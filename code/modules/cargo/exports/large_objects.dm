@@ -1,6 +1,6 @@
 /datum/export/large/crate
 	cost = 500
-	k_elasticity = 0
+	pricemult_per_sale = 1 //completely static price
 	unit_name = "crate"
 	export_types = list(/obj/structure/closet/crate)
 	exclude_types = list(/obj/structure/closet/crate/large, /obj/structure/closet/crate/wooden, /obj/structure/closet/crate/coffin, /obj/structure/closet/crate/mail)
@@ -150,7 +150,7 @@
 	cost = 10 //Base cost of canister. You get more for nice gases inside.
 	unit_name = "Gas Canister"
 	export_types = list(/obj/machinery/portable_atmospherics/canister)
-	k_elasticity = 0.00033
+	pricemult_per_sale = 1 - (0.05 / 1000) //0.05 per thousand moles
 
 /datum/export/large/gas_canister/get_cost(obj/O)
 	var/obj/machinery/portable_atmospherics/canister/C = O
@@ -176,4 +176,4 @@
 
 /datum/export/large/gas_canister/proc/get_gas_value(datum/gas/gasType, moles)
 	var/baseValue = initial(gasType.base_value)
-	return round((baseValue/k_elasticity) * (1 - NUM_E**(-1 * k_elasticity * moles)))
+	return market_category.get_modified_sell_price(baseValue * moles)

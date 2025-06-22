@@ -7,7 +7,7 @@
 
 /datum/round_event/high_priority_bounty/announce(fake)
 	priority_announce("Central Command has issued a high-priority cargo bounty. Details have been sent to all bounty consoles.", "Nanotrasen Bounty Program", SSstation.announcer.get_rand_alert_sound())
-
+/*
 /datum/round_event/high_priority_bounty/start()
 	var/datum/bounty/B
 	for(var/attempts = 0; attempts < 50; ++attempts)
@@ -17,4 +17,4 @@
 		B.mark_high_priority(3)
 		if(try_add_bounty(B))
 			break
-
+*/

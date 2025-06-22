@@ -1,3 +1,4 @@
+
 #define PRINTER_TIMEOUT 10
 
 /datum/computer_file/program/bounty
@@ -18,6 +19,7 @@
 	/// The cargo account for grabbing the cargo account's credits.
 	var/static/datum/bank_account/cargocash
 
+/* //commented because im not doing this right now
 /datum/computer_file/program/bounty/proc/print_paper()
 	new /obj/item/paper/bounty_printout(get_turf(computer))
 
@@ -26,9 +28,6 @@
 
 /datum/computer_file/program/bounty/ui_data(mob/user)
 	var/list/data = list()
-
-	if(!GLOB.bounties_list.len)
-		setup_bounties()
 	cargocash = SSeconomy.get_budget_account(ACCOUNT_CAR_ID)
 
 	var/obj/item/computer_hardware/printer/printer
@@ -79,5 +78,6 @@
 				else
 					COOLDOWN_START(src, printer_ready, PRINTER_TIMEOUT)
 					computer.visible_message(span_notice("\The [computer] prints out a paper."))
+*/
 
 #undef PRINTER_TIMEOUT

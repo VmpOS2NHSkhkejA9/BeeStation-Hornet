@@ -90,50 +90,78 @@ then the player gets the profit from selling his own wasted time.
 
 	return report
 
+
+/datum/market_category //holds price multipliers for price fluctuations and repeated sales/purchases affecting prices
+	var/name = "Objects, Things and Entities"
+	var/description = "The base category that you really shouldn't see."
+	var/category_ID
+	var/pricemult = 1 //base pricemult decided at the start of the round
+	var/pricemult_offset = 0 //random offset set at the start of the round and never changes
+	var/price_elasticity //not even slightly related to the old k_elasticity. how fast the category returns to its normal price
+
+/datum/market_category/New()
+	..()
+	pricemult_offset += (0.01 * rand(-25,25))
+	START_PROCESSING(SSprocessing, src)
+
+/datum/market_category/Destroy()
+	STOP_PROCESSING(SSprocessing, src)
+	return ..()
+
+/datum/market_category/process()
+	..()
+
+/datum/market_category/proc/get_modified_sell_price(var/baseprice)
+	return baseprice * (pricemult + pricemult_offset) //this is simple enough, but having it as a proc means we can easily have special behaviour later on
+
+/datum/market_category/proc/after_sale(var/datum/export/exporttype, amount)
+	pricemult = round(exporttype.pricemult_per_sale ** amount, 0.01)
+
+/datum/market_category/test
+	name = "test"
+	description = "description test"
+	category_ID = TRUE
+
+/datum/market_category/test2
+	name = "test 2"
+	description = "description test"
+	category_ID = TRUE
+
+/datum/market_category/test3
+	name = "Construction & Fabrication Materials"
+	description = "Most materials, from iron to diamond, refined or unrefined."
+	category_ID = MARKET_CATEGORY_MATERIALS
+
 /datum/export
 	var/unit_name = ""				// Unit name. Only used in "Received [total_amount] [name]s [message]." message
 	var/message = ""
 	var/cost = 100					// Cost of item, in cargo credits. Must not alow for infinite price dupes, see above.
-	var/k_elasticity = 1/30			//coefficient used in marginal price calculation that roughly corresponds to the inverse of price elasticity, or "quantity elasticity"
+	var/pricemult_per_sale = 0.95	// pricemult is multiplied by this every time an item is sold. (please don't make this >1 or the economy will explode)
 	var/list/export_types = list()	// Type of the exported object. If none, the export datum is considered base type.
 	var/include_subtypes = TRUE		// Set to FALSE to make the datum apply only to a strict type.
 	var/list/exclude_types = list()	// Types excluded from export
-
-	//cost includes elasticity, this does not.
-	var/init_cost
-
 	//All these need to be present in export call parameter for this to apply.
+	var/market_category_ID
+	var/datum/market_category/market_category
 	var/export_category = EXPORT_CARGO
 
 /datum/export/New()
 	..()
-	START_PROCESSING(SSprocessing, src)
-	init_cost = cost
+
+	for(var/datum/market_category/checked_category in GLOB.market_categories_list)
+		if(checked_category.category_ID == market_category_ID)
+			market_category = checked_category
+			break
+
 	export_types = typecacheof(export_types)
 	exclude_types = typecacheof(exclude_types)
 
-/datum/export/Destroy()
-	STOP_PROCESSING(SSprocessing, src)
-	return ..()
-
-/datum/export/process()
-	. = ..()
-	if(!k_elasticity)
-		return PROCESS_KILL
-	cost *= NUM_E**(k_elasticity * (1/30))
-	if(cost > init_cost)
-		cost = init_cost
-
 // Checks the cost. 0 cost items are skipped in export.
-/datum/export/proc/get_cost(obj/O, allowed_categories = NONE, apply_elastic = TRUE)
+/datum/export/proc/get_cost(obj/O, allowed_categories = NONE, apply_market_modifiers = TRUE)
 	var/amount = get_amount(O)
-	if(apply_elastic)
-		if(k_elasticity!=0)
-			return round((cost/k_elasticity) * (1 - NUM_E**(-1 * k_elasticity * amount)))	//anti-derivative of the marginal cost function
-		else
-			return round(cost * amount)	//alternative form derived from L'Hopital to avoid division by 0
-	else
-		return round(init_cost * amount)
+	if(apply_market_modifiers)
+		return market_category.get_modified_sell_price(amount * cost)
+	return amount * cost
 
 // Checks the amount of exportable in object. Credits in the bill, sheets in the stack, etc.
 // Usually acts as a multiplier for a cost, so item that has 0 amount will be skipped in export.
@@ -171,6 +199,11 @@ then the player gets the profit from selling his own wasted time.
 	if(amount <=0 || the_cost <=0)
 		return FALSE
 
+	if(!dry_run)
+		market_category.after_sale(src, amount) //doing this before calculating price makes all sales a bit worse, but it should make market manipulation harder
+
+	the_cost = market_category.get_modified_sell_price(cost * amount)
+
 	report.total_value[src] += the_cost
 
 	if(istype(O, /datum/export/material))
@@ -178,9 +211,6 @@ then the player gets the profit from selling his own wasted time.
 	else
 		report.total_amount[src] += amount
 
-	if(!dry_run)
-		if(apply_elastic)
-			cost *= NUM_E**(-1*k_elasticity*amount)		//marginal cost modifier
 		SSblackbox.record_feedback("nested tally", "export_sold_cost", 1, list("[O.type]", "[the_cost]"))
 	return TRUE
 
@@ -212,8 +242,13 @@ then the player gets the profit from selling his own wasted time.
 	return msg
 
 GLOBAL_LIST_EMPTY(exports_list)
+GLOBAL_LIST_EMPTY(market_categories_list)
 
 /proc/setupExports()
+	for(var/subtype in subtypesof(/datum/market_category)) //same as below really
+		var/datum/market_category/M = new subtype
+		if(M.category_ID)
+			GLOB.market_categories_list += M
 	for(var/subtype in subtypesof(/datum/export))
 		var/datum/export/E = new subtype
 		if(E.export_types?.len) // Exports without a type are invalid/base types

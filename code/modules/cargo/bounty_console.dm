@@ -19,7 +19,7 @@
 
 /obj/item/paper/bounty_printout
 	name = "paper - Bounties"
-
+/*
 /obj/item/paper/bounty_printout/Initialize(mapload)
 	. = ..()
 	var/final_paper_text = "<h2>Nanotrasen Cargo Bounties</h2></br>"
@@ -30,27 +30,36 @@
 		final_paper_text += "<h3>[B.name]</h3>"
 		final_paper_text += "<ul><li>Reward: [B.reward_string()]</li>"
 		final_paper_text += "<li>Completed: [B.completion_string()]</li></ul>"
-
 	add_raw_text(final_paper_text)
 	update_appearance()
-
+*/
 /obj/machinery/computer/bounty/ui_interact(mob/user, datum/tgui/ui)
-	if(!GLOB.bounties_list.len)
-		setup_bounties()
-
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "CargoBountyConsole")
-		ui.set_autoupdate(FALSE)
+		ui.set_autoupdate(TRUE)
 		ui.open()
 
-/obj/machinery/computer/bounty/ui_data(mob/user)
+/obj/machinery/computer/bounty/ui_data()
 	var/list/data = list()
-	var/list/bountyinfo = list()
-	for(var/datum/bounty/B in GLOB.bounties_list)
-		bountyinfo += list(list("name" = B.name, "description" = B.description, "reward_string" = B.reward_string(), "completion_string" = B.completion_string() , "claimed" = B.claimed, "can_claim" = B.can_claim(), "priority" = B.high_priority, "bounty_ref" = REF(B)))
-	data["stored_cash"] = cargocash.account_balance
-	data["bountydata"] = bountyinfo
+	data["location"] = SSshuttle.supply.getStatusText()
+	var/datum/bank_account/D = SSeconomy.get_budget_account(ACCOUNT_CAR_ID)
+	if(D)
+		data["points"] = D.account_balance
+	var/message = "Remember to stamp and send back the supply manifests."
+	if(SSshuttle.centcom_message)
+		message = SSshuttle.centcom_message
+	data["message"] = message
+
+	var/list/exportrate_info = list()
+	for(var/datum/market_category/E in GLOB.market_categories_list)
+		exportrate_info += list(list(
+			"name" = E.name,
+			"desc" = E.description,
+			"multiplier" = (E.pricemult + E.pricemult_offset) * 100))
+
+	data["exportrates"] = exportrate_info
+
 	return data
 
 /obj/machinery/computer/bounty/ui_act(action, params)
@@ -58,7 +67,7 @@
 		return
 	switch(action)
 		if("ClaimBounty")
-			var/datum/bounty/cashmoney = locate(params["bounty"]) in GLOB.bounties_list
+			var/datum/bounty/cashmoney = locate(params["bounty"]) in SSbounties.accepted_bounties
 			if(cashmoney)
 				cashmoney.claim()
 			return TRUE
