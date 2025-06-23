@@ -1,0 +1,17 @@
+.BountyConsole_Entry_Available {
+  border: 1px solid #000000;
+  white-space: pre-wrap;
+}
+
+.BountyConsole_Entry_Active {
+  border: 1px solid #40628a;
+  white-space: pre-wrap;
+}
+.BountyConsole_Entry_Failed {
+  border: 1px solid red;
+  white-space: pre-wrap;
+}
+.BountyConsole_Entry_Completed {
+  border: 1px solid green;
+  white-space: pre-wrap;
+}

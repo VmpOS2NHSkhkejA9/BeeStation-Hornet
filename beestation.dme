@@ -2453,12 +2453,15 @@
 #include "code\modules\cargo\packs.dm"
 #include "code\modules\cargo\supplypod.dm"
 #include "code\modules\cargo\supplypod_beacon.dm"
+/*
 #include "code\modules\cargo\bounties\assistant.dm"
 #include "code\modules\cargo\bounties\botany.dm"
 #include "code\modules\cargo\bounties\chef.dm"
 #include "code\modules\cargo\bounties\core.dm"
 #include "code\modules\cargo\bounties\engineering.dm"
+*/
 #include "code\modules\cargo\bounties\item.dm"
+/*
 #include "code\modules\cargo\bounties\mech.dm"
 #include "code\modules\cargo\bounties\medical.dm"
 #include "code\modules\cargo\bounties\mining.dm"
@@ -2468,6 +2471,7 @@
 #include "code\modules\cargo\bounties\slime.dm"
 #include "code\modules\cargo\bounties\special.dm"
 #include "code\modules\cargo\bounties\virus.dm"
+*/
 #include "code\modules\cargo\exports\core.dm"
 #include "code\modules\cargo\exports\gear.dm"
 #include "code\modules\cargo\exports\large_objects.dm"

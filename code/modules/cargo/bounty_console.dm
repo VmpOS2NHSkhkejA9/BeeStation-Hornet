@@ -59,22 +59,35 @@
 			"multiplier" = (E.pricemult + E.pricemult_offset) * 100))
 
 	data["exportrates"] = exportrate_info
-
+	data["active_bounties"] = bounties_to_ui_data(SSbounties.accepted_bounties)
+	data["available_bounties"] = bounties_to_ui_data(SSbounties.available_bounties)
+	data["archived_bounties"] = bounties_to_ui_data(SSbounties.archived_bounties)
+	data["reputation"] = SSbounties.reputation
 	return data
+
+/obj/machinery/computer/bounty/proc/bounties_to_ui_data(bountylist)
+	. = list()
+	for(var/datum/bounty/bounty in bountylist)
+		. += list(list(
+			"title" = bounty.name,
+			"description" = bounty.description,
+			"author" = bounty.author,
+			"reward" = bounty.reward,
+			"completion" = bounty.completion_string(),
+			"status" = bounty.status,
+			"reference" = FAST_REF(bounty),
+			"timeremaining" = bounty.expiration_time - world.time
+		))
+	return .
 
 /obj/machinery/computer/bounty/ui_act(action, params)
 	if(..())
 		return
 	switch(action)
-		if("ClaimBounty")
-			var/datum/bounty/cashmoney = locate(params["bounty"]) in SSbounties.accepted_bounties
+		if("Accept")
+			var/datum/bounty/cashmoney = locate(params["reference"]) in SSbounties.available_bounties
 			if(cashmoney)
-				cashmoney.claim()
+				cashmoney.accept()
 			return TRUE
-		if("Print")
-			if(printer_ready < world.time)
-				printer_ready = world.time + PRINTER_TIMEOUT
-				print_paper()
-				return
 
 #undef PRINTER_TIMEOUT

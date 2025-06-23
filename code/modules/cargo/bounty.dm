@@ -1,10 +1,44 @@
 /datum/bounty
 	var/name
+	var/author //just a fluff string
 	var/description
 	var/reward = 1000 // In credits. Modified by a bunch of outside variables, so this is not the real amount of credits awarded.
 	var/high_priority = FALSE
 	var/category = BOUNTY_CATEGORY_TEST
-	var/status
+	var/status = BOUNTY_STATUS_AVAILABLE
+	var/expiration_time = 5 MINUTES //expiration time when unaccepted
+	var/expiration_time_accepted = 20 MINUTES //this much time is added as a bonus when accepted
+
+/datum/bounty/New()
+	expiration_time += world.time
+	START_PROCESSING(SSprocessing, src)
+
+/datum/bounty/Destroy()
+	STOP_PROCESSING(SSprocessing, src)
+	. = ..()
+
+/datum/bounty/proc/archive()
+	STOP_PROCESSING(SSprocessing, src)
+
+/datum/bounty/proc/accept()
+	expiration_time += expiration_time_accepted
+	SSbounties.available_bounties -= src
+	SSbounties.accepted_bounties += src
+	status = BOUNTY_STATUS_ACTIVE
+
+/datum/bounty/process(delta_time)
+	if(expiration_time > world.time)
+		return TRUE
+	switch(status)
+		if(BOUNTY_STATUS_AVAILABLE)
+			SSbounties.available_bounties -= src
+			qdel(src) //unaccepted bounties go straight to the bin
+		if(BOUNTY_STATUS_ACTIVE)
+			SSbounties.accepted_bounties -= src
+			SSbounties.archived_bounties += src
+			status = BOUNTY_STATUS_FAILED
+			archive() //your failure will be remembered
+
 
 // Displayed on bounty UI screen.
 /datum/bounty/proc/completion_string()
@@ -22,12 +56,15 @@
 	return "[actual_reward] Credits"
 
 /datum/bounty/proc/can_claim()
-	return status == BOUNTY_STATUS_ACTIVE
+	return (status == BOUNTY_STATUS_ACTIVE) && (src in SSbounties.accepted_bounties) && (world.time < expiration_time)
 
 // Called when the claim button is clicked. Override to provide fancy rewards.
 /datum/bounty/proc/claim()
 	if(can_claim())
 		SSeconomy.distribute_funds(reward * SSeconomy.bounty_modifier)
+		status = BOUNTY_STATUS_COMPLETED
+		SSbounties.accepted_bounties -= src
+		SSbounties.archived_bounties += src
 
 // If an item sent in the cargo shuttle can satisfy the bounty.
 /datum/bounty/proc/applies_to(obj/O)
@@ -52,18 +89,18 @@
 // It handles items shipped for bounties.
 /proc/bounty_ship_item_and_contents(atom/movable/AM, dry_run=FALSE)
 
-	var/list/matched_one = FALSE
+	var/list/matched_bounties = list()
 	for(var/thing in reverse_range(AM.GetAllContents()))
 		var/matched_this = FALSE
 		for(var/datum/bounty/B in SSbounties.accepted_bounties)
 			if(B.applies_to(thing))
-				matched_one = TRUE
+				matched_bounties += B
 				matched_this = TRUE
 				if(!dry_run)
 					B.ship(thing)
 		if(!dry_run && matched_this)
 			qdel(thing)
-	return matched_one
+	return matched_bounties
 
 /proc/completed_bounty_count()
 	var/count = 0

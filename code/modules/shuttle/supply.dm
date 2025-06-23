@@ -186,7 +186,7 @@ GLOBAL_LIST_INIT(whitelisted_cargo_types, typecacheof(list(
 		setupExports()
 
 	var/msg = ""
-	var/matched_bounty = FALSE
+	var/matched_bounties = list()
 
 	var/datum/export_report/ex = new
 
@@ -195,8 +195,7 @@ GLOBAL_LIST_INIT(whitelisted_cargo_types, typecacheof(list(
 		for(var/atom/movable/AM in shuttle_area)
 			if(iscameramob(AM))
 				continue
-			if(bounty_ship_item_and_contents(AM, dry_run = FALSE))
-				matched_bounty = TRUE
+			matched_bounties += bounty_ship_item_and_contents(AM, dry_run = FALSE)
 			if(!AM.anchored || istype(AM, /obj/vehicle/sealed/mecha))
 				export_item_and_contents(AM, export_categories , dry_run = FALSE, external_report = ex)
 			else if(!ismachinery(AM))
@@ -206,8 +205,10 @@ GLOBAL_LIST_INIT(whitelisted_cargo_types, typecacheof(list(
 	if(ex.exported_atoms)
 		ex.exported_atoms += "." //ugh
 
-	if(matched_bounty)
-		msg += "Bounty items received. An update has been sent to all bounty consoles. "
+	if(LAZYLEN(matched_bounties))
+		msg += "Requested contract items received. An update has been sent to all export consoles. "
+		for(var/datum/bounty/bounty in matched_bounties)
+			bounty.claim()
 
 	for(var/datum/export/E in ex.total_amount)
 		var/export_text = E.total_printout(ex)
