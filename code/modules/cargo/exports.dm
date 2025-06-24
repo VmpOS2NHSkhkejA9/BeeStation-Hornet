@@ -150,14 +150,15 @@ then the player gets the profit from selling his own wasted time.
   */
 /datum/export/proc/sell_object(obj/O, datum/export_report/report, dry_run = TRUE, allowed_categories = EXPORT_CARGO , apply_elastic = TRUE)
 	///This is the value of the object, as derived from export datums.
-	var/the_cost = get_cost(O, allowed_categories , apply_elastic)
+	var/the_cost = get_cost(O, allowed_categories , apply_elastic) //get_cost already gets the amount on its own, so no issue there.
 	///Quantity of the object in question.
 	var/amount = get_amount(O)
 
 	if(amount <=0 || the_cost <=0)
 		return FALSE
 
-	the_cost = market_category.get_modified_sell_price(cost * amount)
+	if(market_category)
+		the_cost = market_category.get_modified_sell_price(the_cost)
 
 	report.total_value[src] += the_cost
 

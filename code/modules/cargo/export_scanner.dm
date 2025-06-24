@@ -43,5 +43,6 @@
 			to_chat(user, span_notice("Scanned [O], value: <b>[price]</b> credits[O.contents.len ? " (contents included)" : ""]."))
 		else
 			to_chat(user, span_warning("Scanned [O], no export value."))
-		if(bounty_ship_item_and_contents(O, dry_run=TRUE))
-			to_chat(user, span_notice("Scanned item is eligible for one or more bounties."))
+		var/validbountycount = LAZYLEN(bounty_ship_item_and_contents(O, dry_run=TRUE))
+		if(validbountycount)
+			to_chat(user, span_notice("Scanned item is eligible for [validbountycount] accepted supply contract[validbountycount > 1 ? "s" : ""]."))

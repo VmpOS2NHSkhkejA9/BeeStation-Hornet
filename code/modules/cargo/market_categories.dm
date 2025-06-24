@@ -1,11 +1,13 @@
+
+
 /datum/market_category //holds price multipliers for price fluctuations and repeated sales/purchases affecting prices
 	var/name = "Objects, Things and Entities"
 	var/description = "The base category that you really shouldn't see."
 	var/category_ID
-	var/pricemult = 1 //base pricemult decided at the start of the round
+	var/pricemult = 1 //base pricemult decided by price drift
 	var/pricemult_offset = 0 //offset affected by sales
-	var/price_normalization = 0.9975 //higher = returns to base price slower
-	var/price_drift = 0
+	var/price_normalization = 1 //higher = returns to base price slower
+	var/current_price_drift = 0
 	var/last_price_drift_adjustment = -10 MINUTES
 
 /datum/market_category/New()
@@ -16,13 +18,28 @@
 	STOP_PROCESSING(SSprocessing, src)
 	return ..()
 
+//these are used exclusively within this proc
+#define NORMALIZATION_MAX_THRESHOLD 0.3
+#define NORMALIZATION_MAX 0.001
+#define NORMALIZATION_MIN 0.0001
+
 /datum/market_category/process()
-	pricemult_offset *= price_normalization
 	if((world.time - last_price_drift_adjustment) > 10 MINUTES)
-		var/new_price_drift = (0.01 * rand(-25,25))
-		pricemult_offset += new_price_drift - price_drift
-		price_drift = new_price_drift
+		var/new_price_drift = 0.01 * rand(-25	,25)
+		pricemult_offset -= new_price_drift - current_price_drift
+		pricemult = 1 + new_price_drift
+		current_price_drift = new_price_drift
 		last_price_drift_adjustment = world.time
+
+	if(pricemult_offset == 0)
+		return
+
+	var/normalization = LERP(NORMALIZATION_MIN, NORMALIZATION_MAX, min(abs(pricemult_offset) / NORMALIZATION_MAX_THRESHOLD, 1))
+	pricemult_offset = pricemult_offset > 0 ? max(pricemult_offset - normalization, 0) : min(pricemult_offset + normalization, 0)
+
+#undef NORMALIZATION_MAX_THRESHOLD
+#undef NORMALIZATION_MAX
+#undef NORMALIZATION_MIN
 
 /datum/market_category/proc/get_modified_sell_price(var/baseprice)
 	return baseprice * (pricemult + pricemult_offset) //this is simple enough, but having it as a proc means we can easily have special behaviour later on
@@ -54,7 +71,7 @@
 
 /datum/market_category/medical
 	name = "Pharmaceutical Products"
-	description = "Advanced chemical mixtures along with fresh organs and a reserve of blood are absolute necessities for any ship, station and base on or around lavaland."
+	description = "Advanced chemical mixtures along with fresh organs and reserves of blood primarily produced by Acrux Medical Technologies are absolute necessities for any ship, station and base on or around lavaland."
 	category_ID = MARKET_CATEGORY_MEDICAL
 
 /datum/market_category/service
@@ -67,3 +84,4 @@
 	name = "Uncategorized Supplies"
 	description = "Basic supplies produced by anyone and everyone and useful for a variety of reasons. Most commonly, bulk water and welding fuel."
 	category_ID = MARKET_CATEGORY_MISC
+
