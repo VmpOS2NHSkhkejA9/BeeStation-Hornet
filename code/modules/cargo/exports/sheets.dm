@@ -60,22 +60,30 @@
 	cost = 155 // 2000u of plasma + 2000u of iron.
 	message = "of plasteel"
 	export_types = list(/obj/item/stack/sheet/plasteel)
+	market_category_ID = MARKET_CATEGORY_MINING
+	pricemult_per_sale = 0.998
 
 // 1 glass + 0.5 iron, cost is rounded up.
 /datum/export/stack/rglass
 	cost = 8
 	message = "of reinforced glass"
 	export_types = list(/obj/item/stack/sheet/rglass)
+	market_category_ID = MARKET_CATEGORY_MINING
+	pricemult_per_sale = 0.999
 
 /datum/export/stack/plastitanium
 	cost = 325 // plasma + titanium costs
 	message = "of plastitanium"
 	export_types = list(/obj/item/stack/sheet/mineral/plastitanium)
+	market_category_ID = MARKET_CATEGORY_MINING
+	pricemult_per_sale = 0.998
 
 /datum/export/stack/wood
 	cost = 30
 	unit_name = "wood plank"
 	export_types = list(/obj/item/stack/sheet/wood)
+	market_category_ID = MARKET_CATEGORY_SERVICE
+	pricemult_per_sale = 0.999
 
 /datum/export/stack/cardboard
 	cost = 2
@@ -99,4 +107,6 @@
 	cost = 1000
 	message = "of alien alloy"
 	export_types = list(/obj/item/stack/sheet/mineral/abductor)
+	market_category_ID = MARKET_CATEGORY_MINING
+	pricemult_per_sale = 0.995
 

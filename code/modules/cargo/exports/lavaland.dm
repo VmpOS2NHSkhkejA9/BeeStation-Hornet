@@ -1,6 +1,9 @@
 //Tendril chest artifacts and ruin loot. Includes ash drake loot since they drop two sets of armor + random item
 //Consumable or one-use items like the magic D20 and gluttony's blessing are omitted
 
+/datum/export/lavaland
+	market_category_ID = MARKET_CATEGORY_MINING
+
 /datum/export/lavaland/minor
 	cost = 10000
 	unit_name = "minor lava planet artifact"

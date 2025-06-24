@@ -1,4 +1,6 @@
 /datum/export/slime
+	market_category_ID = MARKET_CATEGORY_SCIENCE
+	pricemult_per_sale = 0.995
 
 /datum/export/slime/get_cost(obj/O, allowed_categories = NONE, apply_elastic = TRUE)
 	var/costfromparent = ..()

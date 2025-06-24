@@ -5,7 +5,7 @@
 	export_types = list(
 		/obj/item/stack/sheet/mineral, /obj/item/stack/tile/mineral,
 		/obj/item/stack/ore, /obj/item/coin)
-	market_category_ID = MARKET_CATEGORY_MATERIALS
+	market_category_ID = MARKET_CATEGORY_MINING
 	pricemult_per_sale = 0.999
 // Yes, it's a base type containing export_types.
 // But it has no material_id, so any applies_to check will return false, and these types reduce amount of copypasta a lot
@@ -29,11 +29,14 @@
 	cost = 1000
 	material_id = /datum/material/bananium
 	message = "cm3 of bananium"
+	pricemult_per_sale = 0.995
+	market_category_ID = MARKET_CATEGORY_SCIENCE //science USUALLY makes this
 
 /datum/export/material/diamond
 	cost = 500
 	material_id = /datum/material/diamond
 	message = "cm3 of diamonds"
+	pricemult_per_sale = 0.997
 
 /datum/export/material/plasma
 	cost = 200
@@ -69,6 +72,8 @@
 	cost = 500
 	material_id = /datum/material/adamantine
 	message = "cm3 of adamantine"
+	market_category_ID = MARKET_CATEGORY_SCIENCE //science makes this
+	pricemult_per_sale = 0.995
 
 /datum/export/material/bscrystal
 	cost = 300
@@ -79,6 +84,8 @@
 	cost = 25
 	message = "cm3 of plastic"
 	material_id = /datum/material/plastic
+	market_category_ID = MARKET_CATEGORY_MEDICAL //chemistry makes this
+
 
 /datum/export/material/iron
 	cost = 5

@@ -90,60 +90,11 @@ then the player gets the profit from selling his own wasted time.
 
 	return report
 
-
-/datum/market_category //holds price multipliers for price fluctuations and repeated sales/purchases affecting prices
-	var/name = "Objects, Things and Entities"
-	var/description = "The base category that you really shouldn't see."
-	var/category_ID
-	var/pricemult = 1 //base pricemult decided at the start of the round
-	var/pricemult_offset = 0 //offset affected by sales
-	var/price_normalization = 0.9975 //higher = returns to base price slower
-	var/price_drift = 0
-	var/last_price_drift_adjustment = -10 MINUTES
-
-/datum/market_category/New()
-	..()
-	pricemult_offset += (0.01 * rand(-25,25))
-	START_PROCESSING(SSprocessing, src)
-
-/datum/market_category/Destroy()
-	STOP_PROCESSING(SSprocessing, src)
-	return ..()
-
-/datum/market_category/process()
-	pricemult_offset *= price_normalization
-	if((world.time - last_price_drift_adjustment) > 10 MINUTES)
-		price_drift = rand(-2,2) * 0.0005
-		last_price_drift_adjustment = world.time
-	pricemult_offset += price_drift
-	..()
-
-/datum/market_category/proc/get_modified_sell_price(var/baseprice)
-	return baseprice * (pricemult + pricemult_offset) //this is simple enough, but having it as a proc means we can easily have special behaviour later on
-
-/datum/market_category/proc/after_sale(var/datum/export/exporttype, amount)
-	pricemult_offset -= (pricemult + pricemult_offset) * (1 - (exporttype.pricemult_per_sale ** amount))
-
-/datum/market_category/test
-	name = "test"
-	description = "description test"
-	category_ID = TRUE
-
-/datum/market_category/test2
-	name = "test 2"
-	description = "description test"
-	category_ID = TRUE
-
-/datum/market_category/test3
-	name = "Construction & Fabrication Materials"
-	description = "Most materials, from iron to diamond, refined or unrefined."
-	category_ID = MARKET_CATEGORY_MATERIALS
-
 /datum/export
 	var/unit_name = ""				// Unit name. Only used in "Received [total_amount] [name]s [message]." message
 	var/message = ""
 	var/cost = 100					// Cost of item, in cargo credits. Must not alow for infinite price dupes, see above.
-	var/pricemult_per_sale = 0.95	// pricemult is multiplied by this every time an item is sold. (please don't make this >1 or the economy will explode)
+	var/pricemult_per_sale = 0.975	// pricemult is multiplied by this every time an item is sold. (please don't make this >1 or the economy will explode)
 	var/list/export_types = list()	// Type of the exported object. If none, the export datum is considered base type.
 	var/include_subtypes = TRUE		// Set to FALSE to make the datum apply only to a strict type.
 	var/list/exclude_types = list()	// Types excluded from export
@@ -206,9 +157,6 @@ then the player gets the profit from selling his own wasted time.
 	if(amount <=0 || the_cost <=0)
 		return FALSE
 
-	if(!dry_run && market_category)
-		market_category.after_sale(src, amount) //doing this before calculating price makes all sales a bit worse, but it should make market manipulation harder
-
 	the_cost = market_category.get_modified_sell_price(cost * amount)
 
 	report.total_value[src] += the_cost
@@ -219,6 +167,10 @@ then the player gets the profit from selling his own wasted time.
 		report.total_amount[src] += amount
 
 		SSblackbox.record_feedback("nested tally", "export_sold_cost", 1, list("[O.type]", "[the_cost]"))
+
+	if(!dry_run && market_category)
+		market_category.after_sale(src, amount) //doing this before calculating price makes all sales a bit worse, but it should make market manipulation harder
+
 	return TRUE
 
 // Total printout for the cargo console.

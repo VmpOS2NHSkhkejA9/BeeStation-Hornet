@@ -2,6 +2,7 @@
 
 /datum/export/weapon
 	include_subtypes = FALSE
+	market_category_ID = MARKET_CATEGORY_SECURITY
 
 /datum/export/weapon/baton
 	cost = 100

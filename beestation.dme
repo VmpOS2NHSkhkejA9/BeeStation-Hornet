@@ -2453,6 +2453,7 @@
 #include "code\modules\cargo\packs.dm"
 #include "code\modules\cargo\supplypod.dm"
 #include "code\modules\cargo\supplypod_beacon.dm"
+#include "code\modules\cargo\market_categories.dm"
 /*
 #include "code\modules\cargo\bounties\assistant.dm"
 #include "code\modules\cargo\bounties\botany.dm"
@@ -2479,7 +2480,7 @@
 #include "code\modules\cargo\exports\manifest.dm"
 #include "code\modules\cargo\exports\materials.dm"
 #include "code\modules\cargo\exports\parts.dm"
-#include "code\modules\cargo\exports\seeds.dm"
+#include "code\modules\cargo\exports\service.dm"
 #include "code\modules\cargo\exports\sheets.dm"
 #include "code\modules\cargo\exports\tools.dm"
 #include "code\modules\cargo\exports\weapons.dm"

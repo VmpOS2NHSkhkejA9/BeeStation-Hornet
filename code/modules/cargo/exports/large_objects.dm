@@ -55,82 +55,98 @@
 	unit_name = "watertank"
 	export_types = list(/obj/structure/reagent_dispensers/watertank)
 	contents_cost = 200
+	market_category_ID = MARKET_CATEGORY_MISC
 
 /datum/export/large/reagent_dispenser/fuel
 	unit_name = "fueltank"
 	export_types = list(/obj/structure/reagent_dispensers/fueltank)
+	market_category_ID = MARKET_CATEGORY_MISC
 
 /datum/export/large/reagent_dispenser/beer
 	unit_name = "beer keg"
 	contents_cost = 700
 	export_types = list(/obj/structure/reagent_dispensers/beerkeg)
+	market_category_ID = MARKET_CATEGORY_SERVICE
 
 
 /datum/export/large/pipe_dispenser
 	cost = 500
 	unit_name = "pipe dispenser"
 	export_types = list(/obj/machinery/pipe_dispenser)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/emitter
 	cost = 550
 	unit_name = "emitter"
 	export_types = list(/obj/machinery/power/emitter)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/field_generator
 	cost = 550
 	unit_name = "field generator"
 	export_types = list(/obj/machinery/field/generator)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/collector
 	cost = 400
 	unit_name = "radiation collector"
 	export_types = list(/obj/machinery/power/rad_collector)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/tesla_coil
 	cost = 450
 	unit_name = "tesla coil"
 	export_types = list(/obj/machinery/power/tesla_coil)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/pa
 	cost = 350
 	unit_name = "particle accelerator part"
 	export_types = list(/obj/structure/particle_accelerator)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/pa/controls
 	cost = 500
 	unit_name = "particle accelerator control console"
 	export_types = list(/obj/machinery/particle_accelerator/control_box)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/supermatter
 	cost = 8000
 	unit_name = "supermatter shard"
 	export_types = list(/obj/machinery/power/supermatter_crystal/shard)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/grounding_rod
 	cost = 350
 	unit_name = "grounding rod"
 	export_types = list(/obj/machinery/power/grounding_rod)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/tesla_gen
 	cost = 4000
 	unit_name = "energy ball generator"
 	export_types = list(/obj/machinery/the_singularitygen/tesla)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/singulo_gen
 	cost = 4000
 	unit_name = "gravitational singularity generator"
 	export_types = list(/obj/machinery/the_singularitygen)
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 	include_subtypes = FALSE
 
 /datum/export/large/iv
 	cost = 50
 	unit_name = "iv drip"
 	export_types = list(/obj/machinery/iv_drip)
+	market_category_ID = MARKET_CATEGORY_MEDICAL
 
 /datum/export/large/barrier
 	cost = 25
 	unit_name = "security barrier"
 	export_types = list(/obj/item/security_barricade, /obj/structure/barricade/security)
+	market_category_ID = MARKET_CATEGORY_SECURITY
 
 
 /**
@@ -150,7 +166,8 @@
 	cost = 10 //Base cost of canister. You get more for nice gases inside.
 	unit_name = "Gas Canister"
 	export_types = list(/obj/machinery/portable_atmospherics/canister)
-	pricemult_per_sale = 1 - (0.05 / 1000) //0.05 per thousand moles
+	pricemult_per_sale = 0.9999 //x0.9 per thousand moles
+	market_category_ID = MARKET_CATEGORY_ENGINEERING
 
 /datum/export/large/gas_canister/get_cost(obj/O)
 	var/obj/machinery/portable_atmospherics/canister/C = O

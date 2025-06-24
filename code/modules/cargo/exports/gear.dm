@@ -4,16 +4,19 @@
 	cost = 100
 	unit_name = "helmet"
 	export_types = list(/obj/item/clothing/head/helmet/sec)
+	market_category_ID = MARKET_CATEGORY_SECURITY
 
 /datum/export/gear/sec_armor
 	cost = 100
 	unit_name = "armor vest"
 	export_types = list(/obj/item/clothing/suit/armor/vest)
+	market_category_ID = MARKET_CATEGORY_SECURITY
 
 /datum/export/gear/riot_shield
 	cost = 100
 	unit_name = "riot shield"
 	export_types = list(/obj/item/shield/riot)
+	market_category_ID = MARKET_CATEGORY_SECURITY
 
 
 /datum/export/gear/mask/breath

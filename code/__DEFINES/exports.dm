@@ -3,7 +3,13 @@
 #define EXPORT_CONTRABAND 4
 #define EXPORT_PIRATE 8
 
-#define MARKET_CATEGORY_MATERIALS "materials"
+#define MARKET_CATEGORY_MINING "mining"
+#define MARKET_CATEGORY_SECURITY "security"
+#define MARKET_CATEGORY_ENGINEERING "engineering"
+#define MARKET_CATEGORY_SCIENCE "science"
+#define MARKET_CATEGORY_MEDICAL "medical"
+#define MARKET_CATEGORY_SERVICE "service"
+#define MARKET_CATEGORY_MISC "misc"
 
 #define BOUNTY_CATEGORY_SUPPLY "supply" //miners mostly
 #define BOUNTY_CATEGORY_TEST "guh"
