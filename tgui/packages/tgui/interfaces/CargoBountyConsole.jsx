@@ -61,18 +61,21 @@ const CargoContracts = (props) => {
   const { act, data } = useBackend();
   const [tab, setTab] = useSharedState('contracttab', 'available');
   const { reputation } = data;
+  const available_bounties = data.available_bounties || [];
+  const active_bounties = data.active_bounties || [];
+  const archived_bounties = data.archived_bounties || [];
   return (
     <Box>
       <Section fitted>
         <Tabs vertical>
           <Tabs.Tab fontSize={1.25} icon="file-contract" selected={tab === 'available'} onClick={() => setTab('available')}>
-            Available
+            Available ({available_bounties.length})
           </Tabs.Tab>
           <Tabs.Tab fontSize={1.25} icon="bookmark" selected={tab === 'accepted'} onClick={() => setTab('accepted')}>
-            Accepted
+            Accepted ({active_bounties.length})
           </Tabs.Tab>
           <Tabs.Tab fontSize={1.25} icon="box-archive" selected={tab === 'archived'} onClick={() => setTab('archived')}>
-            Archived
+            Archived ({archived_bounties.length})
           </Tabs.Tab>
         </Tabs>
       </Section>
@@ -95,6 +98,11 @@ const CargoContractsAvailable = (props) => {
   return (
     <Section title="Available Contracts" textAlign="center">
       <Flex wrap="wrap" justify="space-between">
+        {!available_bounties.length && (
+          <Flex.Item grow>
+            <NoticeBox>There are no contracts available at this time.</NoticeBox>
+          </Flex.Item>
+        )}
         {available_bounties.map((bounty) => (
           <Flex key={bounty.reference} maxWidth="300px" wrap="wrap" direction="row" p={2}>
             <Section
@@ -143,6 +151,13 @@ const CargoContractsAccepted = (props) => {
   return (
     <Section title="Accepted Contracts" textAlign="center">
       <Flex wrap="wrap" justify="space-between">
+        {!active_bounties.length && (
+          <Flex.Item grow>
+            <NoticeBox>
+              You do not have any active contracts at this time. More may be available in the &quot;Available&quot; tab.
+            </NoticeBox>
+          </Flex.Item>
+        )}
         {active_bounties.map((bounty) => (
           <Flex key={bounty.reference} maxWidth="300px" wrap="wrap" direction="row" p={2}>
             <Section
@@ -183,6 +198,11 @@ const CargoContractsArchived = (props) => {
   return (
     <Section title="Archived Contracts" textAlign="center">
       <Flex wrap="wrap" justify="space-between">
+        {!archived_bounties.length && (
+          <Flex.Item grow>
+            <NoticeBox>You have not failed or completed any contracts this shift.</NoticeBox>
+          </Flex.Item>
+        )}
         {archived_bounties.map((bounty) => (
           <Flex key={bounty.reference} maxWidth="300px" wrap="wrap" direction="row" p={2}>
             <Section
@@ -214,34 +234,43 @@ const CargoContractsArchived = (props) => {
   );
 };
 
-// this looks completely awful right now but it works until I begin to comprehend the gibberish humanity calls tgui
+// crude and simple, but it works and communicates what it needs to.
 const CargoExportRates = (props) => {
   const { act, data } = useBackend();
   const rates = data.exportrates || [];
   return (
     <Section title="Export Rates">
       <Table>
-        <Table.Row bold italic color="label" fontSize={1.25}>
+        <Table.Row bold color="label" fontSize={1.25} nowrap>
           <Table.Cell p={1} textAlign="center">
             Export Category
           </Table.Cell>
-          <Table.Cell p={1} textAlign="center">
+          <Table.Cell p={1} textAlign="center" nowrap>
             Description
           </Table.Cell>
-          <Table.Cell p={1} textAlign="center">
-            Current Rate
+          <Table.Cell p={1} textAlign="center" nowrap>
+            Rate (%)
           </Table.Cell>
         </Table.Row>
         {rates.map((rate) => (
-          <Table.Row key={rate.name}>
+          <Table.Row key={rate.name} className="BountyConsole_Rate">
             <Table.Cell bold p={1}>
               {rate.name}
             </Table.Cell>
-            <Table.Cell italic textAlign="center" p={1}>
+            <Table.Cell italic textAlign="center" p={1} textColor="label">
               {rate.desc}
             </Table.Cell>
-            <Table.Cell bold p={1} textAlign="center">
-              {rate.multiplier}%
+            <Table.Cell
+              bold
+              p={1}
+              textAlign="center"
+              textColor={rate.multiplier > 110 ? 'green' : rate.multiplier < 90 ? 'bad' : 'average'}>
+              <Button
+                color="rgba(0,0,0,0)"
+                tooltip="The value of selling this type of good, compared to its standard value"
+                textColor={rate.multiplier > 110 ? 'green' : rate.multiplier < 90 ? 'bad' : 'average'}>
+                {rate.multiplier}%
+              </Button>
             </Table.Cell>
           </Table.Row>
         ))}

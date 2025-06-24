@@ -19,7 +19,7 @@ SUBSYSTEM_DEF(bounties)
 	to_chat(world, "there are [LAZYLEN(typesof(/datum/bounty))] subtypes of /datum/bounty")
 	for(var/type in typesof(/datum/bounty)) //for reasons beyond me for(var/datum/bounty/bounty in typesof(/datum/bounty)) simply does not work
 		var/datum/bounty/bounty = type
-		if(!bounty || !bounty.name) //no name = basetype
+		if(!bounty || !bounty.name || !bounty.category) //no name = basetype. bounties with no category are also excluded.
 			continue
 		to_chat(world, "iterated over [bounty.name]")
 		if(!categorized_bounties[bounty.category])

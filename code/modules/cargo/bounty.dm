@@ -8,10 +8,21 @@
 	var/status = BOUNTY_STATUS_AVAILABLE
 	var/expiration_time = 5 MINUTES //expiration time when unaccepted
 	var/expiration_time_accepted = 20 MINUTES //this much time is added as a bonus when accepted
+	var/list/wanted_types  // Types accepted for the bounty. Key as type, value as required amount.
+	var/include_subtypes = TRUE     // Set to FALSE to make the datum apply only to a strict type.
+	var/list/exclude_types = list() // Types excluded.
+	var/list/shipped_types = list()
+	var/list/wanted_types_cache //supposedly checking for types in typecaches is very fast
+
 
 /datum/bounty/New()
 	expiration_time += world.time
 	START_PROCESSING(SSprocessing, src)
+	wanted_types_cache = typecacheof(wanted_types)
+	exclude_types = typecacheof(exclude_types)
+	for(var/type in wanted_types) //this works if it's var/atom/type, but not if it's just var/type, for reasons beyond me.
+		to_chat(world, type)
+		shipped_types[type] = 0
 
 /datum/bounty/Destroy()
 	STOP_PROCESSING(SSprocessing, src)
@@ -42,21 +53,20 @@
 
 // Displayed on bounty UI screen.
 /datum/bounty/proc/completion_string()
-	return ""
-
-// Displayed on bounty UI screen.
-/datum/bounty/proc/reward_string()
-	// Simulates claiming the bounty (SSeconomy.distribute_funds) to get the actual reward amount
-	// As of april 2025, this returns (reward * 1.5)
-	var/amount_shared = reward * SSeconomy.bounty_modifier // We get the amount to distribute among the departments
-	var/part = round(amount_shared / SSeconomy.distribution_sum()) // We get the value of a share of the amount to distribute
-	var/datum/bank_account/department/cargo_account = SSeconomy.get_budget_account(ACCOUNT_CAR_ID) // We get the cargo department budget account
-	var/actual_reward = part * cargo_account.budget_ratio // We get the share of the cargo department
-
-	return "[actual_reward] Credits"
+	for(var/type in wanted_types)
+		var/atom/type_atom = type
+		. += {"\[[shipped_types[type]]/[wanted_types[type]]\] [capitalize(type_atom.name)] \n"}
 
 /datum/bounty/proc/can_claim()
-	return (status == BOUNTY_STATUS_ACTIVE) && (src in SSbounties.accepted_bounties) && (world.time < expiration_time)
+	if(!((status == BOUNTY_STATUS_ACTIVE) && (src in SSbounties.accepted_bounties) && (world.time < expiration_time)))
+		return FALSE
+	. = TRUE
+	for(var/type in wanted_types)
+		if(shipped_types[type] >= wanted_types[type])
+			continue
+		. = FALSE
+		break
+	return
 
 // Called when the claim button is clicked. Override to provide fancy rewards.
 /datum/bounty/proc/claim()
@@ -68,16 +78,35 @@
 
 // If an item sent in the cargo shuttle can satisfy the bounty.
 /datum/bounty/proc/applies_to(obj/O)
-	return FALSE
+	if(!wanted_types_cache[O.type] || exclude_types[O.type])
+		return FALSE
+	if(!include_subtypes && !(O.type in wanted_types))
+		return FALSE
+	if(O.flags_1 & HOLOGRAM_1)
+		return FALSE
+	return TRUE //TODO: make this not not bad
 
 // Called when an object is shipped on the cargo shuttle.
 /datum/bounty/proc/ship(obj/O)
-	return
+	var/shipped_type
+	var/amount = 1
+	for(var/type in wanted_types)
+		if(istype(O, type))
+			shipped_type = type
+	if(!shipped_type)
+		return FALSE //this should never happen
+	if(istype(O, /obj/item/stack))
+		var/obj/item/stack/shipped_stack = O
+		amount = shipped_stack.amount
+
+	shipped_types[shipped_type] += amount
+
+	return TRUE
 
 // When randomly generating the bounty list, duplicate bounties must be avoided.
 // This proc is used to determine if two bounties are duplicates, or incompatible in general.
-/datum/bounty/proc/compatible_with(other_bounty)
-	return TRUE
+/datum/bounty/proc/compatible_with(datum/other_bounty)
+	return type != other_bounty.type
 
 /datum/bounty/proc/mark_high_priority(scale_reward = 2)
 	if(high_priority)
