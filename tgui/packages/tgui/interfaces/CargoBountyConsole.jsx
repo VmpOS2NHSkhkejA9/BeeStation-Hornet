@@ -264,11 +264,8 @@ const CargoExportRates = (props) => {
               bold
               p={1}
               textAlign="center"
-              textColor={rate.multiplier > 110 ? 'green' : rate.multiplier < 90 ? 'bad' : 'average'}>
-              <Button
-                color="rgba(0,0,0,0)"
-                tooltip="The value of selling this type of good, compared to its standard value"
-                textColor={rate.multiplier > 110 ? 'green' : rate.multiplier < 90 ? 'bad' : 'average'}>
+              textColor={rate.multiplier > 110 ? 'green' : rate.multiplier < 90 ? 'bad' : 'yellow'}>
+              <Button color="rgba(0,0,0,0)" tooltip="The value of selling this type of good, compared to its standard value">
                 {rate.multiplier}%
               </Button>
             </Table.Cell>

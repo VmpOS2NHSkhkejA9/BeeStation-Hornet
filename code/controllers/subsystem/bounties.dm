@@ -1,5 +1,5 @@
 #define NATURAL_BOUNTY_COUNT 5 //bounties will be replenished over time until this many available bounties exist
-#define ROUNDSTART_BOUNTY_COUNT 8 //start with more bounties than usual, let cargo pick some
+#define ROUNDSTART_BOUNTY_COUNT 8 //start with more bounties than usual, let cargo pick some off the bat
 
 SUBSYSTEM_DEF(bounties)
 	name = "Bounties"
@@ -35,11 +35,12 @@ SUBSYSTEM_DEF(bounties)
 	to_chat(world, "--- SELECTED ROUNDSTART BOUNTIES ---")
 	for(var/n = 1 to ROUNDSTART_BOUNTY_COUNT)
 		var/datum/bounty/selected_bounty = pick_weighted_bounty()
-		if(!selected_bounty)
-			return SS_INIT_FAILURE //something went wrong and we cannot pick bounties, which will result in no bounties for the entire round
 		selected_bounty = new selected_bounty
 		selected_bounty.expiration_time += rand(0, 5 MINUTES) //"slightly" randomize the times so that they don't all expire at the same time
 		available_bounties += selected_bounty
+
+	if(!LAZYLEN(available_bounties))
+		return SS_INIT_FAILURE //something went wrong and we could not pick a single bounty
 
 	for(var/datum/bounty/bounty in available_bounties)
 		to_chat(world, bounty.name)
@@ -51,11 +52,16 @@ SUBSYSTEM_DEF(bounties)
 		return
 	var/datum/bounty/selected_bounty = pick_weighted_bounty()
 	selected_bounty = new selected_bounty
-	selected_bounty.expiration_time += rand(0, 1 MINUTES) //slightly randomize the times so that they don't all expire at the same time
+	selected_bounty.expiration_time += rand(0, 1 MINUTES) //slightly randomize the times so that they don't all show the exact same number of seconds remaining
 	available_bounties += selected_bounty
 
 /datum/controller/subsystem/bounties/Recover()
-
+	categorized_bounties = SSbounties.categorized_bounties
+	available_bounties = SSbounties.available_bounties
+	accepted_bounties = SSbounties.accepted_bounties
+	archived_bounties = SSbounties.archived_bounties
+	weights = SSbounties.weights
+	reputation = SSbounties.reputation
 
 /datum/controller/subsystem/bounties/proc/pick_weighted_bounty()
 	if(!LAZYLEN(weights))

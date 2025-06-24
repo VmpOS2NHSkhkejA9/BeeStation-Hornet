@@ -56,7 +56,7 @@
 		exportrate_info += list(list(
 			"name" = E.name,
 			"desc" = E.description,
-			"multiplier" = (E.pricemult + E.pricemult_offset) * 100))
+			"multiplier" = round((E.pricemult + E.pricemult_offset) * 100, 0.1)))
 
 	data["exportrates"] = exportrate_info
 	data["active_bounties"] = bounties_to_ui_data(SSbounties.accepted_bounties)

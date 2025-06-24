@@ -6,7 +6,7 @@
 		/obj/item/stack/sheet/mineral, /obj/item/stack/tile/mineral,
 		/obj/item/stack/ore, /obj/item/coin)
 	market_category_ID = MARKET_CATEGORY_MATERIALS
-	pricemult_per_sale = 0.975
+	pricemult_per_sale = 0.999
 // Yes, it's a base type containing export_types.
 // But it has no material_id, so any applies_to check will return false, and these types reduce amount of copypasta a lot
 

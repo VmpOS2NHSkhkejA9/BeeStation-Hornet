@@ -96,8 +96,10 @@ then the player gets the profit from selling his own wasted time.
 	var/description = "The base category that you really shouldn't see."
 	var/category_ID
 	var/pricemult = 1 //base pricemult decided at the start of the round
-	var/pricemult_offset = 0 //random offset set at the start of the round and never changes
-	var/price_elasticity //not even slightly related to the old k_elasticity. how fast the category returns to its normal price
+	var/pricemult_offset = 0 //offset affected by sales
+	var/price_normalization = 0.9975 //higher = returns to base price slower
+	var/price_drift = 0
+	var/last_price_drift_adjustment = -10 MINUTES
 
 /datum/market_category/New()
 	..()
@@ -109,13 +111,18 @@ then the player gets the profit from selling his own wasted time.
 	return ..()
 
 /datum/market_category/process()
+	pricemult_offset *= price_normalization
+	if((world.time - last_price_drift_adjustment) > 10 MINUTES)
+		price_drift = rand(-2,2) * 0.0005
+		last_price_drift_adjustment = world.time
+	pricemult_offset += price_drift
 	..()
 
 /datum/market_category/proc/get_modified_sell_price(var/baseprice)
 	return baseprice * (pricemult + pricemult_offset) //this is simple enough, but having it as a proc means we can easily have special behaviour later on
 
 /datum/market_category/proc/after_sale(var/datum/export/exporttype, amount)
-	pricemult = round(exporttype.pricemult_per_sale ** amount, 0.01)
+	pricemult_offset -= (pricemult + pricemult_offset) * (1 - (exporttype.pricemult_per_sale ** amount))
 
 /datum/market_category/test
 	name = "test"
@@ -159,7 +166,7 @@ then the player gets the profit from selling his own wasted time.
 // Checks the cost. 0 cost items are skipped in export.
 /datum/export/proc/get_cost(obj/O, allowed_categories = NONE, apply_market_modifiers = TRUE)
 	var/amount = get_amount(O)
-	if(apply_market_modifiers)
+	if(apply_market_modifiers && market_category)
 		return market_category.get_modified_sell_price(amount * cost)
 	return amount * cost
 
@@ -199,7 +206,7 @@ then the player gets the profit from selling his own wasted time.
 	if(amount <=0 || the_cost <=0)
 		return FALSE
 
-	if(!dry_run)
+	if(!dry_run && market_category)
 		market_category.after_sale(src, amount) //doing this before calculating price makes all sales a bit worse, but it should make market manipulation harder
 
 	the_cost = market_category.get_modified_sell_price(cost * amount)
