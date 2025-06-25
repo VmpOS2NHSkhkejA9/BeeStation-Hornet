@@ -12,6 +12,14 @@
 #define MARKET_CATEGORY_MISC "misc"
 
 #define BOUNTY_CATEGORY_SUPPLY "supply" //miners mostly
+#define BOUNTY_CATEGORY_SECURITY "security"
+#define BOUNTY_CATEGORY_ENGINEERING "engineering"
+#define BOUNTY_CATEGORY_SCIENCE "science"
+#define BOUNTY_CATEGORY_ROBOTICS "robo" //roboticists are so detached from the rest of science they deserve their own bounty weights
+#define BOUNTY_CATEGORY_MEDICAL "medical"
+#define BOUNTY_CATEGORY_SERVICE "service" // cook/botanist/barman
+#define BOUNTY_CATEGORY_CIVILIAN "civilian" // clown/mime/chaplain/etc
+#define BOUNTY_CATEGORY_MISC "misc" //mostly just assistants
 #define BOUNTY_CATEGORY_TEST "guh"
 
 #define BOUNTY_STATUS_AVAILABLE 1

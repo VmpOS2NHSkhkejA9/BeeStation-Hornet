@@ -1,21 +1,11 @@
-/datum/bounty/item/assistant/scooter
-	name = "Scooter"
-	description = "Nanotrasen has determined walking to be wasteful. Ship a scooter to CentCom to speed operations up."
-	reward = 1080 // the mat hoffman
-	wanted_types = list(/obj/vehicle/ridden/scooter)
-	include_subtypes = FALSE
+/datum/bounty/assistant
+	category = BOUNTY_CATEGORY_MISC
 
-/datum/bounty/item/assistant/skateboard
-	name = "Skateboard"
-	description = "Nanotrasen has determined walking to be wasteful. Ship a skateboard to CentCom to speed operations up."
-	reward = 900 // the tony hawk
-	wanted_types = list(/obj/vehicle/ridden/scooter/skateboard, /obj/item/melee/skateboard)
-
-/datum/bounty/item/assistant/stunprod
-	name = "Stunprod"
-	description = "CentCom demands a stunprod to use against dissidents. Craft one, then ship it."
-	reward = 1300
-	wanted_types = list(/obj/item/melee/baton/cattleprod)
+/datum/bounty/assistant/stunprod
+	name = "Improvised Equipment"
+	description = "We've ordered some batons already, but the shipment got delayed and we need something to work with until then."
+	reward = 2000
+	wanted_types = list(/obj/item/melee/baton/cattleprod = 3)
 
 /datum/bounty/item/assistant/soap
 	name = "Soap"
