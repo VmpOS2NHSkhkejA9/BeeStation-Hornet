@@ -4,21 +4,20 @@
 	var/description
 	var/reward = 1000 // In credits. Modified by a bunch of outside variables, so this is not the real amount of credits awarded.
 	var/high_priority = FALSE
-	var/category = BOUNTY_CATEGORY_TEST
+	var/category
 	var/status = BOUNTY_STATUS_AVAILABLE
 	var/expiration_time = 5 MINUTES //expiration time when unaccepted
 	var/expiration_time_accepted = 20 MINUTES //this much time is added as a bonus when accepted
-	var/list/datum/bounty_requirement/requirements = list() //formatted as the requirement datum as key, and a list of args to create that datum with as value
+	var/requirements = list() //list of lists each with key "requirementtype" as the requirement datum's path, every other value is passed through in an arglist in the new proc
 
 /datum/bounty/New()
 	expiration_time += world.time
 
-	to_chat(world, "[name] has [LAZYLEN(requirements)] requirements")
 	var/list/datum/bounty_requirement/requirements_created = list()
-	for(var/req in requirements)
-		var/datum/bounty_requirement/requirement = req
-		requirements_created += new requirement(arglist(requirements[requirement]))
-		to_chat(world, "created [requirement]")
+	for(var/list/req in requirements)
+		var/datum/bounty_requirement/requirement_datum = req["requirementtype"]
+		req.Remove("requirementtype") //not sure why but -= "requirementtype" doesnt work
+		requirements_created += new requirement_datum(arglist(req))
 	requirements = requirements_created
 
 	START_PROCESSING(SSprocessing, src)
@@ -186,8 +185,9 @@
 		if(reagent.type in wanted_reagents)
 			shipped_amount += reagent.volume
 	return TRUE
-/*
-//another base type with a bunch of functionality to generate random bounties; the power of RNG will bring us variety
+
+//base type with a bunch of functionality to generate semi-randomized bounties made up of items and/or reagents; the power of RNG will bring us variety
+//a degree of control is lost over completely hand-designed bounties (this code would need to be extremely complex otherwise)
 /datum/bounty/random
 	var/total_required_min
 	var/total_required_max
@@ -196,27 +196,36 @@
 	var/list/possible_types = list()
 	var/list/possible_descriptions = list()
 	var/distribution_factor = 1 //higher values tend more towards one type making up the bulk of the wanted types
+	var/allow_requirement_subtypes = FALSE
+	var/reagent_quantity_mult = 5 //multiply required amounts of reagents by this AFTER all other required amount calculations
 
 /datum/bounty/random/New()
 
 	var/types_total = rand(different_types_min, different_types_max)
 	var/total_required = rand(total_required_min, total_required_max)
+	var/list/types_and_nums = list()
 
 	var/random_assigned_total = 0
 	for(var/i = 1 to types_total)
 		if(!LAZYLEN(possible_types))
 			break
-		var/random_number = rand(1,10) ** distribution_factor
+		var/random_number = rand(1,100) * distribution_factor
 		var/random_type = pick(possible_types)
-		possible_types -= random_type
-		wanted_types[random_type] = random_number
+		types_and_nums[random_type] = random_number
 		random_assigned_total += random_number
+		possible_types -= random_type
 
-	for(var/type in wanted_types)
-		wanted_types[type] = round(total_required * (wanted_types[type] / random_assigned_total))
+	for(var/type in types_and_nums)
+		types_and_nums[type] = ceil(total_required * (types_and_nums[type] / random_assigned_total)) //round *up* so we dont get 0/0 requirements
+		var/isreagent = ispath(type, /datum/reagent)
+		requirements += list(list(
+			requirementname = type:name, //this works for reagents and atoms, since they both have a name property
+			requirementtype = isreagent ? /datum/bounty_requirement/reagent : /datum/bounty_requirement,
+			includedtypes = list(isreagent ? /obj/item/reagent_containers : type),
+			requiredamount = (types_and_nums[type]) * (isreagent ? reagent_quantity_mult : 1),
+			allowsubtypes = allow_requirement_subtypes
+			))
 
+		to_chat(world, "added requirement for [type] to [src]")
 
-	description = pick(possible_descriptions)
-
-	..()
-*/
+	return ..()
