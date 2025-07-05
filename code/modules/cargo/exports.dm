@@ -170,7 +170,7 @@ then the player gets the profit from selling his own wasted time.
 		SSblackbox.record_feedback("nested tally", "export_sold_cost", 1, list("[O.type]", "[the_cost]"))
 
 	if(!dry_run && market_category)
-		market_category.after_sale(src, amount) //doing this before calculating price makes all sales a bit worse, but it should make market manipulation harder
+		market_category.after_sale(src, amount)
 
 	return TRUE
 

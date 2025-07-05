@@ -1,6 +1,6 @@
 
 
-/datum/market_category //holds price multipliers for price fluctuations and repeated sales/purchases affecting prices
+/datum/market_category //i would have much preferred to call these export categories but those are already a thing
 	var/name = "Objects, Things and Entities"
 	var/description = "The base category that you really shouldn't see."
 	var/category_ID
