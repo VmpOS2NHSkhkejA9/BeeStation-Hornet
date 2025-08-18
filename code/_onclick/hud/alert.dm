@@ -502,7 +502,7 @@ or shoot a gun to move around via Newton's 3rd Law of Motion."
 	return ..()
 
 /atom/movable/screen/alert/clockwork/clocksense/process()
-	var/datum/antagonist/servant_of_ratvar/servant_antagonist = is_servant_of_ratvar(owner)
+	var/datum/antagonist/servant_of_ratvar/servant_antagonist = IS_SERVANT_OF_RATVAR(owner)
 	if(!(servant_antagonist?.team))
 		return
 	desc = "Stored Power - <b>[display_power(GLOB.clockcult_power)]</b>.<br>"
@@ -553,6 +553,21 @@ Recharging stations are available in robotics, the dormitory bathrooms, and the 
 	desc = "Your blood's electric charge is running low, find a source of charge for your blood. Use a recharging station found in robotics or the dormitory bathrooms, or eat some Ethereal-friendly food."
 	icon_state = "etherealcharge"
 
+//MODsuit unique
+/atom/movable/screen/alert/nocore
+	name = "Missing Core"
+	desc = "Unit has no core. No modules available until a core is reinstalled. Robotics may provide assistance."
+	icon_state = "no_cell"
+
+/atom/movable/screen/alert/emptycell/plasma
+	name = "Out of Power"
+	desc = "Unit's plasma core has no charge remaining. No modules available until plasma core is recharged. \
+		Unit can be refilled through plasma ore."
+
+/atom/movable/screen/alert/lowcell/plasma
+	name = "Low Charge"
+	desc = "Unit's plasma core is running low. Unit can be refilled through plasma ore."
+
 //Need to cover all use cases - emag, illegal upgrade module, malf AI hack, traitor cyborg
 /atom/movable/screen/alert/hacked
 	name = "Hacked"
@@ -567,15 +582,15 @@ Recharging stations are available in robotics, the dormitory bathrooms, and the 
 /atom/movable/screen/alert/locked
 	name = "Locked Down"
 	desc = "Unit has been remotely locked down. Usage of a Robotics Control Console like the one in the Research Director's \
-office by your AI master or any qualified human may resolve this matter. Robotics may provide further assistance if necessary."
+		office by your AI master or any qualified human may resolve this matter. Robotics may provide further assistance if necessary."
 	icon_state = "locked"
 
 /atom/movable/screen/alert/newlaw
 	name = "Law Update"
 	desc = "Laws have potentially been uploaded to or removed from this unit. Please be aware of any changes \
-so as to remain in compliance with the most up-to-date laws."
+		so as to remain in compliance with the most up-to-date laws."
 	icon_state = "newlaw"
-	timeout = 300
+	timeout = 30 SECONDS
 
 /atom/movable/screen/alert/hackingapc
 	name = "Hacking APC"
