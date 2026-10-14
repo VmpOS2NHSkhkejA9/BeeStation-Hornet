@@ -120,11 +120,11 @@
 			++count
 	return count
 
-//this only has functionality for /atom/movable, but subtypes can easily be added that check for reagents or other special criteria
+//this code is awful but I have no idea how to do it better
 /datum/bounty_requirement
-	var/name
-	var/list/wanted_types = list()
-	var/list/wanted_types_cache = list()
+	var/name //the name shown on the bounty screen, IE, "Bananas" would be "[15/22] Bananas"
+	var/list/wanted_types = list() //used when checking with subtypes disallowed
+	var/list/wanted_types_cache = list() //used when checking with subtypes allowed
 	var/list/exclude_types = list()
 	var/include_subtypes = TRUE
 	var/required_amount = 1
@@ -167,8 +167,8 @@
 	var/wanted_reagents = list()
 
 /datum/bounty_requirement/reagent/New(requirementname = "", includedtypes = list(/obj/item/reagent_containers), excludedtypes = list(), allowsubtypes = TRUE, requiredamount = 1, includedreagents = list())
-	. = ..()
 	wanted_reagents = includedreagents
+	. = ..()
 
 /datum/bounty_requirement/reagent/applies_to(atom/movable/thing)
 	if(!..())

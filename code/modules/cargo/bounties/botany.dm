@@ -4,7 +4,7 @@
 /datum/bounty/random/botany/bulk //lots of simple produce
 	name = "Bulk Produce"
 	author = "aiuri's #1 muncher"
-	total_required_min = 50 //this is very little
+	total_required_min = 50 //this is very little (only a single plant bag)
 	total_required_min = 500
 	different_types_min = 1
 	different_types_max = 5
