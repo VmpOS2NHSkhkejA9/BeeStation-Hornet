@@ -3,12 +3,8 @@
 	export_category = EXPORT_CARGO
 	include_subtypes = TRUE
 	export_types = list(
-		/obj/item/stack/sheet/mineral, /obj/item/stack/tile/mineral,
-		/obj/item/stack/ore, /obj/item/coin)
-	market_category_ID = MARKET_CATEGORY_MINING
-	pricemult_per_sale = 0.999
-// Yes, it's a base type containing export_types.
-// But it has no material_id, so any applies_to check will return false, and these types reduce amount of copypasta a lot
+		/obj/item/stack = TRUE,
+	)
 
 /datum/export/stack/get_amount(obj/item/stack/exported)
 	if(!exported.amount)
@@ -16,85 +12,4 @@
 	if(!isitem(exported))
 		return 0
 
-	var/amount = I.custom_materials[SSmaterials.GetMaterialRef(material_id)]
-
-	return round(amount / MINERAL_MATERIAL_AMOUNT)
-
-// Materials. Nothing but plasma is really worth selling. Better leave it all to RnD and sell some plasma instead.
-
-/datum/export/material/bananium
-	cost = 1000
-	material_id = /datum/material/bananium
-	message = "cm3 of bananium"
-	pricemult_per_sale = 0.995
-	market_category_ID = MARKET_CATEGORY_SCIENCE //science USUALLY makes this
-
-/datum/export/material/diamond
-	cost = 500
-	material_id = /datum/material/diamond
-	message = "cm3 of diamonds"
-	pricemult_per_sale = 0.997
-
-/datum/export/material/plasma
-	cost = 200
-	material_id = /datum/material/plasma
-	message = "cm3 of plasma"
-
-/datum/export/material/uranium
-	cost = 100
-	material_id = /datum/material/uranium
-	message = "cm3 of uranium"
-
-/datum/export/material/gold
-	cost = 125
-	material_id = /datum/material/gold
-	message = "cm3 of gold"
-
-/datum/export/material/copper
-	cost = 15
-	material_id = /datum/material/copper
-	message = "cm3 of copper"
-
-/datum/export/material/silver
-	cost = 50
-	material_id = /datum/material/silver
-	message = "cm3 of silver"
-
-/datum/export/material/titanium
-	cost = 125
-	material_id = /datum/material/titanium
-	message = "cm3 of titanium"
-
-/datum/export/material/adamantine
-	cost = 500
-	material_id = /datum/material/adamantine
-	message = "cm3 of adamantine"
-	market_category_ID = MARKET_CATEGORY_SCIENCE //science makes this
-	pricemult_per_sale = 0.995
-
-/datum/export/material/bscrystal
-	cost = 300
-	message = "of bluespace crystals"
-	material_id = /datum/material/bluespace
-
-/datum/export/material/plastic
-	cost = 25
-	message = "cm3 of plastic"
-	material_id = /datum/material/plastic
-	market_category_ID = MARKET_CATEGORY_MEDICAL //chemistry makes this
-
-
-/datum/export/material/iron
-	cost = 5
-	message = "cm3 of metal"
-	material_id = /datum/material/iron
-	export_types = list(
-		/obj/item/stack/sheet/iron, /obj/item/stack/tile/iron,
-		/obj/item/stack/rods, /obj/item/stack/ore, /obj/item/coin)
-
-/datum/export/material/glass
-	cost = 5
-	message = "cm3 of glass"
-	material_id = /datum/material/glass
-	export_types = list(/obj/item/stack/sheet/glass, /obj/item/stack/ore,
-		/obj/item/shard)
+	return exported.amount

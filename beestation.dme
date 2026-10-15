@@ -2829,12 +2829,10 @@
 #include "code\modules\cargo\bounties\virus.dm"
 */
 #include "code\modules\cargo\exports\core.dm"
-#include "code\modules\cargo\exports\gear.dm"
 #include "code\modules\cargo\exports\item_price.dm"
 #include "code\modules\cargo\exports\large_objects.dm"
 #include "code\modules\cargo\exports\manifest.dm"
 #include "code\modules\cargo\exports\materials.dm"
-#include "code\modules\cargo\exports\parts.dm"
 #include "code\modules\cargo\exports\service.dm"
 #include "code\modules\cargo\exports\produce.dm"
 #include "code\modules\cargo\exports\seeds.dm"

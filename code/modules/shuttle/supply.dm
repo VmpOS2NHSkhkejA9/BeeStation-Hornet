@@ -194,13 +194,10 @@ GLOBAL_LIST_INIT(whitelisted_cargo_types, typecacheof(list(
 				continue
 			matched_bounties += bounty_ship_item_and_contents(AM, dry_run = FALSE)
 			if(!AM.anchored || istype(AM, /obj/vehicle/sealed/mecha))
-				export_item_and_contents(AM, export_categories , dry_run = FALSE, external_report = ex)
-			else if(!ismachinery(AM))
-				//Exports the contents of things but not the item itself, so you can have conveyor belt that won't get sold
-				export_contents(AM, export_categories , dry_run = FALSE, external_report = ex)
+				export_item_and_contents(AM, export_categories , dry_run = FALSE, external_report = report)
 
-	if(ex.exported_atoms)
-		ex.exported_atoms += "." //ugh
+	if(report.exported_atoms)
+		report.exported_atoms += "." //ugh
 
 	if(LAZYLEN(matched_bounties))
 		msg += "Requested contract items received. An update has been sent to all export consoles. "

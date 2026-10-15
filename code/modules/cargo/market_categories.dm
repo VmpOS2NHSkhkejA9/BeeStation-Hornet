@@ -41,11 +41,11 @@
 #undef NORMALIZATION_MAX
 #undef NORMALIZATION_MIN
 
-/datum/market_category/proc/get_modified_sell_price(var/baseprice)
+/datum/market_category/proc/get_modified_sell_price(baseprice)
 	return baseprice * (pricemult + pricemult_offset) //this is simple enough, but having it as a proc means we can easily have special behaviour later on
 
-/datum/market_category/proc/after_sale(var/datum/export/exporttype, amount)
-	pricemult_offset -= (pricemult + pricemult_offset) * (1 - (exporttype.pricemult_per_sale ** amount))
+/datum/market_category/proc/after_sale(/datum/export/exporttype, amount)
+	//pricemult_offset -= (pricemult + pricemult_offset) * (1 - (exporttype.pricemult_per_sale ** amount))
 
 //these are mostly meant to be per-department; to make it harder for a single department to rake in too much cash.
 

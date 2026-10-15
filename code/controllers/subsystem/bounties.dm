@@ -5,7 +5,7 @@ SUBSYSTEM_DEF(bounties)
 	name = "Bounties"
 	//check every so often if we want to top up the available bounties
 	wait = 1 MINUTES
-	flags = SS_KEEP_TIMING
+	ss_flags = SS_KEEP_TIMING
 	runlevels = RUNLEVEL_GAME
 	var/list/datum/bounty/available_bounties = list() //not accepted and still valid
 	var/list/datum/bounty/accepted_bounties = list() //in progress
