@@ -1,8 +1,8 @@
 /datum/action/spell/pointed/cleave
 	name = "Cleave"
 	desc = "Causes severe bleeding on a target and several targets around them."
-	background_icon_state = "bg_ecult"
-	icon_icon = 'icons/hud/actions/actions_ecult.dmi'
+	background_icon_state = "bg_heretic"
+	button_icon = 'icons/hud/actions/actions_ecult.dmi'
 	button_icon_state = "cleave"
 	ranged_mousepointer = 'icons/effects/mouse_pointers/throw_target.dmi'
 
@@ -41,7 +41,7 @@
 			span_danger("[victim]'s veins are shredded from within as an unholy blaze erupts from [victim.p_their()] blood!"),
 			span_danger("Your veins burst from within and unholy flame erupts from your blood!")
 		)
-		var/obj/item/bodypart/bodypart = pick(victim.bodyparts)
+		var/obj/item/bodypart/bodypart = pick(victim.get_bodyparts())
 		victim.apply_damage(20, BURN, bodypart)
 
 		new /obj/effect/temp_visual/cleave(get_turf(victim))

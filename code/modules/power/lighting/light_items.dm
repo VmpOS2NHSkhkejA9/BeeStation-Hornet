@@ -27,7 +27,7 @@
 	desc = "A replacement light tube."
 	icon_state = "ltube"
 	base_state = "ltube"
-	item_state = "c_tube"
+	inhand_icon_state = "c_tube"
 	brightness = 11
 
 /obj/item/light/tube/broken
@@ -38,7 +38,7 @@
 	desc = "A replacement light bulb."
 	icon_state = "lbulb"
 	base_state = "lbulb"
-	item_state = "contvapour"
+	inhand_icon_state = "contvapour"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 	brightness = 6
@@ -88,7 +88,7 @@
 
 // attack bulb/tube with object
 // if a syringe, can inject plasma to make it explode
-/obj/item/light/attackby(obj/item/I, mob/user, params)
+/obj/item/light/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	if(istype(I, /obj/item/reagent_containers/syringe))
 		var/obj/item/reagent_containers/syringe/S = I
@@ -108,7 +108,7 @@
 	..()
 	shatter()
 
-/obj/item/light/attack_atom(obj/O, mob/living/user, params)
+/obj/item/light/attack_atom(obj/O, mob/living/user, list/modifiers)
 	..()
 	shatter()
 

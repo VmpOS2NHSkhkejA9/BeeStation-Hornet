@@ -1,4 +1,5 @@
 /datum/bounty
+	abstract_type = /datum/bounty
 	var/name
 	var/author //just a fluff string
 	var/description

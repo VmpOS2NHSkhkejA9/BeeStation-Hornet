@@ -7,27 +7,28 @@
 	name = "Slimeperson"
 	plural_form = "Slimepeople"
 	id = SPECIES_SLIMEPERSON
-	species_traits = list(
-		MUTCOLORS,
-		EYECOLOR,
-		HAIR,
-		FACEHAIR,
-	)
 	inherent_traits = list(
-		TRAIT_NOBLOOD
+		TRAIT_TOXINLOVER,
+		TRAIT_NOHAIRLOSS,
+		TRAIT_NOFIRE,
+		TRAIT_EASYDISMEMBER,
+		TRAIT_NOBLOOD,
+		TRAIT_MUTANT_COLORS,
 	)
-	hair_color = "mutcolor"
+	hair_color_mode = USE_MUTANT_COLOR
 	hair_alpha = 150
+	facial_hair_alpha = 150
+	mutanteyes = /obj/item/organ/eyes/jelly
 	var/datum/action/innate/split_body/slime_split
 	var/list/mob/living/carbon/bodies
 	var/datum/action/innate/swap_body/swap_body
 
 	bodypart_overrides = list(
-		BODY_ZONE_L_ARM = /obj/item/bodypart/l_arm/slime,
-		BODY_ZONE_R_ARM = /obj/item/bodypart/r_arm/slime,
+		BODY_ZONE_L_ARM = /obj/item/bodypart/arm/left/slime,
+		BODY_ZONE_R_ARM = /obj/item/bodypart/arm/right/slime,
 		BODY_ZONE_HEAD = /obj/item/bodypart/head/slime,
-		BODY_ZONE_L_LEG = /obj/item/bodypart/l_leg/slime,
-		BODY_ZONE_R_LEG = /obj/item/bodypart/r_leg/slime,
+		BODY_ZONE_L_LEG = /obj/item/bodypart/leg/left/slime,
+		BODY_ZONE_R_LEG = /obj/item/bodypart/leg/right/slime,
 		BODY_ZONE_CHEST = /obj/item/bodypart/chest/slime,
 	)
 
@@ -76,6 +77,7 @@
 	bodies = old_species.bodies
 
 /datum/species/oozeling/slime/spec_life(mob/living/carbon/human/H)
+	. = ..()
 	if(H.blood_volume >= BLOOD_VOLUME_SLIME_SPLIT)
 		if(prob(5))
 			to_chat(H, span_notice("You feel very bloated!"))
@@ -83,13 +85,11 @@
 		H.blood_volume += 3
 		H.adjust_nutrition(-2.5)
 
-	..()
-
 /datum/action/innate/split_body
 	name = "Split Body"
 	check_flags = AB_CHECK_CONSCIOUS
 	button_icon_state = "slimesplit"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 
 /datum/action/innate/split_body/is_available()
@@ -111,9 +111,12 @@
 		to_chat(H, span_warning("Your mind is spread too thin! You have too many bodies already."))
 		return
 
-	H.visible_message(span_notice("[owner] gains a look of concentration while standing perfectly still."), span_notice("You focus intently on moving your body while standing perfectly still..."))
+	H.visible_message(
+		span_notice("[owner] gains a look of concentration while standing perfectly still."),
+		span_notice("You focus intently on moving your body while standing perfectly still..."),
+	)
 
-	H.notransform = TRUE
+	ADD_TRAIT(H, TRAIT_NO_TRANSFORM, REF(src))
 
 	if(do_after(owner, delay = 6 SECONDS, target = owner, timed_action_flags = IGNORE_HELD_ITEM))
 		if(H.blood_volume >= BLOOD_VOLUME_SLIME_SPLIT)
@@ -123,7 +126,7 @@
 	else
 		to_chat(H, span_warning("...but fail to stand perfectly still!"))
 
-	H.notransform = FALSE
+	REMOVE_TRAIT(H, TRAIT_NO_TRANSFORM, REF(src))
 
 /datum/action/innate/split_body/proc/make_dupe()
 	var/mob/living/carbon/human/H = owner
@@ -133,10 +136,11 @@
 
 	spare.underwear = "Nude"
 	H.dna.transfer_identity(spare, transfer_SE=1)
-	spare.dna.features["mcolor"] = pick("FFFFFF","7F7F7F", "7FFF7F", "7F7FFF", "FF7F7F", "7FFFFF", "FF7FFF", "FFFF7F")
+	spare.dna.features["mcolor"] = pick(COLOR_WHITE, "#7F7F7F", "#7FFF7F", "#7F7FFF", "#FF7F7F", "#7FFFFF", "#FF7FFF", "#FFFF7F")
 	spare.real_name = spare.dna.real_name
 	spare.name = spare.dna.real_name
 	spare.updateappearance(mutcolor_update=1)
+	spare.gender = H.gender
 	spare.domutcheck()
 	spare.Move(get_step(H.loc, pick(NORTH,SOUTH,EAST,WEST)))
 
@@ -148,7 +152,7 @@
 		SEND_SIGNAL(spare, COMSIG_NANITE_SYNC, owner_nanites, TRUE, TRUE, TRUE) //The trues are to copy activation as well
 
 	H.blood_volume *= 0.45
-	H.notransform = 0
+	REMOVE_TRAIT(H, TRAIT_NO_TRANSFORM, REF(src))
 
 	var/datum/species/oozeling/slime/origin_datum = H.dna.species
 	origin_datum.bodies |= spare
@@ -157,14 +161,16 @@
 	spare_datum.bodies = origin_datum.bodies
 
 	H.mind.transfer_to(spare)
-	spare.visible_message(span_warning("[H] distorts as a new body \"steps out\" of [H.p_them()]."), span_notice("...and after a moment of disorentation, you're besides yourself!"))
-
+	spare.visible_message(
+		span_warning("[H] distorts as a new body \"steps out\" of [H.p_them()]."),
+		span_notice("...and after a moment of disorentation, you're besides yourself!"),
+	)
 
 /datum/action/innate/swap_body
 	name = "Swap Body"
 	check_flags = NONE
 	button_icon_state = "slimeswap"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 
 /datum/action/innate/swap_body/on_activate()
@@ -203,7 +209,7 @@
 
 		var/list/L = list()
 		// HTML colors need a # prefix
-		L["htmlcolor"] = "#[body.dna.features["mcolor"]]"
+		L["htmlcolor"] = body.dna.features["mcolor"]
 		L["area"] = get_area_name(body, TRUE)
 		var/stat = "error"
 		switch(body.stat)
@@ -308,13 +314,14 @@
 	id = SPECIES_LUMINESCENT
 	examine_limb_id = SPECIES_OOZELING
 	bodypart_overrides = list(
-		BODY_ZONE_L_ARM = /obj/item/bodypart/l_arm/luminescent,
-		BODY_ZONE_R_ARM = /obj/item/bodypart/r_arm/luminescent,
+		BODY_ZONE_L_ARM = /obj/item/bodypart/arm/left/luminescent,
+		BODY_ZONE_R_ARM = /obj/item/bodypart/arm/right/luminescent,
 		BODY_ZONE_HEAD = /obj/item/bodypart/head/luminescent,
-		BODY_ZONE_L_LEG = /obj/item/bodypart/l_leg/luminescent,
-		BODY_ZONE_R_LEG = /obj/item/bodypart/r_leg/luminescent,
+		BODY_ZONE_L_LEG = /obj/item/bodypart/leg/left/luminescent,
+		BODY_ZONE_R_LEG = /obj/item/bodypart/leg/right/luminescent,
 		BODY_ZONE_CHEST = /obj/item/bodypart/chest/luminescent,
 	)
+	mutanteyes = /obj/item/organ/eyes/jelly
 	var/glow_intensity = LUMINESCENT_DEFAULT_GLOW
 	var/obj/effect/dummy/lighting_obj/moblight/glow
 	var/obj/item/slime_extract/current_extract
@@ -371,7 +378,7 @@
 	desc = "Eat a slime extract to use its properties."
 	check_flags = AB_CHECK_CONSCIOUS
 	button_icon_state = "slimeconsume"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 
 /datum/action/innate/integrate_extract/proc/update_name()
@@ -420,7 +427,7 @@
 		var/obj/item/I = H.get_active_held_item()
 		if(istype(I, /obj/item/slime_extract))
 			var/obj/item/slime_extract/S = I
-			if(!S.Uses)
+			if(!S.extract_uses)
 				to_chat(H, span_warning("[I] is spent! You cannot integrate it."))
 				return
 			if(!H.temporarilyRemoveItemFromInventory(S))
@@ -437,7 +444,7 @@
 	desc = "Pulse the slime extract with energized jelly to activate it."
 	check_flags = AB_CHECK_CONSCIOUS
 	button_icon_state = "slimeuse1"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 	var/activation_type = SLIME_ACTIVATE_MINOR
 
@@ -496,6 +503,7 @@ GLOBAL_LIST_EMPTY(slime_links_by_mind)
 	plural_form = null
 	id = SPECIES_STARGAZER
 	examine_limb_id = SPECIES_OOZELING
+	mutanteyes = /obj/item/organ/eyes/jelly
 	/// Special "project thought" telepathy action for stargazers.
 	var/datum/action/innate/project_thought/project_action
 
@@ -523,7 +531,7 @@ GLOBAL_LIST_EMPTY(slime_links_by_mind)
 	name = "Send Thought"
 	desc = "Send a private psychic message to someone you can see."
 	button_icon_state = "send_mind"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 
 /datum/action/innate/project_thought/on_activate()
@@ -563,7 +571,7 @@ GLOBAL_LIST_EMPTY(slime_links_by_mind)
 	name = "Link Minds"
 	desc = "Link someone's mind to your Slime Link, allowing them to communicate telepathically with other linked minds."
 	button_icon_state = "mindlink"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 	/// The species required to use this ability. Typepath.
 	var/req_species = /datum/species/oozeling/stargazer

@@ -2,7 +2,9 @@
 	name = "Full Tank of Pluoxium"
 	description = "CentCom RnD is researching extra compact internals. Ship us a tank full of Pluoxium and you'll be compensated."
 	reward = 7500
-	wanted_types = list(/obj/item/tank)
+	wanted_types = list(
+		/obj/item/tank = TRUE,
+	)
 	var/moles_required = 20 // A full tank is 28 moles, but CentCom ignores that fact.
 	var/gas_type = /datum/gas/pluoxium
 
@@ -11,9 +13,7 @@
 		return FALSE
 	var/obj/item/tank/T = O
 	var/datum/gas_mixture/our_mix = T.return_air()
-	if(!our_mix.gases[gas_type])
-		return FALSE
-	return our_mix.gases[gas_type][MOLES] >= moles_required
+	return our_mix.moles[gas_type] >= moles_required
 
 /datum/bounty/item/engineering/gas/nitrium_tank
 	name = "Full Tank of Nitrium"
@@ -29,4 +29,6 @@
 	name = "Contained Tesla Ball"
 	description = "Station 24 is being overrun by hordes of angry Mothpeople. They are requesting the ultimate bug zapper."
 	reward = 75000 //requires 14k credits of purchases, not to mention cooperation with engineering/heads of staff to set up inside the cramped shuttle
-	wanted_types = list(/obj/anomaly/energy_ball)
+	wanted_types = list(
+		/obj/anomaly/energy_ball = TRUE,
+	)

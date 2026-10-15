@@ -3,20 +3,25 @@
 /datum/species/monkey
 	name = "\improper Monkey"
 	id = SPECIES_MONKEY
-	skinned_type = /obj/item/stack/sheet/animalhide/
+	mutantbrain = /obj/item/organ/brain/primate
+	skinned_type = /obj/item/stack/sheet/animalhide/monkey
+	meat = /obj/item/food/meat/slab/monkey
 	changesource_flags = MIRROR_BADMIN
-	offset_features = list(
-	OFFSET_HEAD = list(0,-3),
-	OFFSET_FACEMASK = list(0,-3)
+	inherent_traits = list(
+		TRAIT_NO_AUGMENTS,
+		TRAIT_NO_BLOOD_OVERLAY,
+		TRAIT_NO_DNA_COPY,
+		TRAIT_NO_UNDERWEAR,
+		TRAIT_VENTCRAWLER_NUDE,
 	)
 
 	bodypart_overrides = list(
 		BODY_ZONE_HEAD = /obj/item/bodypart/head/monkey,
 		BODY_ZONE_CHEST = /obj/item/bodypart/chest/monkey,
-		BODY_ZONE_L_ARM = /obj/item/bodypart/l_arm/monkey,
-		BODY_ZONE_R_ARM = /obj/item/bodypart/r_arm/monkey,
-		BODY_ZONE_L_LEG = /obj/item/bodypart/l_leg/monkey,
-		BODY_ZONE_R_LEG = /obj/item/bodypart/r_leg/monkey
+		BODY_ZONE_L_ARM = /obj/item/bodypart/arm/left/monkey,
+		BODY_ZONE_R_ARM = /obj/item/bodypart/arm/right/monkey,
+		BODY_ZONE_L_LEG = /obj/item/bodypart/leg/left/monkey,
+		BODY_ZONE_R_LEG = /obj/item/bodypart/leg/right/monkey
 	)
 
 /datum/species/monkey/get_species_description()

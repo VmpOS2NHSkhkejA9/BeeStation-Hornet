@@ -147,7 +147,7 @@
 		postmark_image.appearance_flags |= RESET_COLOR
 		add_overlay(postmark_image)
 
-/obj/item/mail/attackby(obj/item/W, mob/user, params)
+/obj/item/mail/attackby(obj/item/W, mob/user, list/modifiers)
 	// Destination tagging
 	if(istype(W, /obj/item/dest_tagger))
 		var/obj/item/dest_tagger/destination_tag = W
@@ -164,7 +164,7 @@
 		// If the recipient's mind has gone, then anyone can open their mail
 		// whether a mind can actually be qdel'd is an exercise for the reader
 		if(recipient && recipient != user?.mind)
-			if(!is_changeling(user) && !(user?.mind?.has_antag_datum(/datum/antagonist/obsessed)))
+			if(!IS_CHANGELING(user) && !(user?.mind?.has_antag_datum(/datum/antagonist/obsessed)))
 				to_chat(user, span_notice("You can't open somebody else's mail! That's <em>immoral</em>!"))
 				return
 			var/can_open = FALSE
@@ -194,9 +194,9 @@
 /obj/item/mail/proc/initialize_for_recipient(datum/mind/recipient, list/received_report)
 	switch(rand(1,5))
 		if(5)
-			name = "[initial(name)] critical to [recipient.name] ([recipient.assigned_role])"
+			name = "[initial(name)] critical to [recipient.name] ([recipient.assigned_role.title])"
 		else
-			name = "[initial(name)] for [recipient.name] ([recipient.assigned_role])"
+			name = "[initial(name)] for [recipient.name] ([recipient.assigned_role.title])"
 	recipient_ref = WEAKREF(recipient)
 
 	//Recipients
@@ -205,7 +205,7 @@
 	var/list/goodies = generic_goodies.Copy()
 
 	//Load the job the player have
-	var/datum/job/this_job = SSjob.name_occupations[recipient.assigned_role] // only station crews have 'assigned role'
+	var/datum/job/this_job = SSjob.name_occupations[recipient.assigned_role.title] // only station crews have 'assigned role'
 	if(this_job)
 		goodies += this_job.mail_goodies
 		var/datum/record/crew/R = find_record(recipient.name, GLOB.manifest.general)
@@ -234,6 +234,7 @@
 	desc = "A certified post crate from CentCom."
 	icon_state = "mail_crate"
 	door_anim_time = 0
+	custom_price = 0
 
 /* Fills this mail crate with N pieces of mail, where N is the lower of the amount var passed,
 ** and the maximum capacity of this crate. If N is larger than the number of alive human players, the excess will be junkmail.*/
@@ -245,8 +246,11 @@
 	var/list/mail_recipients = list()
 
 	for(var/mob/living/carbon/human/human in GLOB.player_list)
-		// Skip wizards, nuke ops, cyborgs and dead people; Centcom does not send them mail
-		if(human.stat == DEAD || !human.mind || !SSjob.GetJob(human.mind.assigned_role) || human.mind.special_role)
+		// Mail is not routed to anyone who isn't present on the manifest, since how would we know
+		// to send their mail here?
+		if(human.stat == DEAD || !human.mind)
+			continue
+		if(!(human.mind.assigned_role.job_flags & JOB_CREW_MEMBER))
 			continue
 
 		mail_recipients += human.mind
@@ -305,7 +309,7 @@
 		add_raw_text("<i>You need to escape the simulation. Don't forget the numbers, they help you remember:</i> '[random_code(4)]...'")
 		return ..()
 	var/code = random_code(5)
-	for(var/obj/machinery/nuclearbomb/selfdestruct/nuke in GLOB.nuke_list)
+	for(var/obj/machinery/nuclearbomb/selfdestruct/nuke as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/nuclearbomb/selfdestruct))
 		if(nuke)
 			if(nuke.r_code == "ADMIN")
 				nuke.r_code = code

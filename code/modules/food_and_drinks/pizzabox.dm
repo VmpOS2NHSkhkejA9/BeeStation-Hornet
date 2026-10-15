@@ -2,7 +2,7 @@
 	name = "pizza bomb"
 	desc = "Special delivery!"
 	icon_state = "pizzabomb_inactive"
-	item_state = "eshield0"
+	inhand_icon_state = "eshield0"
 	lefthand_file = 'icons/mob/inhands/equipment/shields_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/shields_righthand.dmi'
 
@@ -11,7 +11,7 @@
 	desc = "A box suited for pizzas."
 	icon = 'icons/obj/food/containers.dmi'
 	icon_state = "pizzabox"
-	item_state = "pizzabox"
+	inhand_icon_state = "pizzabox"
 	lefthand_file = 'icons/mob/inhands/misc/food_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/food_righthand.dmi'
 
@@ -38,9 +38,6 @@
 	if(pizza)
 		pizza = new pizza
 	update_icon()
-
-/obj/item/pizzabox/ComponentInitialize()
-	. = ..()
 	AddElement(/datum/element/empprotection, EMP_PROTECT_WIRES)
 
 /obj/item/pizzabox/Destroy()
@@ -99,14 +96,16 @@
 			add_overlay(tag_overlay)
 
 /obj/item/pizzabox/worn_overlays(mutable_appearance/standing, isinhands = FALSE, icon_file, item_layer, atom/origin)
-	. = list()
+	. = ..()
 	var/current_offset = 2
-	if(isinhands)
-		for(var/V in boxes) //add EXTRA BOX per box
-			var/mutable_appearance/M = mutable_appearance(icon_file, item_state, item_layer)
-			M.pixel_y = current_offset
-			current_offset += 2
-			. += M
+	if(!isinhands)
+		return
+
+	for(var/V in boxes) //add EXTRA BOX per box
+		var/mutable_appearance/M = mutable_appearance(icon_file, inhand_icon_state, item_layer)
+		M.pixel_y = current_offset
+		current_offset += 2
+		. += M
 
 /obj/item/pizzabox/attack_self(mob/user)
 	if(boxes.len > 0)
@@ -143,7 +142,7 @@
 				if (isnull(bomb_timer))
 					return
 
-				bomb_timer = clamp(CEILING(bomb_timer, 1), bomb_timer_min, bomb_timer_max)
+				bomb_timer = clamp(ceil(bomb_timer), bomb_timer_min, bomb_timer_max)
 				bomb_defused = FALSE
 				wires.ui_update()
 
@@ -161,7 +160,7 @@
 		update_icon()
 		user.regenerate_icons()
 
-/obj/item/pizzabox/attackby(obj/item/I, mob/user, params)
+/obj/item/pizzabox/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/pizzabox))
 		var/obj/item/pizzabox/newbox = I
 		if(!open && !newbox.open)
@@ -371,7 +370,7 @@
 			var/list/pineapple_pizza_liker = pizza_types.Copy()
 			pineapple_pizza_liker -= /obj/item/food/pizza/pineapple
 			pizza_preferences[nommer.ckey] = pick_weight(pineapple_pizza_liker)
-		else if(nommer.mind && nommer.mind.assigned_role == JOB_NAME_BOTANIST)
+		else if(nommer.mind?.assigned_role.title == /datum/job/botanist)
 			pizza_preferences[nommer.ckey] = /obj/item/food/pizza/dank
 		else
 			pizza_preferences[nommer.ckey] = pick_weight(pizza_types)
@@ -380,11 +379,11 @@
 		if(pizza.type != pizza_preferences[nommer.ckey])
 			QDEL_NULL(pizza)
 		else
-			pizza.foodtypes = T?.liked_food //make sure it's our favourite
+			pizza.foodtypes = T?.liked_foodtypes //make sure it's our favourite
 			return
 
 	var/obj/item/food/pizza/favourite_pizza_type = pizza_preferences[nommer.ckey]
 	pizza = new favourite_pizza_type
 	boxtag_set = FALSE
 	update_icon() //update our boxtag to match our new pizza
-	pizza.foodtypes = T?.liked_food //it's our favorite!
+	pizza.foodtypes = T?.liked_foodtypes //it's our favorite!

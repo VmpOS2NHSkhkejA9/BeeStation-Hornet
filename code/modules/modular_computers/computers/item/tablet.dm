@@ -1,28 +1,33 @@
-/obj/item/modular_computer/tablet  //Its called tablet for theme of 90ies but actually its a "big smartphone" sized
+/obj/item/modular_computer/tablet //Its called tablet for theme of 90ies but actually its a "big smartphone" sized
 	name = "tablet computer"
 	icon = 'icons/obj/modular_tablet.dmi'
 	icon_state = "tablet-red"
 	icon_state_menu = "menu"
 	worn_icon_state = "pda"
-	hardware_flag = PROGRAM_PDA
-	max_hardware_size = 2
+	max_hardware_size = WEIGHT_CLASS_SMALL
 	w_class = WEIGHT_CLASS_SMALL
+	custom_price = PAYCHECK_MEDIUM * 2
 	max_bays = 3
 	steel_sheet_cost = 1
 	slot_flags = ITEM_SLOT_ID | ITEM_SLOT_BELT
 	has_light = TRUE //LED flashlight!
 	comp_light_luminosity = 3 //not the same as the PDA
-	interaction_flags_atom = INTERACT_ATOM_ALLOW_USER_LOCATION
+	interaction_flags_atom = INTERACT_ATOM_ALLOW_USER_LOCATION | INTERACT_ATOM_IGNORE_MOBILITY
 	can_save_id = TRUE
 	saved_auto_imprint = TRUE
-	var/list/contained_item = list(/obj/item/pen, /obj/item/toy/crayon, /obj/item/lipstick, /obj/item/flashlight/pen, /obj/item/clothing/mask/cigarette)
-	//This is the typepath to load "into" the pda
-	var/obj/item/insert_type = /obj/item/pen
-	//This is the currently inserted item
-	var/obj/item/inserted_item
+	can_store_pai = TRUE
+	looping_sound = FALSE
 
-	/// If this tablet can be detonated with detomatix (needs to be refactored into a signal)
-	var/detonatable = TRUE
+	/// The typepaths we are allowed to store
+	var/static/list/contained_item = list(
+		/obj/item/pen,
+		/obj/item/toy/crayon,
+		/obj/item/lipstick,
+		/obj/item/flashlight/pen,
+		/obj/item/cigarette,
+	)
+	/// The item currently inserted into the PDA
+	var/obj/item/inserted_item
 
 	/// The note used by the notekeeping app, stored here for convenience.
 	var/note = "Congratulations on your station upgrading to the new NtOS and Thinktronic based collaboration effort, bringing you the best in electronics and software since 2467!"
@@ -30,7 +35,10 @@
 	var/obj/item/paper/stored_paper
 
 /obj/item/modular_computer/tablet/Destroy()
-	QDEL_NULL(stored_paper)
+	if(istype(inserted_item))
+		QDEL_NULL(inserted_item)
+	if(stored_paper)
+		QDEL_NULL(stored_paper)
 	return ..()
 
 /obj/item/modular_computer/tablet/ui_static_data(mob/user)
@@ -76,35 +84,41 @@
 		ui_update()
 	return TRUE
 
-/obj/item/modular_computer/tablet/attackby(obj/item/attacking_item, mob/user)
+/obj/item/modular_computer/tablet/attackby(obj/item/attacking_item, mob/user, list/modifiers)
 	. = ..()
+	if(!is_type_in_list(attacking_item, contained_item))
+		return
+	if(attacking_item.w_class >= WEIGHT_CLASS_SMALL) // Prevent putting spray cans, pipes, etc (subtypes of pens/crayons)
+		return
+	if(inserted_item)
+		to_chat(user, span_warning("There is already \a [inserted_item] in \the [src]!"))
+		return
+	if(!user.transferItemToLoc(attacking_item, src))
+		return
 
-	if(is_type_in_list(attacking_item, contained_item))
-		if(attacking_item.w_class >= WEIGHT_CLASS_SMALL) // Prevent putting spray cans, pipes, etc (subtypes of pens/crayons)
-			return
-		if(inserted_item)
-			to_chat(user, span_warning("There is already \a [inserted_item] in \the [src]!"))
-		else
-			if(!user.transferItemToLoc(attacking_item, src))
-				return
-			to_chat(user, span_notice("You insert \the [attacking_item] into \the [src]."))
-			inserted_item = attacking_item
-			playsound(src, 'sound/machines/pda_button1.ogg', 50, TRUE)
-			update_appearance()
+	to_chat(user, span_notice("You insert \the [attacking_item] into \the [src]."))
+	inserted_item = attacking_item
+	RegisterSignal(inserted_item, COMSIG_QDELETING, PROC_REF(on_inserted_item_deleted))
+	playsound(src, 'sound/machines/pda_button1.ogg', 50, TRUE)
+	update_appearance()
 
-/obj/item/modular_computer/tablet/pre_attack(atom/target, mob/living/user, params)
+/obj/item/modular_computer/tablet/proc/on_inserted_item_deleted(datum/source)
+	UnregisterSignal(source, COMSIG_QDELETING)
+	inserted_item = null
+
+/obj/item/modular_computer/tablet/pre_attack(atom/target, mob/living/user, list/modifiers)
 	if(try_scan_paper(target, user))
 		return FALSE
 	var/obj/item/computer_hardware/hard_drive/role/job_disk = all_components[MC_HDD_JOB]
-	if(istype(job_disk) && !job_disk.process_pre_attack(target, user, params))
+	if(istype(job_disk) && !job_disk.process_pre_attack(target, user, modifiers))
 		return FALSE
 	return ..()
 
-/obj/item/modular_computer/tablet/attack(atom/target, mob/living/user, params)
+/obj/item/modular_computer/tablet/attack(atom/target, mob/living/user, list/modifiers)
 	// Send to programs for processing - this should go LAST
 	// Used to implement the physical scanner.
 	for(var/datum/computer_file/program/thread in (idle_threads + active_program))
-		if(thread.use_attack && !thread.attack(target, user, params))
+		if(thread.use_attack && !thread.attack(target, user, modifiers))
 			return
 	..()
 
@@ -116,11 +130,15 @@
 			return
 	..()
 
-// Eject the pen if the ID was not ejected
+// Eject the PAI then pen if the ID was not ejected
 /obj/item/modular_computer/tablet/AltClick(mob/user)
 	if(..() || issilicon(user) || !user.canUseTopic(src, BE_CLOSE))
 		return
-	remove_pen(user)
+	if(!inserted_item && stored_pai_card)
+		usr.put_in_hands(stored_pai_card)
+		remove_pai()
+	else
+		remove_pen(user)
 
 // Always eject pen with Ctrl+Click
 /obj/item/modular_computer/tablet/CtrlClick(mob/user)
@@ -155,35 +173,16 @@
 /obj/item/modular_computer/tablet/proc/remove_pen(mob/user)
 	if(issilicon(user) || !user.canUseTopic(src, BE_CLOSE, FALSE, NO_TK)) //TK doesn't work even with this removed but here for readability
 		return
-	if(inserted_item)
-		to_chat(user, span_notice("You remove [inserted_item] from [src]."))
-		user.put_in_hands(inserted_item)
-		inserted_item = null
-		playsound(src, 'sound/machines/pda_button2.ogg', 50, TRUE)
-		update_appearance()
-	else
+	if(!inserted_item)
 		to_chat(user, span_warning("This tablet does not have a pen in it!"))
+		return
 
-// Tablet 'splosion..
-
-/obj/item/modular_computer/tablet/proc/explode(mob/target, mob/bomber)
-	var/turf/current_turf = get_turf(src)
-
-	log_bomber(bomber, "tablet-bombed", target, "[bomber && !is_special_character(bomber) ? "(SENT BY NON-ANTAG)" : ""]")
-
-	if (ismob(loc))
-		var/mob/victim = loc
-		victim.show_message(span_userdanger("Your [src] explodes!"), MSG_VISUAL, span_warning("You hear a loud *pop*!"), MSG_AUDIBLE)
-	else
-		visible_message(span_danger("[src] explodes!"), span_warning("You hear a loud *pop*!"))
-
-	if(current_turf)
-		current_turf.hotspot_expose(700,125)
-		if(istype(all_components[MC_HDD_JOB], /obj/item/computer_hardware/hard_drive/role/virus/syndicate))
-			explosion(current_turf, devastation_range = -1, heavy_impact_range = 1, light_impact_range = 3, flash_range = 4)
-		else
-			explosion(current_turf, devastation_range = -1, heavy_impact_range = -1, light_impact_range = 2, flash_range = 3)
-	qdel(src)
+	to_chat(user, span_notice("You remove [inserted_item] from [src]."))
+	user.put_in_hands(inserted_item)
+	UnregisterSignal(inserted_item, COMSIG_QDELETING)
+	inserted_item = null
+	playsound(src, 'sound/machines/pda_button2.ogg', 50, TRUE)
+	update_appearance()
 
 // SUBTYPES
 /obj/item/modular_computer/tablet/syndicate_contract_uplink
@@ -237,6 +236,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/modular_computer/tablet/integrated)
 
 /obj/item/modular_computer/tablet/integrated/Destroy()
 	borgo = null
+	for(var/port in all_components)
+		var/obj/item/computer_hardware/component = all_components[port]	//This hopefully stops borgs from just shitting out their parts when they die
+		qdel(component)
+		forget_component(component)
 	return ..()
 
 /obj/item/modular_computer/tablet/integrated/turn_on(mob/user, open_ui = FALSE)
@@ -319,6 +322,29 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/modular_computer/tablet/integrated)
 		var/mob/living/silicon/robot/robo = borgo
 		robo.lamp_color = COLOR_RED //Syndicate likes it red
 
+// IPC integrated tablets runtime in the normal creation test, as they need to be initialized in an IPC
+CREATION_TEST_IGNORE_SUBTYPES(/obj/item/modular_computer/tablet/ipc)
+
+/obj/item/modular_computer/tablet/ipc
+	name = "modular interface"
+	icon_state = "tablet-silicon"
+	icon_state_menu = "menu"
+	has_light = FALSE
+	comp_light_luminosity = 0
+	var/mob/living/carbon/tablet_owner
+
+/obj/item/modular_computer/tablet/ipc/Initialize(mapload)
+	. = ..()
+	tablet_owner = loc
+	if(!isipc(tablet_owner))
+		tablet_owner = null
+		stack_trace("[type] initialized outside of an IPC, deleting.")
+		return INITIALIZE_HINT_QDEL
+
+/obj/item/modular_computer/tablet/ipc/Destroy()
+	tablet_owner = null
+	..()
+
 GLOBAL_LIST_EMPTY(PDAs)
 
 // Round start tablets
@@ -330,9 +356,8 @@ GLOBAL_LIST_EMPTY(PDAs)
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
 	comp_light_luminosity = 2.3
-	max_hardware_size = 1
-
-	can_store_pai = TRUE
+	max_hardware_size = WEIGHT_CLASS_TINY
+	allow_chunky = TRUE
 
 	var/default_disk = 0
 	/// If the PDA has been picked up / equipped before. This is used to set the user's preference background color / theme.
@@ -366,32 +391,13 @@ GLOBAL_LIST_EMPTY(PDAs)
 	to_chat(user, span_notice("It doesn't feel right to snoop around like that..."))
 	return // we don't want ais or cyborgs using a private role tablet
 
-/obj/item/modular_computer/tablet/pda/Initialize(mapload)
-	. = ..()
-	install_component(new /obj/item/computer_hardware/hard_drive/micro)
-	install_component(new /obj/item/computer_hardware/processor_unit/small)
-	install_component(new /obj/item/computer_hardware/battery(src, /obj/item/stock_parts/cell/computer/nano))
-	install_component(new /obj/item/computer_hardware/network_card)
-	install_component(new /obj/item/computer_hardware/card_slot)
-	install_component(new /obj/item/computer_hardware/identifier)
-	install_component(new /obj/item/computer_hardware/sensorpackage)
-
-	if(default_disk)
-		var/obj/item/computer_hardware/hard_drive/portable/disk = new default_disk(src)
-		install_component(disk)
-
-	if(insert_type)
-		inserted_item = new insert_type(src)
-		// show the inserted item
-		update_appearance()
-
 /// Return a list of types you want to pregenerate and use later
 /// Do not pass in things that care about their init location, or expect extra input
 /// Also as a courtesy to me, don't pass in any bombs
 /obj/item/modular_computer/tablet/pda/proc/get_types_to_preload()
 	var/list/preload = list()
-	//preload += default_cartridge
-	preload += insert_type
+	if(ispath(inserted_item))
+		preload += inserted_item
 	return preload
 
 /// Callbacks for preloading pdas

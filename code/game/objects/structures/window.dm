@@ -14,10 +14,8 @@
 	armor_type = /datum/armor/structure_window
 	can_atmos_pass = ATMOS_PASS_PROC
 	rad_insulation = RAD_VERY_LIGHT_INSULATION
-	rad_flags = RAD_PROTECT_CONTENTS
 	pass_flags_self = PASSTRANSPARENT
 	z_flags = Z_BLOCK_IN_DOWN | Z_BLOCK_IN_UP
-	var/ini_dir = null
 	var/state = WINDOW_OUT_OF_FRAME
 	var/reinf = FALSE
 	var/heat_resistance = 800
@@ -37,8 +35,6 @@
 	/// If we added a leaning component to ourselves
 	var/added_leaning = FALSE
 
-
-
 /datum/armor/structure_window
 	fire = 80
 	acid = 100
@@ -47,8 +43,12 @@
 	icon_state = "window_corner"
 	density = FALSE
 
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/corner/spawner, 0)
+
 /obj/structure/window/corner/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/corner/unanchored/spawner, 0)
 
 /obj/structure/window/examine(mob/user)
 	. = ..()
@@ -76,19 +76,20 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	if(reinf && anchored)
 		state = WINDOW_SCREWED_TO_FRAME
 
-	ini_dir = dir
 	air_update_turf(TRUE, TRUE)
 
 	if(fulltile)
 		setDir()
 		obj_flags &= ~BLOCKS_CONSTRUCTION_DIR
 		obj_flags &= ~IGNORE_DENSITY
+	else
+		AddElement(/datum/element/simple_rotation, ROTATION_NEEDS_ROOM, post_rotation_proccall = PROC_REF(post_rotation))
 
 	//windows only block while reinforced and fulltile, so we'll use the proc
 	real_explosion_block = explosion_block
 	explosion_block = EXPLOSION_BLOCK_PROC
 
-	AddComponent(/datum/component/simple_rotation, ROTATION_NEEDS_ROOM, AfterRotation = CALLBACK(src, PROC_REF(AfterRotation)))
+	AddElement(/datum/element/atmos_sensitive)
 
 	var/static/list/loc_connections = list(
 		COMSIG_ATOM_EXIT = PROC_REF(on_exit),
@@ -105,15 +106,12 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	//Adds the component only once. We do it here & not in Initialize() because there are tons of windows & we don't want to add to their init times
 	LoadComponent(/datum/component/leanable, dropping)
 
-/obj/structure/window/ComponentInitialize()
-	. = ..()
-	AddElement(/datum/element/atmos_sensitive)
 /obj/structure/window/rcd_vals(mob/user, obj/item/construction/rcd/the_rcd)
 	if(the_rcd.mode == RCD_DECONSTRUCT)
 		return list("mode" = RCD_DECONSTRUCT, "delay" = 20, "cost" = 5)
 	return FALSE
 
-/obj/structure/window/rcd_act(mob/user, var/obj/item/construction/rcd/the_rcd, passed_mode)
+/obj/structure/window/rcd_act(mob/user, obj/item/construction/rcd/the_rcd, passed_mode)
 	if(passed_mode == RCD_DECONSTRUCT)
 		to_chat(user, span_notice("You deconstruct the window."))
 		log_attack("[key_name(user)] has deconstructed [src] at [loc_name(src)] using [format_text(initial(the_rcd.name))]")
@@ -131,7 +129,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 		new/obj/structure/window/reinforced/clockwork/fulltile(get_turf(src))
 	qdel(src)
 
-/obj/structure/window/singularity_pull(S, current_size)
+/obj/structure/window/singularity_pull(obj/anomaly/singularity/singularity, current_size)
 	..()
 	if(anchored && current_size >= STAGE_TWO)
 		set_anchored(FALSE)
@@ -187,10 +185,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	playsound(src, knocksound, 50, 1)
 	return COMPONENT_CANCEL_ATTACK_CHAIN
 
-/obj/structure/window/attack_hulk(mob/living/carbon/human/user, does_attack_animation = 0)
+/obj/structure/window/attack_hulk(mob/living/carbon/human/user)
 	if(!can_be_reached(user))
-		return 1
-	. = ..()
+		return FALSE
+	return ..()
 
 /obj/structure/window/attack_hand(mob/living/user, list/modifiers)
 	. = ..()
@@ -217,7 +215,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 		return
 	..()
 
-/obj/structure/window/attackby(obj/item/I, mob/living/user, params)
+/obj/structure/window/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(!can_be_reached(user))
 		return TRUE //skip the afterattack
 
@@ -277,9 +275,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 				qdel(src)
 			return
 	return ..()
-
-/obj/structure/window/AltClick(mob/user)
-	return ..() // This hotkey is BLACKLISTED since it's used by /datum/component/simple_rotation
 
 /obj/structure/window/set_anchored(anchorvalue)
 	..()
@@ -345,7 +340,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	if (fulltile)
 		. += new /obj/item/shard(location)
 
-/obj/structure/window/proc/AfterRotation(mob/user, degrees)
+/obj/structure/window/proc/post_rotation(mob/user, degrees)
 	air_update_turf(TRUE, FALSE)
 
 /obj/structure/window/Destroy()
@@ -379,7 +374,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 			return
 
 		var/ratio = atom_integrity / max_integrity
-		ratio = CEILING(ratio*4, 1) * 25
+		ratio = ceil(ratio*4) * 25
 
 		if(smoothing_flags & (SMOOTH_CORNERS|SMOOTH_BITMASK))
 			QUEUE_SMOOTH(src)
@@ -396,12 +391,12 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 /obj/structure/window/atmos_expose(datum/gas_mixture/air, exposed_temperature)
 	take_damage(round(air.return_volume() / 100), BURN, 0, 0)
 
-/obj/structure/window/get_dumping_location(obj/item/storage/source,mob/user)
+/obj/structure/window/get_dumping_location()
 	return null
 
-/obj/structure/window/CanAStarPass(obj/item/card/id/ID, to_dir, atom/movable/passing_atom)
+/obj/structure/window/CanAStarPass(to_dir, datum/can_pass_info/pass_info)
 	if(!density)
-		return 1
+		return TRUE
 	if(fulltile || (dir == to_dir))
 		return 0
 
@@ -410,17 +405,12 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 /obj/structure/window/GetExplosionBlock()
 	return reinf && fulltile ? real_explosion_block : 0
 
-/obj/structure/window/spawner/east
-	dir = EAST
-
-/obj/structure/window/spawner/west
-	dir = WEST
-
-/obj/structure/window/spawner/north
-	dir = NORTH
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/spawner, 0)
 
 /obj/structure/window/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/unanchored/spawner, 0)
 
 /obj/structure/window/reinforced
 	name = "reinforced window"
@@ -435,32 +425,29 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	rad_insulation = RAD_HEAVY_INSULATION
 	ricochet_chance_mod = 0.8
 
-
 /datum/armor/window_reinforced
 	melee = 50
 	bomb = 25
-	rad = 100
 	fire = 80
 	acid = 100
 
-/obj/structure/window/reinforced/spawner/east
-	dir = EAST
-
-/obj/structure/window/reinforced/spawner/west
-	dir = WEST
-
-/obj/structure/window/reinforced/spawner/north
-	dir = NORTH
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/spawner, 0)
 
 /obj/structure/window/reinforced/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/unanchored/spawner, 0)
 
 /obj/structure/window/reinforced/corner
 	icon_state = "rwindow_corner"
 	density = FALSE
 
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/corner/spawner, 0)
+
 /obj/structure/window/reinforced/corner/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/corner/unanchored/spawner, 0)
 
 /obj/structure/window/plasma
 	name = "plasma window"
@@ -473,16 +460,14 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	glass_type = /obj/item/stack/sheet/plasmaglass
 	rad_insulation = RAD_NO_INSULATION
 
-/obj/structure/window/plasma/ComponentInitialize()
+/obj/structure/window/plasma/Initialize(mapload)
 	. = ..()
 	RemoveElement(/datum/element/atmos_sensitive)
-
 
 /datum/armor/window_plasma
 	melee = 75
 	bullet = 5
 	bomb = 45
-	rad = 100
 	fire = 99
 	acid = 100
 
@@ -495,75 +480,83 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	if (fulltile)
 		. += new /obj/item/shard/plasma(location)
 
-/obj/structure/window/plasma/spawner/east
-	dir = EAST
-
-/obj/structure/window/plasma/spawner/west
-	dir = WEST
-
-/obj/structure/window/plasma/spawner/north
-	dir = NORTH
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/plasma/spawner, 0)
 
 /obj/structure/window/plasma/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/plasma/unanchored/spawner, 0)
 
 /obj/structure/window/plasma/corner
 	icon_state = "plasmawindow_corner"
 	density = FALSE
 
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/plasma/corner/spawner, 0)
+
 /obj/structure/window/plasma/corner/unanchored
 	anchored = FALSE
 
-/obj/structure/window/plasma/reinforced
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/plasma/corner/unanchored/spawner, 0)
+
+/obj/structure/window/reinforced/plasma
 	name = "reinforced plasma window"
 	desc = "A window made out of a plasma-silicate alloy and a rod matrix. It looks hopelessly tough to break and is most likely nigh fireproof."
 	icon_state = "plasmarwindow"
 	reinf = TRUE
 	heat_resistance = 50000
-	armor_type = /datum/armor/plasma_reinforced
+	armor_type = /datum/armor/reinforced_plasma
 	max_integrity = 500
 	explosion_block = 2
 	glass_type = /obj/item/stack/sheet/plasmarglass
 
-/datum/armor/plasma_reinforced
+/datum/armor/reinforced_plasma
 	melee = 85
 	bullet = 20
 	bomb = 60
-	rad = 100
 	fire = 99
 	acid = 100
 
-/obj/structure/window/plasma/reinforced/spawner/east
-	dir = EAST
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/plasma/spawner, 0)
 
-/obj/structure/window/plasma/reinforced/spawner/west
-	dir = WEST
-
-/obj/structure/window/plasma/reinforced/spawner/north
-	dir = NORTH
-
-/obj/structure/window/plasma/reinforced/unanchored
+/obj/structure/window/reinforced/plasma/unanchored
 	anchored = FALSE
 
-/obj/structure/window/plasma/reinforced/corner
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/plasma/unanchored/spawner, 0)
+
+/obj/structure/window/reinforced/plasma/corner
 	icon_state = "plasmarwindow_corner"
 	density = FALSE
 
-/obj/structure/window/plasma/reinforced/corner/unanchored
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/plasma/corner/spawner, 0)
+
+/obj/structure/window/reinforced/plasma/corner/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/plasma/corner/unanchored/spawner, 0)
 
 /obj/structure/window/reinforced/tinted
 	name = "tinted window"
 	icon_state = "twindow" //what what, hon hon
 	opacity = TRUE
 
-/obj/structure/window/reinforced/tinted/frosted
-	name = "frosted window"
-	icon_state = "twindow"
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/tinted/spawner, 0)
 
 /obj/structure/window/reinforced/tinted/corner
 	icon_state = "twindow_corner"
 	density = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/tinted/corner/spawner, 0)
+
+/obj/structure/window/reinforced/tinted/corner/unanchored
+	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/tinted/corner/unanchored/spawner, 0)
+
+/obj/structure/window/reinforced/tinted/frosted
+	name = "frosted window"
+	icon_state = "twindow"
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/reinforced/tinted/frosted/spawner, 0)
 
 /obj/structure/window/depleteduranium
 	name = "depleted uranium window"
@@ -571,39 +564,36 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	icon_state = "duwindow"
 	reinf = TRUE
 	heat_resistance = 50000
-	armor_type = /datum/armor/window_depleteduranium
+	armor_type = /datum/armor/depleted_uranium
 	max_integrity = 500
 	explosion_block = 2
 	glass_type = /obj/item/stack/sheet/mineral/uranium
 	rad_insulation = RAD_FULL_INSULATION
 
-
-/datum/armor/window_depleteduranium
+/datum/armor/depleted_uranium
 	melee = 45
 	bullet = 20
 	bomb = 60
-	rad = 100
 	fire = 100
 	acid = 100
 
-/obj/structure/window/depleteduranium/spawner/east
-	dir = EAST
-
-/obj/structure/window/depleteduranium/spawner/west
-	dir = WEST
-
-/obj/structure/window/depleteduranium/spawner/north
-	dir = NORTH
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/depleteduranium/spawner, 0)
 
 /obj/structure/window/depleteduranium/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/depleteduranium/unanchored/spawner, 0)
 
 /obj/structure/window/depleteduranium/corner
 	icon_state = "duwindow_corner"
 	density = FALSE
 
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/depleteduranium/corner/spawner, 0)
+
 /obj/structure/window/depleteduranium/corner/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/depleteduranium/corner/unanchored/spawner, 0)
 
 /* Full Tile Windows (more atom_integrity) */
 
@@ -661,7 +651,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 /obj/structure/window/plasma/fulltile/unanchored
 	anchored = FALSE
 
-/obj/structure/window/plasma/reinforced/fulltile
+/obj/structure/window/reinforced/plasma/fulltile
 	icon = 'icons/obj/smooth_structures/windows/rplasma_window.dmi'
 	icon_state = "rplasma_window-0"
 	base_icon_state = "rplasma_window"
@@ -674,7 +664,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	obj_flags = CAN_BE_HIT
 	glass_amount = 2
 
-/obj/structure/window/plasma/reinforced/fulltile/unanchored
+/obj/structure/window/reinforced/plasma/fulltile/unanchored
 	anchored = FALSE
 
 /obj/structure/window/reinforced/fulltile
@@ -718,7 +708,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	max_integrity = 150
 	glass_amount = 2
 
-/obj/structure/window/shuttle
+/obj/structure/window/reinforced/shuttle
 	name = "shuttle window"
 	desc = "A reinforced, air-locked pod window."
 	icon = 'icons/obj/smooth_structures/windows/shuttle_window.dmi'
@@ -740,11 +730,12 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	glass_amount = 2
 	ricochet_chance_mod = 0.9
 
+/obj/structure/window/reinforced/shuttle/unanchored
+	anchored = FALSE
 
 /datum/armor/window_shuttle
 	melee = 50
 	bomb = 50
-	rad = 100
 	fire = 80
 	acid = 100
 
@@ -757,7 +748,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 /obj/structure/window/shuttle/unanchored
 	anchored = FALSE
 
-/obj/structure/window/plastitanium
+/obj/structure/window/reinforced/plasma/plastitanium
 	name = "plastitanium window"
 	desc = "A durable looking window made of an alloy of of plasma and titanium."
 	icon = 'icons/obj/smooth_structures/windows/plastitanium_window.dmi'
@@ -782,11 +773,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 /datum/armor/window_plastitanium
 	melee = 50
 	bomb = 50
-	rad = 100
 	fire = 80
 	acid = 100
 
-/obj/structure/window/plastitanium/unanchored
+/obj/structure/window/reinforced/plasma/plastitanium/unanchored
 	anchored = FALSE
 
 /obj/structure/window/paperframe
@@ -854,8 +844,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 
 
 /obj/structure/window/paperframe/attackby(obj/item/W, mob/living/user)
-	if(W.is_hot())
-		fire_act(W.is_hot())
+	if(W.get_temperature())
+		fire_act(W.get_temperature())
 		return
 	if(user.combat_mode)
 		return ..()
@@ -877,6 +867,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	icon = 'icons/obj/smooth_structures/windows/clockwork_window.dmi'
 	icon_state = "clockwork_window_single"
 	glass_type = /obj/item/stack/sheet/bronze
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/bronze/spawner, 0)
 
 /obj/structure/window/bronze/unanchored
 	anchored = FALSE
@@ -901,5 +893,9 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/window)
 	icon_state = "clockwork_window_single_corner"
 	density = FALSE
 
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/bronze/corner/spawner, 0)
+
 /obj/structure/window/bronze/corner/unanchored
 	anchored = FALSE
+
+MAPPING_DIRECTIONAL_HELPERS(/obj/structure/window/bronze/corner/unanchored/spawner, 0)

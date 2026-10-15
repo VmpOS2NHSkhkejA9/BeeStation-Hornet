@@ -18,6 +18,8 @@
 	. = ..()
 	overlay = mutable_appearance(icon, overlay_state, ABOVE_MOB_LAYER)
 	add_overlay(overlay)
+
+/obj/vehicle/ridden/space/speedbike/add_riding_element()
 	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/speedbike)
 
 /obj/vehicle/ridden/space/speedbike/Move(newloc,move_dir)
@@ -48,6 +50,8 @@
 	if(isnull(overlay))
 		overlay = mutable_appearance(icon, "speedwagon_cover", ABOVE_MOB_LAYER)
 	add_overlay(overlay)
+
+/obj/vehicle/ridden/space/speedwagon/add_riding_element()
 	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/speedwagon)
 
 /obj/vehicle/ridden/space/speedwagon/Bump(atom/movable/A)
@@ -72,7 +76,7 @@
 				visible_message(span_danger("[src] crashes into [H]!"))
 				playsound(src, 'sound/effects/bang.ogg', 50, 1)
 
-/obj/vehicle/ridden/space/speedwagon/Moved()
+/obj/vehicle/ridden/space/speedwagon/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
 	if(!has_buckled_mobs())
 		return

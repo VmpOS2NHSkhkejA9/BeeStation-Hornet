@@ -17,7 +17,6 @@
 	circuit = /obj/item/circuitboard/machine/portable_thermomachine
 	//We don't use area power, we always use the cell
 	use_power = NO_POWER_USE
-	interacts_with_air = TRUE
 
 	///The cell we spawn with
 	var/obj/item/stock_parts/cell/cell = null
@@ -44,7 +43,6 @@
 
 
 /datum/armor/machinery_portable_thermomachine
-	rad = 100
 	fire = 80
 	acid = 10
 
@@ -136,10 +134,10 @@
 	cell = null
 	var/laser = 0
 	var/cap = 0
-	for(var/obj/item/stock_parts/micro_laser/M in component_parts)
-		laser += M.rating
-	for(var/obj/item/stock_parts/capacitor/M in component_parts)
-		cap += M.rating
+	for(var/datum/stock_part/micro_laser/M in component_parts)
+		laser += M.tier
+	for(var/datum/stock_part/capacitor/M in component_parts)
+		cap += M.tier
 	for(var/obj/item/stock_parts/cell/M in component_parts)
 		cell = M
 
@@ -161,9 +159,9 @@
 /obj/machinery/portable_thermomachine/wrench_act(mob/living/user, obj/item/tool)
 	. = ..()
 	default_unfasten_wrench(user, tool)
-	return TOOL_ACT_TOOLTYPE_SUCCESS
+	return ITEM_INTERACT_SUCCESS
 
-/obj/machinery/portable_thermomachine/attackby(obj/item/I, mob/user, params)
+/obj/machinery/portable_thermomachine/attackby(obj/item/I, mob/user, list/modifiers)
 	add_fingerprint(user)
 
 	if(default_deconstruction_screwdriver(user, icon_state, icon_state, I))

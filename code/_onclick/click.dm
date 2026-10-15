@@ -54,29 +54,31 @@
 		usr.MouseWheelOn(src, delta_x, delta_y, params)
 
 /**
-  * Standard mob ClickOn()
-  * Handles exceptions: Buildmode, middle click, modified clicks, mech actions
-  *
-  * After that, mostly just check your state, check whether you're holding an item,
-  * check whether you're adjacent to the target, then pass off the click to whoever
-  * is receiving it.
-  * The most common are:
-  * * [mob/proc/UnarmedAttack] (atom,adjacent) - used here only when adjacent, with no item in hand; in the case of humans, checks gloves
-  * * [atom/proc/attackby] (item,user) - used only when adjacent
-  * * [obj/item/proc/afterattack] (atom,user,adjacent,params) - used both ranged and adjacent
-  * * [mob/proc/RangedAttack] (atom,params) - used only ranged, only used for tk and laser eyes but could be changed
-  */
+ * Standard mob ClickOn()
+ *
+ * After that, mostly just check your state, check whether you're holding an item,
+ * check whether you're adjacent to the target, then pass off the click to whoever is receiving it.
+ *
+ * The most common are:
+ * * [mob/proc/UnarmedAttack] (atom,adjacent) - used here only when adjacent, with no item in hand; in the case of humans, checks gloves
+ * * [atom/proc/attackby] (item,user) - used only when adjacent
+ * * [obj/item/proc/afterattack] (atom,user,adjacent,params) - used both ranged and adjacent
+ * * [mob/proc/RangedAttack] (atom,modifiers) - used only ranged, only used for tk and laser eyes but could be changed
+ */
 /mob/proc/ClickOn( atom/A, params )
 	if(world.time <= next_click)
 		return
 	next_click = world.time + 1
 
-	if(check_click_intercept(params,A) || notransform)
+	if(check_click_intercept(params,A) || HAS_TRAIT(src, TRAIT_NO_TRANSFORM))
 		return
 
 	var/list/modifiers = params2list(params)
 
 	if(SEND_SIGNAL(src, COMSIG_MOB_CLICKON, A, modifiers) & COMSIG_MOB_CANCEL_CLICKON)
+		return
+
+	if(LAZYACCESS(modifiers, BUTTON4) || LAZYACCESS(modifiers, BUTTON5))
 		return
 
 	if(LAZYACCESS(modifiers, SHIFT_CLICK))
@@ -104,7 +106,7 @@
 		CtrlClickOn(A)
 		return
 
-	if(incapacitated(IGNORE_RESTRAINTS|IGNORE_STASIS))
+	if(INCAPACITATED_IGNORING(src, INCAPABLE_RESTRAINTS|INCAPABLE_STASIS))
 		return
 
 	face_atom(A)
@@ -130,18 +132,18 @@
 	if(W == A)
 		if(LAZYACCESS(modifiers, RIGHT_CLICK))
 			W.attack_self_secondary(src, modifiers)
-			update_inv_hands()
+			update_held_items()
 			return
 		else
 			W.attack_self(src, modifiers)
-			update_inv_hands()
+			update_held_items()
 			return
 
 	//These are always reachable.
 	//User itself, current loc, and user inventory
 	if(HasDirectAccess(A))
 		if(W)
-			W.melee_attack_chain(src, A, params)
+			W.melee_attack_chain(src, A, modifiers)
 		else
 			if(ismob(A))
 				changeNext_move(CLICK_CD_MELEE)
@@ -162,7 +164,7 @@
 	//Standard reach turf to turf or reaching inside storage
 	if(CanReach(A,W))
 		if(W)
-			W.melee_attack_chain(src, A, params)
+			W.melee_attack_chain(src, A, modifiers)
 		else
 			if(ismob(A))
 				changeNext_move(CLICK_CD_MELEE)
@@ -170,17 +172,26 @@
 	else
 		if(W)
 			if(LAZYACCESS(modifiers, RIGHT_CLICK))
-				var/after_attack_secondary_result = W.afterattack_secondary(A, src, FALSE, params)
+				// Try the ranged attack first
+				var/ranged_attack_result = W.ranged_attack_secondary(A, src, modifiers)
+
+				// Defer to normal ranged attack
+				if (ranged_attack_result == SECONDARY_ATTACK_CALL_NORMAL)
+					if (W.ranged_attack(A, src, modifiers))
+						return
+
+				var/after_attack_secondary_result = W.afterattack_secondary(A, src, FALSE, modifiers)
 
 				if(after_attack_secondary_result == SECONDARY_ATTACK_CALL_NORMAL)
-					W.afterattack(A, src, FALSE, params)
+					W.afterattack(A, src, FALSE, modifiers)
 			else
-				W.afterattack(A,src,0,params)
+				if (!W.ranged_attack(A, src, modifiers))
+					W.afterattack(A, src, FALSE, modifiers)
 		else
 			if(LAZYACCESS(modifiers, RIGHT_CLICK))
 				ranged_secondary_attack(A, modifiers)
 			else
-				RangedAttack(A,modifiers)
+				RangedAttack(A, modifiers)
 
 /// Is the atom obscured by a PREVENT_CLICK_UNDER_1 object above it
 /atom/proc/IsObscured()
@@ -299,7 +310,10 @@
 
 
 /*
- * Translates into [atom/proc/attack_hand], etc.
+ * UnarmedAttack: The higest level of mob click chain discounting click itself.
+ *
+ * This handles, just "clicking on something" without an item. It translates
+ * into [atom/proc/attack_hand], [atom/proc/attack_animal] etc.
  *
  * Note: proximity_flag here is used to distinguish between normal usage (flag=1),
  * and usage when clicking on things telekinetically (flag=0).  This proc will
@@ -323,7 +337,7 @@
   * for things like ranged glove touches, spitting alien acid/neurotoxin,
   * animals lunging, etc.
   */
-/mob/proc/RangedAttack(atom/A, modifiers)
+/mob/proc/RangedAttack(atom/A, list/modifiers)
 	if(SEND_SIGNAL(src, COMSIG_MOB_ATTACK_RANGED, A, modifiers) & COMPONENT_CANCEL_ATTACK_CHAIN)
 		return TRUE
 
@@ -376,7 +390,7 @@
 		ML.pulled(src)
 
 /mob/living/CtrlClick(mob/user)
-	if(!isliving(user) || !user.CanReach(src) || user.incapacitated())
+	if(!isliving(user) || !user.CanReach(src) || user.incapacitated)
 		return ..()
 
 	if(world.time < user.next_move)
@@ -391,7 +405,7 @@
 
 /mob/living/carbon/CtrlClick(mob/user)
 
-	if(!iscarbon(user) || !user.CanReach(src) || user.incapacitated())
+	if(!iscarbon(user) || !user.CanReach(src) || user.incapacitated)
 		return ..()
 
 	if(world.time < user.next_move)
@@ -473,7 +487,7 @@
 	return
 
 /mob/proc/ShiftMiddleClickOn(atom/A, params)
-	src.pointed(A, params)
+	src._pointed(A, params)
 	return
 
 /atom/proc/CtrlShiftClick(mob/user)
@@ -545,15 +559,15 @@
 	mouse_opacity = MOUSE_OPACITY_OPAQUE
 	screen_loc = "CENTER"
 
-#define MAX_SAFE_BYOND_ICON_SCALE_TILES (MAX_SAFE_BYOND_ICON_SCALE_PX / world.icon_size)
-#define MAX_SAFE_BYOND_ICON_SCALE_PX (33 * 32)			//Not using world.icon_size on purpose.
+#define MAX_SAFE_BYOND_ICON_SCALE_TILES (MAX_SAFE_BYOND_ICON_SCALE_PX / ICON_SIZE_ALL)
+#define MAX_SAFE_BYOND_ICON_SCALE_PX (33 * 32) //Not using world.icon_size on purpose. //Ok well I trust you!
 
 /atom/movable/screen/click_catcher/proc/UpdateGreed(view_size_x = 15, view_size_y = 15)
 	var/icon/newicon = icon('icons/hud/screen_gen.dmi', "catcher")
 	var/ox = min(MAX_SAFE_BYOND_ICON_SCALE_TILES, view_size_x)
 	var/oy = min(MAX_SAFE_BYOND_ICON_SCALE_TILES, view_size_y)
-	var/px = view_size_x * world.icon_size
-	var/py = view_size_y * world.icon_size
+	var/px = view_size_x * ICON_SIZE_X
+	var/py = view_size_y * ICON_SIZE_Y
 	var/sx = min(MAX_SAFE_BYOND_ICON_SCALE_PX, px)
 	var/sy = min(MAX_SAFE_BYOND_ICON_SCALE_PX, py)
 	newicon.Scale(sx, sy)

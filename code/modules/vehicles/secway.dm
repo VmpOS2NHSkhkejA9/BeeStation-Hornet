@@ -17,8 +17,7 @@
 	fire = 60
 	acid = 60
 
-/obj/vehicle/ridden/secway/Initialize(mapload)
-	. = ..()
+/obj/vehicle/ridden/secway/add_riding_element()
 	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/secway)
 
 /obj/vehicle/ridden/secway/atom_break()
@@ -34,7 +33,7 @@
 	smoke.set_up(0, src)
 	smoke.start()
 
-/obj/vehicle/ridden/secway/attackby(obj/item/W, mob/living/user, params)
+/obj/vehicle/ridden/secway/attackby(obj/item/W, mob/living/user, list/modifiers)
 	if(W.tool_behaviour == TOOL_WELDER && !user.combat_mode)
 		if(atom_integrity < max_integrity)
 			if(W.use_tool(src, user, 0, volume = 50, amount = 1))

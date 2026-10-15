@@ -1,22 +1,17 @@
 /datum/species/oozeling
 	name = "\improper Oozeling"
 	id = SPECIES_OOZELING
-	bodyflag = FLAG_OOZELING
-	species_traits = list(
-		MUTCOLORS,
-		EYECOLOR,
-		HAIR,
-		FACEHAIR,
-		NOAUGMENTS
-	)
 	inherent_traits = list(
 		TRAIT_TOXINLOVER,
 		TRAIT_NOHAIRLOSS,
 		TRAIT_NOFIRE,
 		TRAIT_EASYDISMEMBER,
+		TRAIT_MUTANT_COLORS,
+		TRAIT_NO_AUGMENTS,
 	)
-	hair_color = "mutcolor"
+	hair_color_mode = USE_MUTANT_COLOR
 	hair_alpha = 150
+	facial_hair_alpha = 150
 	mutantlungs = /obj/item/organ/lungs/slime
 	mutanttongue = /obj/item/organ/tongue/slime
 	meat = /obj/item/food/meat/slab/human/mutant/slime
@@ -33,22 +28,11 @@
 	bodypart_overrides = list(
 		BODY_ZONE_HEAD = /obj/item/bodypart/head/oozeling,
 		BODY_ZONE_CHEST = /obj/item/bodypart/chest/oozeling,
-		BODY_ZONE_L_ARM = /obj/item/bodypart/l_arm/oozeling,
-		BODY_ZONE_R_ARM = /obj/item/bodypart/r_arm/oozeling,
-		BODY_ZONE_L_LEG = /obj/item/bodypart/l_leg/oozeling,
-		BODY_ZONE_R_LEG = /obj/item/bodypart/r_leg/oozeling
+		BODY_ZONE_L_ARM = /obj/item/bodypart/arm/left/oozeling,
+		BODY_ZONE_R_ARM = /obj/item/bodypart/arm/right/oozeling,
+		BODY_ZONE_L_LEG = /obj/item/bodypart/leg/left/oozeling,
+		BODY_ZONE_R_LEG = /obj/item/bodypart/leg/right/oozeling
 	)
-
-/datum/species/oozeling/random_name(gender, unique, lastname, attempts)
-	. = "[pick(GLOB.oozeling_first_names)]"
-	if(lastname)
-		. += " [lastname]"
-	else
-		. += " [pick(GLOB.oozeling_last_names)]"
-
-	if(unique && attempts < 10)
-		if(findname(.))
-			. = .(gender, TRUE, lastname, ++attempts)
 
 /datum/species/oozeling/on_species_loss(mob/living/carbon/C)
 	if(regenerate_limbs)
@@ -62,7 +46,7 @@
 		regenerate_limbs.Grant(C)
 
 /datum/species/oozeling/spec_life(mob/living/carbon/human/H, delta_time, times_fired)
-	..()
+	. = ..()
 	if(H.stat == DEAD) //can't farm slime jelly from a dead slime/jelly person indefinitely
 		return
 
@@ -100,11 +84,11 @@
 	if(!atmos_sealed)
 		var/datum/gas_mixture/environment = H.loc.return_air()
 		if(environment?.total_moles())
-			if(GET_MOLES(/datum/gas/water_vapor, environment) >= 1)
+			if(environment.moles[/datum/gas/water_vapor] >= 1)
 				H.blood_volume -= 15
 				if(prob(50))
 					to_chat(H, span_danger("Your ooze melts away rapidly in the water vapor!"))
-			if(H.blood_volume <= 672 && GET_MOLES(/datum/gas/plasma, environment) >= 1)
+			if(H.blood_volume <= 672 && environment.moles[/datum/gas/plasma] >= 1)
 				H.blood_volume += 15
 	if(H.blood_volume < BLOOD_VOLUME_OKAY && prob(5))
 		to_chat(H, span_danger("You feel drained!"))
@@ -114,12 +98,14 @@
 		regenerate_limbs.update_buttons()
 
 /datum/species/oozeling/proc/Cannibalize_Body(mob/living/carbon/human/H)
+	if(HAS_TRAIT(H, TRAIT_OOZELING_NO_CANNIBALIZE))
+		return
 	var/list/limbs_to_consume = list(BODY_ZONE_R_ARM, BODY_ZONE_L_ARM, BODY_ZONE_R_LEG, BODY_ZONE_L_LEG) - H.get_missing_limbs()
 	var/obj/item/bodypart/consumed_limb
 	for(var/L in limbs_to_consume) //Check every bodypart the oozeling has, see if they're organic or not
 		if(!IS_ORGANIC_LIMB(H.get_bodypart(L))) //Get actual limb, list only has body zone
 			limbs_to_consume -= L //If it's inorganic, remove it from the consumption list
-	if(!limbs_to_consume.len)
+	if(!length(limbs_to_consume))
 		H.losebreath++
 		return
 	if((BODY_ZONE_L_LEG in limbs_to_consume) || (BODY_ZONE_R_LEG in limbs_to_consume)) //Check if there are any organic legs left
@@ -135,7 +121,7 @@
 	name = "Regenerate Limbs"
 	check_flags = AB_CHECK_CONSCIOUS
 	button_icon_state = "slimeheal"
-	icon_icon = 'icons/hud/actions/actions_slime.dmi'
+	button_icon = 'icons/hud/actions/actions_slime.dmi'
 	background_icon_state = "bg_alien"
 
 /datum/action/innate/regenerate_limbs/is_available()
@@ -148,39 +134,43 @@
 
 /datum/action/innate/regenerate_limbs/on_activate()
 	var/mob/living/carbon/human/H = owner
+	if(DOING_INTERACTION(H, DOAFTER_SOURCE_REGEN_LIMBS))
+		return
 	var/list/limbs_to_heal = H.get_missing_limbs()
 	if(!LAZYLEN(limbs_to_heal))
 		to_chat(H, span_notice("You feel intact enough as it is."))
 		return
 	to_chat(H, span_notice("You focus intently on your missing [limbs_to_heal.len >= 2 ? "limbs" : "limb"]..."))
 	if(H.blood_volume >= 80*limbs_to_heal.len+BLOOD_VOLUME_OKAY)
-		if(do_after(H, 60, target = H))
+		if(do_after(H, 6 SECONDS, target = H, interaction_key = DOAFTER_SOURCE_REGEN_LIMBS))
 			H.regenerate_limbs()
 			H.blood_volume -= 80*limbs_to_heal.len
 			H.nutrition -= 20*limbs_to_heal.len
 			to_chat(H, span_notice("...and after a moment you finish reforming!"))
+		else
+			to_chat(H, span_warning("...but you must stay still in order to focus on regenerating!"))
 		return
 	if(H.blood_volume >= 80)//We can partially heal some limbs
 		while(H.blood_volume >= BLOOD_VOLUME_OKAY+80 && LAZYLEN(limbs_to_heal))
-			if(do_after(H, 30, target = H))
-				var/healed_limb = pick(limbs_to_heal)
-				H.regenerate_limb(healed_limb)
-				limbs_to_heal -= healed_limb
-				H.blood_volume -= 80
-				H.nutrition -= 20
-			to_chat(H, span_warning("...but there is not enough of you to fix everything! You must attain more blood volume to heal completely!"))
+			if(!do_after(H, 3 SECONDS, target = H, interaction_key = DOAFTER_SOURCE_REGEN_LIMBS))
+				to_chat(H, span_warning("...but you must stay still in order to focus on regenerating!"))
+				return
+			var/healed_limb = pick_n_take(limbs_to_heal)
+			H.regenerate_limb(healed_limb)
+			H.blood_volume -= 80
+			H.nutrition -= 20
 		return
 	to_chat(H, span_warning("...but there is not enough of you to go around! You must attain more blood volume to heal!"))
 
-/datum/species/oozeling/handle_chemicals(datum/reagent/chem, mob/living/carbon/human/H)
+/datum/species/oozeling/handle_chemical(datum/reagent/chem, mob/living/carbon/human/affected, seconds_per_tick, times_fired)
+	. = ..()
+	if(. & COMSIG_MOB_STOP_REAGENT_CHECK)
+		return
 	if(chem.type == /datum/reagent/water)
 		if(chem.volume > 10)
-			H.reagents.remove_reagent(chem.type, chem.volume - 10)
-			to_chat(H, span_warning("The water you consumed is melting away your insides!"))
-		H.blood_volume -= 25
-		H.reagents.remove_reagent(chem.type, chem.metabolization_rate)
-		return TRUE
-	return ..()
+			affected.reagents.remove_reagent(chem.type, chem.volume - 5)
+			to_chat(affected, span_warning("The water you consumed is melting away your insides!"))
+		affected.blood_volume -= 25
 
 /datum/species/oozeling/z_impact_damage(mob/living/carbon/human/H, turf/T, levels)
 	// Splat!
@@ -206,7 +196,7 @@
 			target.visible_message(span_notice("[user] extingushes [target] with a hug!"), span_boldnotice("[user] extingushes you with a hug!"), span_italics("You hear a fire sizzle out."))
 			target.fire_stacks = max(target.fire_stacks - 5, 0)
 			if(target.fire_stacks <= 0)
-				target.ExtinguishMob()
+				target.extinguish_mob()
 		else
 			target.visible_message(span_notice("[target] wriggles out of [user]'s close hug!"), span_notice("You wriggle out of [user]'s close hug."))
 

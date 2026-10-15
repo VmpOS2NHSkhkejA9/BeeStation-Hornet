@@ -108,6 +108,8 @@ CREATE TABLE IF NOT EXISTS `SS13_characters` (
 	`hair_style_name` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`gradient_style` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`facial_style_name` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
+	`facial_hair_gradient` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
+	`facial_hair_gradient_color` VARCHAR(8) COLLATE 'utf8mb4_general_ci',
 	`underwear` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`underwear_color` VARCHAR(8) COLLATE 'utf8mb4_general_ci',
 	`undershirt` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
@@ -123,6 +125,7 @@ CREATE TABLE IF NOT EXISTS `SS13_characters` (
 	`feature_moth_antennae` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`feature_moth_markings` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`feature_moth_wings` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
+	`feature_moth_eyes` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`feature_ethcolor` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`feature_insect_type` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`feature_ipc_screen` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
@@ -161,6 +164,7 @@ CREATE TABLE IF NOT EXISTS `SS13_characters` (
 	`quirk_smoker_cigarettes` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`quirk_junkie_drug` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`quirk_alcohol_type` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
+	`quirk_accent` VARCHAR(64) COLLATE 'utf8mb4_general_ci',
 	`equipped_gear` MEDIUMTEXT COLLATE 'utf8mb4_general_ci',
 	`role_preferences` MEDIUMTEXT COLLATE 'utf8mb4_general_ci',
 	`randomize` MEDIUMTEXT COLLATE 'utf8mb4_general_ci',
@@ -506,7 +510,7 @@ CREATE TABLE IF NOT EXISTS `SS13_schema_revision` (
   `date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`major`,`minor`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-INSERT INTO `SS13_schema_revision` (`major`, `minor`) VALUES (7, 5);
+INSERT INTO `SS13_schema_revision` (`major`, `minor`) VALUES (7, 6);
 
 
 

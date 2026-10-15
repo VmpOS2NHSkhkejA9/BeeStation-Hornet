@@ -27,15 +27,16 @@
 	return ..()
 
 /obj/machinery/dna_scannernew/RefreshParts()
+	. = ..()
 	scan_level = 0
 	damage_coeff = 0
 	precision_coeff = 0
-	for(var/obj/item/stock_parts/scanning_module/P in component_parts)
-		scan_level += P.rating
-	for(var/obj/item/stock_parts/matter_bin/M in component_parts)
-		precision_coeff = M.rating
-	for(var/obj/item/stock_parts/micro_laser/P in component_parts)
-		damage_coeff = P.rating
+	for(var/datum/stock_part/scanning_module/scanning_module in component_parts)
+		scan_level += scanning_module.tier
+	for(var/datum/stock_part/matter_bin/M in component_parts)
+		precision_coeff = M.tier
+	for(var/datum/stock_part/micro_laser/P in component_parts)
+		damage_coeff = P.tier
 	for(var/obj/machinery/computer/scan_consolenew/console in view(1))
 		if(console.connected_scanner == src)
 			console.calculate_timeouts()
@@ -103,19 +104,22 @@
 			return C
 	return null
 
-/obj/machinery/dna_scannernew/close_machine(mob/living/carbon/user)
+/obj/machinery/dna_scannernew/close_machine(mob/living/carbon/user, density_to_set = TRUE)
 	if(!state_open)
 		return FALSE
 
-	..(user)
+	..()
+	// Sealed with someone inside is the only time this thing is actually scanning.
+	update_use_power(occupant ? ACTIVE_POWER_USE : IDLE_POWER_USE)
 
 	return TRUE
 
-/obj/machinery/dna_scannernew/open_machine()
+/obj/machinery/dna_scannernew/open_machine(drop = TRUE, density_to_set = FALSE)
 	if(state_open)
 		return FALSE
 
 	..()
+	update_use_power(IDLE_POWER_USE)
 
 	return TRUE
 
@@ -127,7 +131,7 @@
 		return
 	open_machine()
 
-/obj/machinery/dna_scannernew/attackby(obj/item/I, mob/user, params)
+/obj/machinery/dna_scannernew/attackby(obj/item/I, mob/user, list/modifiers)
 
 	if(default_deconstruction_screwdriver(user, icon_state, icon_state, I))//sent icon_state is irrelevant...
 		update_icon()//..since we're updating the icon here, since the scanner can be unpowered when opened/closed
@@ -152,25 +156,6 @@
 	if(user.stat != CONSCIOUS || HAS_TRAIT(user, TRAIT_UI_BLOCKED) || !Adjacent(user) || !user.Adjacent(target) || !iscarbon(target) || !ISADVANCEDTOOLUSER(user) || locked)
 		return
 	close_machine(target)
-
-/obj/machinery/dna_scannernew/proc/irradiate(mob/living/carbon/target)
-	if(HAS_TRAIT(target, TRAIT_RADIMMUNE))
-		return
-	to_chat(target, span_danger("You feel warm."))
-	target.rad_act(250/(damage_coeff ** 2))
-
-	if(!target.has_dna() || HAS_TRAIT(target, TRAIT_BADDNA))
-		return
-
-	var/resist = target.getarmor(null, RAD)
-	if(prob(max(0,100-resist)))
-		target.random_mutate_unique_identity()
-		if(prob(20))
-			if(prob(90))
-				target.easy_random_mutate(NEGATIVE+MINOR_NEGATIVE)
-			else
-				target.easy_random_mutate(POSITIVE)
-			target.domutcheck()
 
 /obj/machinery/dna_scannernew/proc/shock(mob/user, prb)
 	if(machine_stat & (BROKEN|NOPOWER))		// unpowered, no shock

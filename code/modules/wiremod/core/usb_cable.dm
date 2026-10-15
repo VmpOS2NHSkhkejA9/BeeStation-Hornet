@@ -4,7 +4,7 @@
 	desc = "A cable that can connect integrated circuits to anything with a USB port, such as computers and machines."
 	icon = 'icons/obj/wiremod.dmi'
 	icon_state = "usb_cable"
-	item_state = "coil"
+	inhand_icon_state = "coil"
 	w_class = WEIGHT_CLASS_TINY
 	custom_materials = list(/datum/material/iron = 75)
 	var/usb_range = USB_CABLE_MAX_RANGE
@@ -35,7 +35,7 @@
 	if (!check_in_range())
 		return PROCESS_KILL
 
-/obj/item/usb_cable/pre_attack(atom/target, mob/living/user, params)
+/obj/item/usb_cable/pre_attack(atom/target, mob/living/user, list/modifiers)
 	var/signal_result = SEND_SIGNAL(target, COMSIG_ATOM_USB_CABLE_TRY_ATTACH, src, user)
 
 	var/last_attached_circuit = attached_circuit
@@ -86,13 +86,13 @@
 
 /obj/item/usb_cable/proc/register_circuit_signals()
 	RegisterSignal(attached_circuit, COMSIG_MOVABLE_MOVED, PROC_REF(on_moved))
-	RegisterSignal(attached_circuit, COMSIG_PARENT_QDELETING, PROC_REF(on_circuit_qdeling))
+	RegisterSignal(attached_circuit, COMSIG_QDELETING, PROC_REF(on_circuit_qdeling))
 	RegisterSignal(attached_circuit.shell, COMSIG_MOVABLE_MOVED, PROC_REF(on_moved))
 
 /obj/item/usb_cable/proc/unregister_circuit_signals(obj/item/integrated_circuit/old_circuit)
 	UnregisterSignal(attached_circuit, list(
 		COMSIG_MOVABLE_MOVED,
-		COMSIG_PARENT_QDELETING,
+		COMSIG_QDELETING,
 	))
 
 	UnregisterSignal(attached_circuit.shell, COMSIG_MOVABLE_MOVED)

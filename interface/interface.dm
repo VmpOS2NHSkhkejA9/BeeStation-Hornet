@@ -65,7 +65,7 @@ AUTH_CLIENT_VERB(reportissue)
 			message += GLOB.revdata.GetTestMergeInfo(FALSE)
 		// We still use tgalert here because some people were concerned that if someone wanted to report that tgui wasn't working
 		// then the report issue button being tgui-based would be problematic.
-		if(tgalert(src, message, "Report Issue","Yes","No")!="Yes")
+		if(tg_alert(src, message, "Report Issue", "Yes", "No") != "Yes")
 			return
 		var/static/issue_template = rustg_file_read(".github/ISSUE_TEMPLATE.md")
 		var/servername = CONFIG_GET(string/servername)
@@ -260,11 +260,11 @@ AUTH_CLIENT_VERB(map)
 	set name = "View Webmap"
 	set desc = "View the current map in the webviewer"
 	set category = "OOC"
-	if(SSmapping.config.map_link == "None")
+	if(SSmapping.current_map.map_link == "None")
 		to_chat(src,span_danger("The current map does not have a webmap. "))
-	else if(SSmapping.config.map_link)
-		if(alert("This will open the current map in your browser. Are you sure?",,"Yes","No")!="Yes")
+	else if(SSmapping.current_map.map_link)
+		if(tgui_alert(src, "This will open the current map in your browser. Are you sure?", "", list("Yes","No"))!="Yes")
 			return
-		src << link("https://webmap.affectedarc07.co.uk/maps/bee/[SSmapping.config.map_link]")
+		src << link("https://webmap.affectedarc07.co.uk/maps/bee/[SSmapping.current_map.map_link]")
 	else
 		to_chat(src, span_danger("The current map is either invalid or unavailable. Open an issue on the github. "))

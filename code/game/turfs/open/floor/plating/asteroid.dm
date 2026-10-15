@@ -36,7 +36,7 @@
 	if(user)
 		to_chat(user, span_notice("Looks like someone has dug here already."))
 
-/turf/open/floor/plating/asteroid/try_replace_tile(obj/item/stack/tile/T, mob/user, params)
+/turf/open/floor/plating/asteroid/try_replace_tile(obj/item/stack/tile/T, mob/user, list/modifiers)
 	return
 
 /turf/open/floor/plating/asteroid/burn_tile()
@@ -51,7 +51,7 @@
 /turf/open/floor/plating/asteroid/crush()
 	return
 
-/turf/open/floor/plating/asteroid/attackby(obj/item/W, mob/user, params)
+/turf/open/floor/plating/asteroid/attackby(obj/item/W, mob/user, list/modifiers)
 	. = ..()
 	if(!.)
 		if(W.tool_behaviour == TOOL_SHOVEL || W.tool_behaviour == TOOL_MINING)
@@ -72,7 +72,7 @@
 				return TRUE
 		else if(istype(W, /obj/item/storage/bag/ore))
 			for(var/obj/item/stack/ore/O in src)
-				SEND_SIGNAL(W, COMSIG_PARENT_ATTACKBY, O)
+				SEND_SIGNAL(W, COMSIG_ATOM_ATTACKBY, O)
 
 /turf/open/floor/plating/asteroid/rcd_vals(mob/user, obj/item/construction/rcd/the_rcd)
 	if(the_rcd.canRturf)

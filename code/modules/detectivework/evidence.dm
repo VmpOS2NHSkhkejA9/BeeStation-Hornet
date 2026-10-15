@@ -5,7 +5,7 @@
 	desc = "An empty evidence bag."
 	icon = 'icons/obj/storage/storage.dmi'
 	icon_state = "evidenceobj"
-	item_state = ""
+	inhand_icon_state = ""
 	w_class = WEIGHT_CLASS_TINY
 
 /obj/item/evidencebag/afterattack(obj/item/I, mob/user,proximity)
@@ -14,7 +14,7 @@
 		return
 	evidencebagEquip(I, user)
 
-/obj/item/evidencebag/attackby(obj/item/I, mob/user, params)
+/obj/item/evidencebag/attackby(obj/item/I, mob/user, list/modifiers)
 	if(evidencebagEquip(I, user))
 		return 1
 

@@ -1,23 +1,23 @@
 //Bot Construction
 
 /obj/item/bot_assembly
-	icon = 'icons/mob/aibots.dmi'
+	icon = 'icons/mob/silicon/aibots.dmi'
 	w_class = WEIGHT_CLASS_NORMAL
 	force = 3
 	throw_speed = 2
 	throw_range = 5
 	var/created_name
 	var/build_step = ASSEMBLY_FIRST_STEP
-	var/robot_arm = /obj/item/bodypart/r_arm/robot
+	var/robot_arm = /obj/item/bodypart/arm/right/robot
 
-/obj/item/bot_assembly/attackby(obj/item/I, mob/user, params)
+/obj/item/bot_assembly/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	if(istype(I, /obj/item/pen))
 		rename_bot()
 		return
 
 /obj/item/bot_assembly/proc/rename_bot()
-	var/t = sanitize_name(stripped_input(usr, "Enter new robot name", name, created_name,MAX_NAME_LEN))
+	var/t = sanitize_name(stripped_input(usr, "Enter new robot name", name, created_name,MAX_NAME_LEN), allow_numbers = TRUE)
 	if(!t)
 		return
 	if(!in_range(src, usr) && loc != usr)
@@ -40,9 +40,9 @@
 	throwforce = 5
 	created_name = "Cleanbot"
 
-/obj/item/bot_assembly/cleanbot/attackby(obj/item/W, mob/user, params)
+/obj/item/bot_assembly/cleanbot/attackby(obj/item/W, mob/user, list/modifiers)
 	..()
-	if(istype(W, /obj/item/bodypart/l_arm/robot) || istype(W, /obj/item/bodypart/r_arm/robot))
+	if(istype(W, /obj/item/bodypart/arm/left/robot) || istype(W, /obj/item/bodypart/arm/right/robot))
 		if(!can_finish_build(W, user))
 			return
 		var/mob/living/simple_animal/bot/cleanbot/A = new(drop_location())
@@ -59,9 +59,9 @@
 	throwforce = 5
 	created_name = "Larry"
 
-/obj/item/bot_assembly/larry/attackby(obj/item/W, mob/user, params)
+/obj/item/bot_assembly/larry/attackby(obj/item/W, mob/user, list/modifiers)
 	..()
-	if(istype(W, /obj/item/bodypart/l_arm/robot) || istype(W, /obj/item/bodypart/r_arm/robot))
+	if(istype(W, /obj/item/bodypart/arm/left/robot) || istype(W, /obj/item/bodypart/arm/right/robot))
 		if(!can_finish_build(W, user))
 			return
 		var/mob/living/simple_animal/bot/cleanbot/larry/A = new(drop_location())
@@ -76,26 +76,26 @@
 	name = "incomplete ED-209 assembly"
 	desc = "Some sort of bizarre assembly."
 	icon_state = "ed209_frame"
-	item_state = "ed209_frame"
+	inhand_icon_state = "ed209_frame"
 	created_name = "ED-209 Security Robot" //To preserve the name if it's a unique securitron I guess
 	var/lasercolor = ""
 	var/vest_type = /obj/item/clothing/suit/armor/vest
 
-/obj/item/bot_assembly/ed209/attackby(obj/item/W, mob/user, params)
+/obj/item/bot_assembly/ed209/attackby(obj/item/W, mob/user, list/modifiers)
 	..()
 	switch(build_step)
 		if(ASSEMBLY_FIRST_STEP, ASSEMBLY_SECOND_STEP)
-			if(istype(W, /obj/item/bodypart/l_leg/robot) || istype(W, /obj/item/bodypart/r_leg/robot))
+			if(istype(W, /obj/item/bodypart/leg/left/robot) || istype(W, /obj/item/bodypart/leg/right/robot))
 				if(!user.temporarilyRemoveItemFromInventory(W))
 					return
 				to_chat(user, span_notice("You add [W] to [src]."))
 				qdel(W)
 				name = "legs/frame assembly"
 				if(build_step == ASSEMBLY_FIRST_STEP)
-					item_state = "ed209_leg"
+					inhand_icon_state = "ed209_leg"
 					icon_state = "ed209_leg"
 				else
-					item_state = "ed209_legs"
+					inhand_icon_state = "ed209_legs"
 					icon_state = "ed209_legs"
 				build_step++
 
@@ -113,7 +113,7 @@
 				to_chat(user, span_notice("You add [W] to [src]."))
 				qdel(W)
 				name = "vest/legs/frame assembly"
-				item_state = "[lasercolor]ed209_shell"
+				inhand_icon_state = "[lasercolor]ed209_shell"
 				icon_state = "[lasercolor]ed209_shell"
 				build_step++
 
@@ -143,7 +143,7 @@
 			to_chat(user, span_notice("You add [W] to [src]."))
 			qdel(W)
 			name = "covered and shielded frame assembly"
-			item_state = "[lasercolor]ed209_hat"
+			inhand_icon_state = "[lasercolor]ed209_hat"
 			icon_state = "[lasercolor]ed209_hat"
 			build_step++
 
@@ -155,7 +155,7 @@
 				to_chat(user, span_notice("You add [W] to [src]."))
 				qdel(W)
 				name = "covered, shielded and sensored frame assembly"
-				item_state = "[lasercolor]ed209_prox"
+				inhand_icon_state = "[lasercolor]ed209_prox"
 				icon_state = "[lasercolor]ed209_prox"
 
 		if(6)
@@ -181,7 +181,7 @@
 					if(!istype(W, /obj/item/gun/energy/laser/redtag))
 						return
 				if("")
-					if(!istype(W, /obj/item/gun/energy/disabler))
+					if(!istype(W, /obj/item/gun/ballistic/taser,))
 						return
 				else
 					return
@@ -189,7 +189,7 @@
 				return
 			name = "[W.name] ED-209 assembly"
 			to_chat(user, span_notice("You add [W] to [src]."))
-			item_state = "[lasercolor]ed209_taser"
+			inhand_icon_state = "[lasercolor]ed209_taser"
 			icon_state = "[lasercolor]ed209_taser"
 			qdel(W)
 			build_step++
@@ -241,7 +241,7 @@
 			name = "incomplete floorbot assembly"
 			icon_state = "[toolbox_color]toolbox_tiles_sensor"
 
-/obj/item/bot_assembly/floorbot/attackby(obj/item/W, mob/user, params)
+/obj/item/bot_assembly/floorbot/attackby(obj/item/W, mob/user, list/modifiers)
 	..()
 	switch(build_step)
 		if(ASSEMBLY_FIRST_STEP)
@@ -254,7 +254,7 @@
 				update_icon()
 
 		if(ASSEMBLY_SECOND_STEP)
-			if(istype(W, /obj/item/bodypart/l_arm/robot) || istype(W, /obj/item/bodypart/r_arm/robot))
+			if(istype(W, /obj/item/bodypart/arm/left/robot) || istype(W, /obj/item/bodypart/arm/right/robot))
 				if(!can_finish_build(W, user))
 					return
 				var/mob/living/simple_animal/bot/floorbot/A = new(drop_location(), toolbox_color)
@@ -282,7 +282,7 @@
 		if(skin)
 			add_overlay("kit_skin_[skin]")
 
-/obj/item/bot_assembly/medbot/attackby(obj/item/W, mob/user, params)
+/obj/item/bot_assembly/medbot/attackby(obj/item/W, mob/user, list/modifiers)
 	..()
 	switch(build_step)
 		if(ASSEMBLY_FIRST_STEP)
@@ -317,7 +317,7 @@
 	icon_state = "honkbot_arm"
 	created_name = "Honkbot"
 
-/obj/item/bot_assembly/honkbot/attackby(obj/item/I, mob/user, params)
+/obj/item/bot_assembly/honkbot/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	switch(build_step)
 		if(ASSEMBLY_FIRST_STEP)
@@ -349,12 +349,12 @@
 	name = "incomplete securitron assembly"
 	desc = "Some sort of bizarre assembly made from a proximity sensor, helmet, and signaler."
 	icon_state = "helmet_signaler"
-	item_state = "helmet"
+	inhand_icon_state = "helmet"
 	created_name = "Securitron" //To preserve the name if it's a unique securitron I guess
 	var/swordamt = 0 //If you're converting it into a grievousbot, how many swords have you attached
 	var/toyswordamt = 0 //honk
 
-/obj/item/bot_assembly/secbot/attackby(obj/item/I, mob/user, params)
+/obj/item/bot_assembly/secbot/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	var/atom/Tsec = drop_location()
 	switch(build_step)
@@ -388,7 +388,7 @@
 					build_step--
 
 		if(ASSEMBLY_THIRD_STEP)
-			if((istype(I, /obj/item/bodypart/l_arm/robot)) || (istype(I, /obj/item/bodypart/r_arm/robot)))
+			if((istype(I, /obj/item/bodypart/arm/left/robot)) || (istype(I, /obj/item/bodypart/arm/right/robot)))
 				if(!user.temporarilyRemoveItemFromInventory(I))
 					return
 				to_chat(user, span_notice("You add [I] to [src]!"))
@@ -405,7 +405,7 @@
 				build_step--
 
 		if(ASSEMBLY_FOURTH_STEP)
-			if(istype(I, /obj/item/melee/baton))
+			if(istype(I, /obj/item/melee/baton/security))
 				if(!can_finish_build(I, user))
 					return
 				to_chat(user, span_notice("You complete the Securitron! Beep boop."))
@@ -486,7 +486,7 @@
 	icon_state = "firebot_arm"
 	created_name = "Firebot"
 
-/obj/item/bot_assembly/firebot/attackby(obj/item/I, mob/user, params)
+/obj/item/bot_assembly/firebot/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	switch(build_step)
 		if(ASSEMBLY_FIRST_STEP)
@@ -516,7 +516,7 @@
 	icon_state = "atmosbot_assembly"
 	created_name = "Atmosbot"
 
-/obj/item/bot_assembly/atmosbot/attackby(obj/item/I, mob/user, params)
+/obj/item/bot_assembly/atmosbot/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	switch(build_step)
 		if(ASSEMBLY_FIRST_STEP)

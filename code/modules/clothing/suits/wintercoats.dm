@@ -6,11 +6,12 @@
 	icon = 'icons/obj/clothing/suits/wintercoat.dmi'
 	icon_state = "coatwinter"
 	worn_icon = 'icons/mob/clothing/suits/wintercoat.dmi'
-	item_state = "coatwinter"
+	inhand_icon_state = "coatwinter"
 	body_parts_covered = CHEST|GROIN|ARMS
 	cold_protection = CHEST|GROIN|ARMS
 	min_cold_protection_temperature = FIRE_SUIT_MIN_TEMP_PROTECT
 	armor_type = /datum/armor/hooded_wintercoat
+	custom_price = 25
 	allowed = list(
 		/obj/item/flashlight,
 		/obj/item/tank/internals/emergency_oxygen,
@@ -33,7 +34,8 @@
 	body_parts_covered = HEAD
 	cold_protection = HEAD
 	min_cold_protection_temperature = FIRE_SUIT_MIN_TEMP_PROTECT
-	flags_inv = HIDEHAIR|HIDEEARS
+	flags_inv = HIDEEARS
+	hair_mask = /datum/hair_mask/winterhood
 
 /obj/item/clothing/suit/hooded/wintercoat/white
 	name = "white winter coat"
@@ -47,7 +49,7 @@
 /obj/item/clothing/suit/hooded/wintercoat/captain
 	name = "captain's winter coat"
 	icon_state = "coatcaptain"
-	item_state = "coatcaptain"
+	inhand_icon_state = "coatcaptain"
 	armor_type = /datum/armor/wintercoat_captain
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/captain
 
@@ -72,10 +74,11 @@
 	name = "security winter coat"
 	desc = "A thick jacket made from a light, fire-resistant kevlar-like material which provides some protection to the user. It is particularly effective against energy-based threats due to its thickness and insulation."
 	icon_state = "coatsecurity"
-	item_state = "coatsecurity"
+	inhand_icon_state = "coatsecurity"
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/security
 	armor_type = /datum/armor/wintercoat_security
 	slowdown = 0.04
+	custom_price = 50
 
 
 /datum/armor/wintercoat_security
@@ -110,10 +113,10 @@
 /obj/item/clothing/suit/hooded/wintercoat/detective
 	name = "detective winter coat"
 	icon_state = "coatdetective"
-	item_state = "coatdetective"
+	inhand_icon_state = "coatdetective"
 	allowed = list(
 		/obj/item/tank/internals,
-		/obj/item/melee/classic_baton,
+		/obj/item/melee/baton,
 		/obj/item/gun/ballistic/revolver/detective,
 		/obj/item/detective_scanner,
 		/obj/item/flashlight,
@@ -156,7 +159,7 @@
 /obj/item/clothing/suit/hooded/wintercoat/brigphys
 	name = "brig physician winter coat"
 	icon_state = "coatbrigphys"
-	item_state = "coatbrigphys"
+	inhand_icon_state = "coatbrigphys"
 	allowed = list(
 		/obj/item/analyzer,
 		/obj/item/dnainjector,
@@ -167,7 +170,7 @@
 		/obj/item/reagent_containers/cup/beaker,
 		/obj/item/reagent_containers/cup/bottle,
 		/obj/item/reagent_containers/hypospray,
-		/obj/item/reagent_containers/pill,
+		/obj/item/reagent_containers/applicator,
 		/obj/item/reagent_containers/syringe,
 		/obj/item/sensor_device,
 		/obj/item/stack/medical,
@@ -179,7 +182,7 @@
 		/obj/item/tank/internals/plasmaman,
 		/obj/item/toy,
 		/obj/item/storage/fancy/cigarettes,
-		/obj/item/lighter
+		/obj/item/lighter,
 	)
 	armor_type = /datum/armor/wintercoat_brigphys
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/brigphys
@@ -209,19 +212,19 @@
 /obj/item/clothing/suit/hooded/wintercoat/medical
 	name = "medical winter coat"
 	icon_state = "coatmedical"
-	item_state = "coatmedical"
+	inhand_icon_state = "coatmedical"
 	allowed = list(
 		/obj/item/analyzer,
 		/obj/item/dnainjector,
 		/obj/item/flashlight/pen,
 		/obj/item/healthanalyzer,
-		/obj/item/melee/classic_baton/police/telescopic,
+		/obj/item/melee/baton/telescopic,
 		/obj/item/paper,
 		/obj/item/reagent_containers/dropper,
 		/obj/item/reagent_containers/cup/beaker,
 		/obj/item/reagent_containers/cup/bottle,
 		/obj/item/reagent_containers/hypospray,
-		/obj/item/reagent_containers/pill,
+		/obj/item/reagent_containers/applicator,
 		/obj/item/reagent_containers/syringe,
 		/obj/item/sensor_device,
 		/obj/item/stack/medical,
@@ -233,7 +236,7 @@
 		/obj/item/tank/internals/plasmaman,
 		/obj/item/toy,
 		/obj/item/storage/fancy/cigarettes,
-		/obj/item/lighter
+		/obj/item/lighter,
 	)
 	armor_type = /datum/armor/wintercoat_medical
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/medical
@@ -246,22 +249,47 @@
 /obj/item/clothing/head/hooded/winterhood/medical
 	icon_state = "winterhood_medical"
 
+// Chief Medical Officer
+/obj/item/clothing/suit/hooded/wintercoat/medical/cmo
+	name = "chief medical officer's winter coat"
+	desc = "A winter coat in a vibrant shade of blue with a small silver caduceus instead of a plastic zipper tab. The normal liner is replaced with an exceptionally thick, soft layer of fur."
+	icon_state = "coatcmo"
+	inhand_icon_state = null
+	armor_type = /datum/armor/medical_cmo
+	hoodtype = /obj/item/clothing/head/hooded/winterhood/medical/cmo
+
+/datum/armor/medical_cmo
+	bio = 50
+	fire = 20
+	acid = 30
+
+/obj/item/clothing/suit/hooded/wintercoat/medical/cmo/Initialize(mapload)
+	. = ..()
+	allowed += list(
+		/obj/item/melee/baton/telescopic,
+	)
+
+/obj/item/clothing/head/hooded/winterhood/medical/cmo
+	desc = "A blue winter coat hood."
+	icon_state = "hood_cmo"
+	armor_type = /datum/armor/medical_cmo
+
+
 /obj/item/clothing/suit/hooded/wintercoat/virologist
 	name = "virology winter coat"
 	icon_state = "coatviro"
-	item_state = "coatviro"
+	inhand_icon_state = "coatviro"
 	allowed = list(
-		/obj/item/extrapolator,
 		/obj/item/analyzer,
 		/obj/item/flashlight/pen,
 		/obj/item/healthanalyzer,
-		/obj/item/melee/classic_baton/police/telescopic,
+		/obj/item/melee/baton/telescopic,
 		/obj/item/paper,
 		/obj/item/reagent_containers/dropper,
 		/obj/item/reagent_containers/cup/beaker,
 		/obj/item/reagent_containers/cup/bottle,
 		/obj/item/reagent_containers/hypospray,
-		/obj/item/reagent_containers/pill,
+		/obj/item/reagent_containers/applicator,
 		/obj/item/reagent_containers/syringe,
 		/obj/item/sensor_device,
 		/obj/item/stack/medical,
@@ -273,11 +301,10 @@
 		/obj/item/tank/internals/plasmaman,
 		/obj/item/toy,
 		/obj/item/storage/fancy/cigarettes,
-		/obj/item/lighter
+		/obj/item/lighter,
 	)
 	armor_type = /datum/armor/wintercoat_virologist
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/virologist
-
 
 /datum/armor/wintercoat_virologist
 	bio = 80
@@ -287,7 +314,6 @@
 	icon_state = "winterhood_viro"
 	armor_type = /datum/armor/winterhood_virologist
 
-
 /datum/armor/winterhood_virologist
 	bio = 50
 
@@ -295,19 +321,19 @@
 	name = "chemist winter coat"
 	desc = "A heavy jacket made from hardy 'synthetic' animal furs capable of enduring most chemical mishaps."
 	icon_state = "coatchem"
-	item_state = "coatchem"
+	inhand_icon_state = "coatchem"
 	allowed = list(
 		/obj/item/grenade/chem_grenade,
 		/obj/item/analyzer,
 		/obj/item/flashlight/pen,
 		/obj/item/healthanalyzer,
-		/obj/item/melee/classic_baton/police/telescopic,
+		/obj/item/melee/baton/telescopic,
 		/obj/item/paper,
 		/obj/item/reagent_containers/dropper,
 		/obj/item/reagent_containers/cup/beaker,
 		/obj/item/reagent_containers/cup/bottle,
 		/obj/item/reagent_containers/hypospray,
-		/obj/item/reagent_containers/pill,
+		/obj/item/reagent_containers/applicator,
 		/obj/item/reagent_containers/syringe,
 		/obj/item/sensor_device,
 		/obj/item/stack/medical,
@@ -319,12 +345,11 @@
 		/obj/item/tank/internals/plasmaman,
 		/obj/item/toy,
 		/obj/item/storage/fancy/cigarettes,
-		/obj/item/lighter
+		/obj/item/lighter,
 	)
 	armor_type = /datum/armor/wintercoat_chemist
 	resistance_flags = FIRE_PROOF | ACID_PROOF
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/chemist
-
 
 /datum/armor/wintercoat_chemist
 	bomb = 15
@@ -341,20 +366,20 @@
 /obj/item/clothing/suit/hooded/wintercoat/geneticist
 	name = "geneticist winter coat"
 	icon_state = "coatgene"
-	item_state = "coatgene"
+	inhand_icon_state = "coatgene"
 	allowed = list(
 		/obj/item/dnainjector,
 		/obj/item/sequence_scanner,
 		/obj/item/analyzer,
 		/obj/item/flashlight/pen,
 		/obj/item/healthanalyzer,
-		/obj/item/melee/classic_baton/police/telescopic,
+		/obj/item/melee/baton/telescopic,
 		/obj/item/paper,
 		/obj/item/reagent_containers/dropper,
 		/obj/item/reagent_containers/cup/beaker,
 		/obj/item/reagent_containers/cup/bottle,
 		/obj/item/reagent_containers/hypospray,
-		/obj/item/reagent_containers/pill,
+		/obj/item/reagent_containers/applicator,
 		/obj/item/reagent_containers/syringe,
 		/obj/item/sensor_device,
 		/obj/item/stack/medical,
@@ -366,7 +391,7 @@
 		/obj/item/tank/internals/plasmaman,
 		/obj/item/toy,
 		/obj/item/storage/fancy/cigarettes,
-		/obj/item/lighter
+		/obj/item/lighter,
 	)
 	armor_type = /datum/armor/wintercoat_geneticist
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/geneticist
@@ -374,7 +399,6 @@
 
 /datum/armor/wintercoat_geneticist
 	bio = 20
-	rad = 30
 	acid = 45
 
 /obj/item/clothing/head/hooded/winterhood/geneticist
@@ -383,11 +407,30 @@
 /obj/item/clothing/suit/hooded/wintercoat/science
 	name = "science winter coat"
 	icon_state = "coatscience"
-	item_state = "coatscience"
-	allowed = list(/obj/item/analyzer, /obj/item/stack/medical, /obj/item/dnainjector, /obj/item/reagent_containers/dropper, /obj/item/reagent_containers/syringe, /obj/item/reagent_containers/hypospray, /obj/item/healthanalyzer, /obj/item/flashlight/pen, /obj/item/reagent_containers/cup/bottle, /obj/item/reagent_containers/cup/beaker, /obj/item/reagent_containers/pill, /obj/item/storage/pill_bottle, /obj/item/paper, /obj/item/melee/classic_baton/police/telescopic, /obj/item/toy, /obj/item/storage/fancy/cigarettes, /obj/item/lighter, /obj/item/tank/internals/emergency_oxygen, /obj/item/tank/internals/plasmaman)
+	inhand_icon_state = "coatscience"
+	allowed = list(
+		/obj/item/analyzer,
+		/obj/item/stack/medical,
+		/obj/item/dnainjector,
+		/obj/item/reagent_containers/dropper,
+		/obj/item/reagent_containers/syringe,
+		/obj/item/reagent_containers/hypospray,
+		/obj/item/healthanalyzer,
+		/obj/item/flashlight/pen,
+		/obj/item/reagent_containers/cup/bottle,
+		/obj/item/reagent_containers/cup/beaker,
+		/obj/item/reagent_containers/applicator,
+		/obj/item/storage/pill_bottle,
+		/obj/item/paper,
+		/obj/item/melee/baton/telescopic,
+		/obj/item/toy,
+		/obj/item/storage/fancy/cigarettes,
+		/obj/item/lighter,
+		/obj/item/tank/internals/emergency_oxygen,
+		/obj/item/tank/internals/plasmaman,
+	)
 	armor_type = /datum/armor/wintercoat_science
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/science
-
 
 /datum/armor/wintercoat_science
 	bomb = 10
@@ -398,14 +441,13 @@
 /obj/item/clothing/suit/hooded/wintercoat/engineering
 	name = "engineering winter coat"
 	icon_state = "coatengineer"
-	item_state = "coatengineer"
+	inhand_icon_state = "coatengineer"
 	armor_type = /datum/armor/wintercoat_engineering
 	allowed = list(/obj/item/flashlight, /obj/item/tank/internals/emergency_oxygen, /obj/item/tank/internals/plasmaman, /obj/item/t_scanner, /obj/item/construction/rcd, /obj/item/pipe_dispenser, /obj/item/toy, /obj/item/storage/fancy/cigarettes, /obj/item/lighter)
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/engineering
 
 
 /datum/armor/wintercoat_engineering
-	rad = 20
 	fire = 30
 	acid = 45
 
@@ -415,8 +457,9 @@
 /obj/item/clothing/suit/hooded/wintercoat/engineering/atmos
 	name = "atmospherics winter coat"
 	icon_state = "coatatmos"
-	item_state = "coatatmos"
+	inhand_icon_state = "coatatmos"
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/engineering/atmos
+	allowed = list(/obj/item/flashlight, /obj/item/tank/internals/emergency_oxygen, /obj/item/tank/internals/plasmaman, /obj/item/t_scanner, /obj/item/construction/rcd, /obj/item/pipe_dispenser, /obj/item/toy, /obj/item/storage/fancy/cigarettes, /obj/item/lighter, /obj/item/extinguisher)
 
 /obj/item/clothing/head/hooded/winterhood/engineering/atmos
 	icon_state = "winterhood_atmos"
@@ -424,7 +467,7 @@
 /obj/item/clothing/suit/hooded/wintercoat/hydro
 	name = "hydroponics winter coat"
 	icon_state = "coathydro"
-	item_state = "coathydro"
+	inhand_icon_state = "coathydro"
 	allowed = list(/obj/item/reagent_containers/spray/plantbgone, /obj/item/plant_analyzer, /obj/item/seeds, /obj/item/reagent_containers/cup/bottle, /obj/item/cultivator, /obj/item/reagent_containers/spray/pestspray, /obj/item/hatchet, /obj/item/storage/bag/plants, /obj/item/toy, /obj/item/tank/internals/emergency_oxygen, /obj/item/tank/internals/plasmaman, /obj/item/storage/fancy/cigarettes, /obj/item/lighter)
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/hydro
 
@@ -435,7 +478,7 @@
 	name = "cargo winter coat"
 	desc = "A heavy jacket made from 'synthetic' animal furs. It's especially tailored to hold Cargo related items." // Cargo players if I missed anything let me know
 	icon_state = "coatcargo"
-	item_state = "coatcargo"
+	inhand_icon_state = "coatcargo"
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/cargo
 	allowed = list(
 		/obj/item/hand_labeler,
@@ -461,7 +504,7 @@
 	name = "mining winter coat"
 	desc = "A heavy jacket made from 'synthetic' animal furs. It is quite armoured and well suited to explore harsh environments."
 	icon_state = "coatminer"
-	item_state = "coatminer"
+	inhand_icon_state = "coatminer"
 	allowed = list(
 		/obj/item/pickaxe,
 		/obj/item/flashlight,
@@ -494,7 +537,6 @@
 	energy = 20
 	bomb = 50
 	bio = 10
-	rad = 20
 	fire = 50
 	acid = 50
 	stamina = 20
@@ -519,7 +561,6 @@
 	energy = 20
 	bomb = 50
 	bio = 10
-	rad = 20
 	fire = 50
 	acid = 50
 	stamina = 20
@@ -608,7 +649,7 @@
 	name = "centcom winter coat"
 	desc = "A luxurious winter coat woven in the bright green and gold colours of Central Command. It has a small pin in the shape of the Nanotrasen logo for a zipper."
 	icon_state = "coatcentcom"
-	item_state = "coatcentcom"
+	inhand_icon_state = "coatcentcom"
 	armor_type = /datum/armor/wintercoat_centcom
 	hoodtype = /obj/item/clothing/head/hooded/winterhood/centcom
 
@@ -620,7 +661,6 @@
 	energy = 50
 	bomb = 35
 	bio = 10
-	rad = 10
 	fire = 10
 	acid = 60
 
@@ -640,6 +680,5 @@
 	energy = 50
 	bomb = 35
 	bio = 10
-	rad = 10
 	fire = 10
 	acid = 60

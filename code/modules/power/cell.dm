@@ -1,9 +1,14 @@
+#define ETHEREAL_CELL_DRAIN_TIME (3.5 SECONDS)
+#define ETHEREAL_CELL_POWER_DRAIN (0.75 * STANDARD_CELL_CHARGE)
+/// The factor by which we multiply drain to get how much we gain
+#define ETHEREAL_CELL_POWER_GAIN_FACTOR 0.08
+
 /obj/item/stock_parts/cell
 	name = "power cell"
 	desc = "A rechargeable electrochemical power cell."
 	icon = 'icons/obj/power.dmi'
 	icon_state = "cell"
-	item_state = "cell"
+	inhand_icon_state = "cell"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
 	force = 5
@@ -13,7 +18,8 @@
 	w_class = WEIGHT_CLASS_SMALL
 	/// note %age converted to actual charge in New
 	var/charge = 0
-	var/maxcharge = 1000
+	/// Maximum charge possible in Aur
+	var/maxcharge = STANDARD_CELL_CHARGE
 	custom_materials = list(/datum/material/iron=700, /datum/material/glass=50)
 	grind_results = list(/datum/reagent/lithium = 15, /datum/reagent/iron = 5, /datum/reagent/silicon = 5)
 	/// If the cell has been booby-trapped by injecting it with plasma. Chance on use() to explode.
@@ -21,7 +27,9 @@
 	/// If the power cell was damaged by an explosion, chance for it to become corrupted and function the same as rigged.
 	var/corrupted = FALSE
 	///how much power is given every tick in a recharger
-	var/chargerate = 100
+	var/chargerate
+	/// How many recharge cycles untill 100%? Default is 20. Calculation goes - (maxcharge / chargerate_divide)
+	var/chargerate_divide = 20
 	///does it self recharge, over time, or not?
 	var/self_recharge = FALSE
 	///stores the chargerate to restore when hit with EMP, for slime cores
@@ -43,12 +51,18 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 		maxcharge = override_maxcharge
 	charge = maxcharge
 	if(ratingdesc)
-		desc += " This one has a rating of [display_energy(maxcharge)], and you should not swallow it."
+		desc += " This one can store up to <span class='cfc_orange'>[display_power(maxcharge)]</span>."
+	chargerate = (maxcharge / chargerate_divide)
 	update_appearance()
 
 /obj/item/stock_parts/cell/Destroy()
 	STOP_PROCESSING(SSobj, src)
 	return ..()
+
+/obj/item/stock_parts/cell/calculate_price()
+	// Base cell price is 10. Price will increase related to max charge
+	// T2 cell is 100 cr for instance
+	custom_price = maxcharge / 1000
 
 /obj/item/stock_parts/cell/vv_edit_var(var_name, var_value)
 	switch(var_name)
@@ -82,13 +96,13 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 	return maxcharge ? 100 * charge / maxcharge : 0 //Division by 0 protection
 
 // use power from a cell
-/obj/item/stock_parts/cell/use(amount)
+/obj/item/stock_parts/cell/use(amount, force)
 	if(rigged && amount > 0)
 		plasma_ignition(4)
 		return 0
-	if(charge < amount)
+	if(!force && charge < amount)
 		return 0
-	charge = (charge - amount)
+	charge = max(charge - amount, 0)
 	if(!istype(loc, /obj/machinery/power/apc))
 		SSblackbox.record_feedback("tally", "cell_used", 1, type)
 	return 1
@@ -103,6 +117,25 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 	var/power_used = min(maxcharge-charge,amount)
 	charge += power_used
 	return power_used
+
+/**
+ * Changes the charge of the cell.
+ * Args:
+ * - amount: The energy to give to the cell (can be negative).
+ * Returns: The energy that was given to the cell (can be negative).
+ */
+/obj/item/stock_parts/cell/proc/change(amount)
+	var/energy_used = clamp(amount, -charge, maxcharge - charge)
+	charge += energy_used
+	if(rigged && energy_used)
+		explode()
+	return energy_used
+
+/**
+ * Returns the amount of charge used on the cell.
+ */
+/obj/item/stock_parts/cell/proc/used_charge()
+	return maxcharge - charge
 
 /obj/item/stock_parts/cell/examine(mob/user)
 	. = ..()
@@ -170,44 +203,49 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 					corrupt()
 
 /obj/item/stock_parts/cell/attack_self(mob/user)
-	if(isethereal(user))
-		var/mob/living/carbon/human/H = user
-		var/datum/species/ethereal/E = H.dna.species
-		if(E.drain_time > world.time)
-			return
-		var/obj/item/organ/stomach/battery/stomach = H.get_organ_slot(ORGAN_SLOT_STOMACH)
-		if(!istype(stomach))
-			to_chat(H, span_warning("You can't receive charge!"))
-			return
-		if(H.nutrition >= NUTRITION_LEVEL_ALMOST_FULL)
-			to_chat(user, span_warning("You are already fully charged!"))
+	if(!ishuman(user))
+		return
+
+	var/mob/living/carbon/human/human_user = user
+	var/obj/item/organ/stomach/electrical/ethereal/maybe_stomach = human_user.get_organ_slot(ORGAN_SLOT_STOMACH)
+	if(!istype(maybe_stomach))
+		return
+	if(maybe_stomach.drain_time > world.time)
+		return
+
+	ethereal_drain(human_user, maybe_stomach)
+
+/obj/item/stock_parts/cell/proc/ethereal_drain(mob/living/carbon/human/user, obj/item/organ/stomach/electrical/ethereal/used_stomach)
+	if(charge <= 0)
+		balloon_alert(user, "out of charge!")
+		return
+
+	var/obj/item/stock_parts/cell/stomach_cell = used_stomach.cell
+	used_stomach.drain_time = world.time + ETHEREAL_CELL_DRAIN_TIME
+	to_chat(user, span_notice("You begin clumsily channeling power from [src] into your body."))
+
+	while(do_after(user, ETHEREAL_CELL_DRAIN_TIME, target = src))
+		if(isnull(used_stomach) || (used_stomach != user.get_organ_slot(ORGAN_SLOT_STOMACH)))
+			balloon_alert(user, "cell removed!?")
 			return
 
-		to_chat(H, span_notice("You clumsily channel power through the [src] and into your body, wasting some in the process."))
-		E.drain_time = world.time + 25
-		while(do_after(user, 20, target = src))
-			if(!istype(stomach))
-				to_chat(H, span_warning("You can't receive charge!"))
-				return
-			E.drain_time = world.time + 25
-			if(charge > 300)
-				stomach.adjust_charge(75)
-				charge -= 300 //you waste way more than you receive, so that ethereals cant just steal one cell and forget about hunger
-				to_chat(H, span_notice("You receive some charge from the [src]."))
-			else
-				stomach.adjust_charge(charge/4)
-				charge = 0
-				to_chat(H, span_notice("You drain the [src]."))
-				E.drain_time = 0
-				return
+		var/our_charge = charge
+		var/scaled_stomach_used_charge = stomach_cell.used_charge() / ETHEREAL_CELL_POWER_GAIN_FACTOR
+		var/potential_charge = min(our_charge, scaled_stomach_used_charge)
+		// work out the drain before spending it
+		var/energy_drained = min(ETHEREAL_CELL_POWER_DRAIN, potential_charge)
+		if(!use(energy_drained, force = TRUE))
+			balloon_alert(user, "can't draw from it!")
+			return
+		used_stomach.adjust_charge(energy_drained * ETHEREAL_CELL_POWER_GAIN_FACTOR)
+		update_appearance(UPDATE_OVERLAYS)
 
-			if(stomach.charge >= stomach.max_charge)
-				to_chat(H, span_notice("You are now fully charged."))
-				E.drain_time = 0
-				return
-		to_chat(H, span_warning("You fail to receive charge from the [src]!"))
-		E.drain_time = 0
-	return
+		if(stomach_cell.used_charge() <= 0)
+			balloon_alert(user, "charge is full!")
+			return
+		if(charge <= 0)
+			balloon_alert(user, "out of charge!")
+			return
 
 /obj/item/stock_parts/cell/blob_act(obj/structure/blob/B)
 	SSexplosions.high_mov_atom += src
@@ -221,6 +259,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 /obj/item/stock_parts/cell/get_part_rating()
 	return rating * maxcharge
 
+/obj/item/stock_parts/cell/attackby_storage_insert(datum/component/storage, atom/storage_holder, mob/user)
+	var/obj/item/mod/control/mod = storage_holder
+	return !(istype(mod) && mod.open)
+
 /* Cell variants*/
 /obj/item/stock_parts/cell/empty/Initialize(mapload)
 	. = ..()
@@ -229,7 +271,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 /obj/item/stock_parts/cell/crap
 	name = "\improper Nanotrasen brand rechargeable AA battery"
 	desc = "You can't top the plasma top." //TOTALLY TRADEMARK INFRINGEMENT
-	maxcharge = 500
+	maxcharge = 5 KILOWATT
 	custom_materials = list(/datum/material/glass=40)
 
 /obj/item/stock_parts/cell/crap/empty/Initialize(mapload)
@@ -240,52 +282,33 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 /obj/item/stock_parts/cell/upgraded
 	name = "upgraded power cell"
 	desc = "A power cell with a slightly higher capacity than normal!"
-	maxcharge = 2500
+	maxcharge = 25 KILOWATT
 	custom_materials = list(/datum/material/glass=50)
-	chargerate = 1000
 
 /obj/item/stock_parts/cell/upgraded/plus
 	name = "upgraded power cell+"
 	desc = "A power cell with an even higher capacity than the base model!"
-	maxcharge = 5000
+	maxcharge = 50 KILOWATT
 
-/obj/item/stock_parts/cell/secborg
-	name = "security borg rechargeable D battery"
-	maxcharge = 600	//600 max charge / 100 charge per shot = six shots
-	custom_materials = list(/datum/material/glass=40)
-
-/obj/item/stock_parts/cell/secborg/empty/Initialize(mapload)
-	. = ..()
-	charge = 0
-	update_appearance()
-
-/obj/item/stock_parts/cell/pulse //200 pulse shots
-	name = "pulse rifle power cell"
-	maxcharge = 40000
-	chargerate = 1500
-
-/obj/item/stock_parts/cell/pulse/carbine //25 pulse shots
-	name = "pulse carbine power cell"
-	maxcharge = 5000
-
-/obj/item/stock_parts/cell/pulse/pistol //10 pulse shots
-	name = "pulse pistol power cell"
-	maxcharge = 2000
+/obj/item/stock_parts/cell/ninja
+	name = "black power cell"
+	icon_state = "bscell"
+	maxcharge = 100 KILOWATT
+	custom_materials = list(/datum/material/glass=60)
+	chargerate_divide = 5	// charges four times faster than a standard cell
 
 /obj/item/stock_parts/cell/high
 	name = "high-capacity power cell"
 	icon_state = "hcell"
-	maxcharge = 10000
+	maxcharge = 100 KILOWATT
 	custom_materials = list(/datum/material/glass=60)
-	chargerate = 1500
 	rating = 1
 
 /obj/item/stock_parts/cell/high/plus
 	name = "high-capacity power cell+"
 	desc = "Where did these come from?"
 	icon_state = "h+cell"
-	maxcharge = 15000
-	chargerate = 2250
+	maxcharge = 150 KILOWATT
 
 /obj/item/stock_parts/cell/high/empty/Initialize(mapload)
 	. = ..()
@@ -295,9 +318,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 /obj/item/stock_parts/cell/super
 	name = "super-capacity power cell"
 	icon_state = "scell"
-	maxcharge = 20000
+	maxcharge = 200 KILOWATT
 	custom_materials = list(/datum/material/glass=300)
-	chargerate = 2000
 	rating = 2
 
 /obj/item/stock_parts/cell/super/empty/Initialize(mapload)
@@ -308,9 +330,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 /obj/item/stock_parts/cell/hyper
 	name = "hyper-capacity power cell"
 	icon_state = "hpcell"
-	maxcharge = 30000
+	maxcharge = 300 KILOWATT
 	custom_materials = list(/datum/material/glass=400)
-	chargerate = 3000
 	rating = 3
 
 /obj/item/stock_parts/cell/hyper/empty/Initialize(mapload)
@@ -322,9 +343,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 	name = "bluespace power cell"
 	desc = "A rechargeable transdimensional power cell."
 	icon_state = "bscell"
-	maxcharge = 40000
+	maxcharge = 400 KILOWATT
 	custom_materials = list(/datum/material/glass=600)
-	chargerate = 4000
 	rating = 4
 
 /obj/item/stock_parts/cell/bluespace/empty/Initialize(mapload)
@@ -335,34 +355,32 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 /obj/item/stock_parts/cell/infinite
 	name = "infinite-capacity power cell!"
 	icon_state = "icell"
-	maxcharge = 30000
+	maxcharge = INFINITY
 	custom_materials = list(/datum/material/glass=1000)
 	rating = 100
-	chargerate = 30000
+	chargerate_divide = 1
 
-/obj/item/stock_parts/cell/infinite/use()
-	return 1
+/obj/item/stock_parts/cell/infinite/use(used, force = FALSE)
+	return TRUE
 
 /obj/item/stock_parts/cell/infinite/abductor
 	name = "void core"
 	desc = "An alien power cell that produces energy seemingly out of nowhere."
 	icon = 'icons/obj/abductor.dmi'
 	icon_state = "cell"
-	maxcharge = 50000
+	maxcharge = 500 KILOWATT
 	ratingdesc = FALSE
 
-/obj/item/stock_parts/cell/infinite/abductor/ComponentInitialize()
+/obj/item/stock_parts/cell/infinite/abductor/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/update_icon_blocker)
-
 
 /obj/item/stock_parts/cell/potato
 	name = "potato battery"
 	desc = "A rechargeable starch based power cell."
 	icon = 'icons/obj/hydroponics/harvest.dmi'
 	icon_state = "potato"
-	charge = 100
-	maxcharge = 300
+	maxcharge = 3 KILOWATT
 	custom_materials = null
 	grown_battery = TRUE //it has the overlays for wires
 
@@ -374,46 +392,13 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 	custom_materials = null
 	rating = 5 //self-recharge makes these desirable
 	self_recharge = TRUE // Infused slime cores self-recharge, over time
-	chargerate = 100
-	maxcharge = 2000
-
-/obj/item/stock_parts/cell/emproof
-	name = "\improper EMP-proof cell"
-	desc = "An EMP-proof cell."
-	maxcharge = 500
-	rating = 3
-
-/obj/item/stock_parts/cell/emproof/empty/Initialize(mapload)
-	. = ..()
-	charge = 0
-	update_appearance()
-
-/obj/item/stock_parts/cell/emproof/empty/ComponentInitialize()
-	. = ..()
-	AddElement(/datum/element/empprotection, EMP_PROTECT_SELF)
-
-/obj/item/stock_parts/cell/emproof/corrupt()
-	return
-
-/obj/item/stock_parts/cell/beam_rifle
-	name = "beam rifle capacitor"
-	desc = "A high powered capacitor that can provide huge amounts of energy in an instant."
-	maxcharge = 50000
-	chargerate = 5000	//Extremely energy intensive
-
-/obj/item/stock_parts/cell/beam_rifle/corrupt()
-	return
-
-/obj/item/stock_parts/cell/beam_rifle/emp_act(severity)
-	. = ..()
-	if(. & EMP_PROTECT_SELF)
-		return
-	charge = clamp((charge-(10000/severity)),0,maxcharge)
+	chargerate_divide = 100
+	maxcharge = 20 KILOWATT
 
 /obj/item/stock_parts/cell/emergency_light
 	name = "miniature power cell"
 	desc = "A tiny power cell with a very low power capacity. Used in light fixtures to power them in the event of an outage."
-	maxcharge = 120 //Emergency lights use 0.2 W per tick, meaning ~10 minutes of emergency power from a cell
+	maxcharge = 1.2 KILOWATT //Emergency lights use 5 watts per second, meaning 4 minutes of emergency power from a cell
 	custom_materials = list(/datum/material/glass = 20)
 	w_class = WEIGHT_CLASS_TINY
 
@@ -422,3 +407,20 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stock_parts/cell)
 	var/area/A = get_area(src)
 	if(!A.lightswitch || !A.light_power)
 		charge = 0 //For naturally depowered areas, we start with no power
+
+/obj/item/stock_parts/cell/ethereal
+	name = "ahelp it"
+	desc = "you shouldn't see this"
+	maxcharge = ETHEREAL_CHARGE_DANGEROUS
+	charge = ETHEREAL_CHARGE_FULL
+	icon_state = null
+	custom_materials = null
+	grind_results = null
+
+/obj/item/stock_parts/cell/ethereal/examine(mob/user)
+	. = ..()
+	CRASH("[src.type] got examined by [user]")
+
+#undef ETHEREAL_CELL_DRAIN_TIME
+#undef ETHEREAL_CELL_POWER_DRAIN
+#undef ETHEREAL_CELL_POWER_GAIN_FACTOR

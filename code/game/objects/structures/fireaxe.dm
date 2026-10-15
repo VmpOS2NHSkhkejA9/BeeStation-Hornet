@@ -21,7 +21,6 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/fireaxecabinet, 32)
 	bullet = 20
 	energy = 100
 	bomb = 10
-	rad = 100
 	fire = 90
 	acid = 50
 
@@ -35,7 +34,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/structure/fireaxecabinet, 32)
 		QDEL_NULL(fireaxe)
 	return ..()
 
-/obj/structure/fireaxecabinet/attackby(obj/item/I, mob/living/user, params)
+/obj/structure/fireaxecabinet/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(iscyborg(user) || I.tool_behaviour == TOOL_MULTITOOL)
 		toggle_lock(user)
 	else if(I.tool_behaviour == TOOL_WELDER && !user.combat_mode && !broken)

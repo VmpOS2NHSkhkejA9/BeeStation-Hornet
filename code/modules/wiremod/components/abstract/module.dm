@@ -6,6 +6,7 @@
 /obj/item/circuit_component/module
 	display_name = "Module"
 	desc = "A component that has other components within it, acting like a function. Use it in your hand to control the amount of input and output ports it has, as well as being able to access the integrated circuit contained inside."
+	category = "Abstract"
 
 	var/obj/item/integrated_circuit/module/internal_circuit
 
@@ -233,9 +234,9 @@
 	. = list()
 	.["global_port_types"] = GLOB.wiremod_basic_types
 
-/obj/item/circuit_component/module/attackby(obj/item/I, mob/living/user, params)
+/obj/item/circuit_component/module/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(istype(I, /obj/item/circuit_component))
-		internal_circuit.attackby(I, user, params)
+		internal_circuit.attackby(I, user, modifiers)
 		return
 	return ..()
 

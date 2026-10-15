@@ -9,10 +9,10 @@
 #define COMSIG_COMPONENT_REMOVING "component_removing"
 /// before a datum's Destroy() is called: (force), returning a nonzero value will cancel the qdel operation
 /// you should only be using this if you want to block deletion
-/// that's the only functional difference between it and COMSIG_PARENT_QDELETING, outside setting QDELETING to detect
-#define COMSIG_PARENT_PREQDELETED "parent_preqdeleted"
+/// that's the only functional difference between it and COMSIG_QDELETING, outside setting QDELETING to detect
+#define COMSIG_PREQDELETED "parent_preqdeleted"
 /// just before a datum's Destroy() is called: (force), at this point none of the other components chose to interrupt qdel and Destroy will be called
-#define COMSIG_PARENT_QDELETING "parent_qdeleting"
+#define COMSIG_QDELETING "parent_qdeleting"
 /// generic topic handler (usr, href_list)
 #define COMSIG_TOPIC "handle_topic"
 
@@ -50,6 +50,9 @@
 #define COMSIG_SPECIES_GAIN "species_gain"
 ///from datum/species/on_species_loss(): (datum/species/lost_species)
 #define COMSIG_SPECIES_LOSS "species_loss"
+///from datum/species/handle_chemical(): (datum/reagent/chem, mob/living/carbon/human/affected, seconds_per_tick, times_fired)
+#define COMSIG_SPECIES_HANDLE_CHEMICAL "species_handle_chemicals"
+	// same return values as COMSIG_MOB_STOP_REAGENT_CHECK
 
 // /datum/song signals
 /// Sent to the instrument when a song starts playing
@@ -61,9 +64,6 @@
 #define COMSIG_TURF_IS_WET "check_turf_wet"
 ///(max_strength, immediate, duration_decrease = INFINITY): Returns bool.
 #define COMSIG_TURF_MAKE_DRY "make_turf_try"
-
-///Called on an object to "clean it", such as removing blood decals/overlays, etc. The clean types bitfield is sent with it. Return TRUE if any cleaning was necessary and thus performed.
-#define COMSIG_COMPONENT_CLEAN_ACT "clean_act"
 
 //Creamed
 
@@ -80,7 +80,8 @@
 
 //Diseases
 
-#define COMSIG_DISEASE_END "disease_end" 						//from the base of /datum/disease/advance/Destroy(): (GetDiseaseID)
+//from the base of /datum/disease/advance/Destroy(): (GetDiseaseID)
+#define COMSIG_DISEASE_END "disease_end"
 
 //Mood
 
@@ -89,7 +90,6 @@
 
 /// Called in /obj/structure/moneybot/add_money(). (to_add)
 #define COMSIG_MONEYBOT_ADD_MONEY "moneybot_add_money"
-
 
 #define COMSIG_GREYSCALE_CONFIG_REFRESHED "greyscale_config_refreshed"
 
@@ -113,22 +113,18 @@
 	/// Return COMPONENT_NO_DEFAULT_MESSAGE to prevent the transforming component from displaying the default transform message / sound.
 	#define COMPONENT_NO_DEFAULT_MESSAGE (1<<0)
 
-// /datum/mind signals
-// (mob/old, mob/new)
-#define COMSIG_MIND_TRANSFER_TO "mind_transfer_to"
-// (datum/atom_hud/antag/hud)
-#define COMSIG_MIND_JOIN_ANTAG_HUD "mind_join_antag_hud"
-// (datum/atom_hud/antag/hud)
-#define COMSIG_MIND_LEAVE_ANTAG_HUD "mind_leave_antag_hud"
-// Sent when a mob with a mind enters cryo storage: ()
-#define COMSIG_MIND_CRYOED "mind_cryoed"
-
 // /datum/component/clockwork_trap signals
 #define COMSIG_CLOCKWORK_SIGNAL_RECEIVED "clock_received"			//! When anything the trap is attatched to is triggered
 
 ///Subsystem signals
 ///From base of datum/controller/subsystem/Initialize
 #define COMSIG_SUBSYSTEM_POST_INITIALIZE "subsystem_post_initialize"
+
+///from SSJob whenever setup_occupations() is called, all occupations are set
+#define COMSIG_OCCUPATIONS_SETUP "occupations_setup"
+
+///from SSJob when divide_occupations() is called
+#define COMSIG_OCCUPATIONS_DIVIDED "occupations_divided"
 
 ///from SSsecurity_level when the security level changes : (new_level)
 #define COMSIG_SECURITY_LEVEL_CHANGED "security_level_changed"
@@ -155,3 +151,15 @@
 /// Called when a buffer tries to send some stored data to something (datum/source, mob/user, datum/buffer, obj/item/buffer_parent) (buffer item may be null)
 #define COMSIG_PARENT_RECEIVE_BUFFER "receive_buffer"
 	#define COMPONENT_BUFFER_RECEIVED (1 << 0)
+
+/// Called when a device a traitor has planted effects someone's mood. Pass the mind of the viewer.
+#define COMSIG_DEMORALISING_EVENT "traitor_demoralise_event"
+
+/// Called when a projectile dampener captures an object.
+#define COMSIG_DAMPENER_CAPTURE "dampener_capture"
+/// Called when a projectile dampener releases an object.
+#define COMSIG_DAMPENER_RELEASE "dampener_release"
+
+/// IPC upgrade signals.
+#define COMSIG_UPGRADE_ACTIVATED "upgrade_activated"
+#define COMSIG_UPGRADE_DEACTIVATED "upgrade_deactivated"

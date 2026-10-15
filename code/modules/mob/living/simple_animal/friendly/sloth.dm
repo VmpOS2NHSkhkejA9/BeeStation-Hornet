@@ -17,7 +17,7 @@
 	response_disarm_simple = "gently push aside"
 	response_harm_continuous = "kicks"
 	response_harm_simple = "kick"
-	mob_biotypes = list(MOB_ORGANIC, MOB_BEAST)
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	gold_core_spawnable = FRIENDLY_SPAWN
 	melee_damage = 18 //why the fuck does it do this much damage
 	health = 50
@@ -27,6 +27,11 @@
 	can_be_held = TRUE
 	held_state = "sloth"
 	footstep_type = FOOTSTEP_MOB_CLAW
+	///In the case 'melee_damage_upper' is somehow raised above 0
+	attack_verb_continuous = "bites"
+	attack_verb_simple = "bite"
+	attack_sound = 'sound/weapons/bite.ogg'
+	attack_vis_effect = ATTACK_EFFECT_BITE
 
 
 //Cargo Sloth

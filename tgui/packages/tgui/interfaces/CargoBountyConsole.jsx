@@ -1,5 +1,5 @@
 import { useBackend, useSharedState } from '../backend';
-import { AnimatedNumber, Box, Button, Flex, LabeledList, Section, Table, Tabs, Divider, NoticeBox } from '../components';
+import { AnimatedNumber, Box, Button, Divider, Flex, LabeledList, NoticeBox, Section, Table, Tabs } from '../components';
 import { formatMoney, formatTime } from '../format';
 import { Window } from '../layouts';
 

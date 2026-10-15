@@ -84,7 +84,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob)
 /obj/structure/blob/blob_act()
 	return
 
-/obj/structure/blob/Adjacent(var/atom/neighbour)
+/obj/structure/blob/Adjacent(atom/neighbour)
 	. = ..()
 	if(.)
 		var/result = 0
@@ -209,8 +209,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob)
 		if(prob(100 - severity * 30))
 			new /obj/effect/temp_visual/emp(get_turf(src))
 
-/obj/structure/blob/tesla_act(power)
-	..()
+/obj/structure/blob/zap_act(power, zap_flags)
+	. = ..()
 	if(overmind)
 		if(overmind.blobstrain.tesla_reaction(src, power))
 			take_damage(power/400, BURN, ENERGY)
@@ -225,7 +225,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob)
 /obj/structure/blob/hulk_damage()
 	return 15
 
-/obj/structure/blob/attackby(obj/item/I, mob/user, params)
+/obj/structure/blob/attackby(obj/item/I, mob/user, list/modifiers)
 	if(I.tool_behaviour == TOOL_ANALYZER)
 		user.changeNext_move(CLICK_CD_MELEE)
 		to_chat(user, "<b>The analyzer beeps once, then reports:</b><br>")
@@ -311,7 +311,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob)
 /obj/structure/blob/examine(mob/user)
 	. = ..()
 	var/datum/atom_hud/hud_to_check = GLOB.huds[DATA_HUD_MEDICAL_ADVANCED]
-	if(user.research_scanner || hud_to_check.hudusers[user])
+	if(user.research_scanner || hud_to_check.hud_users[z][user])
 		. += "<b>Your HUD displays an extensive report...</b><br>"
 		if(overmind)
 			. += overmind.blobstrain.examine(user)

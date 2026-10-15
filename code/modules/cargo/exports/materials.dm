@@ -1,7 +1,7 @@
-/datum/export/material
-	cost = 5 // Cost per MINERAL_MATERIAL_AMOUNT, which is 2000cm3 as of April 2016.
-	message = "cm3 of developer's tears. Please, report this on github"
-	var/material_id = null
+/datum/export/stack
+	cost = 0	// This is defined later based on cusgenerated prices
+	export_category = EXPORT_CARGO
+	include_subtypes = TRUE
 	export_types = list(
 		/obj/item/stack/sheet/mineral, /obj/item/stack/tile/mineral,
 		/obj/item/stack/ore, /obj/item/coin)
@@ -10,13 +10,10 @@
 // Yes, it's a base type containing export_types.
 // But it has no material_id, so any applies_to check will return false, and these types reduce amount of copypasta a lot
 
-/datum/export/material/get_amount(obj/O)
-	if(!material_id)
+/datum/export/stack/get_amount(obj/item/stack/exported)
+	if(!exported.amount)
 		return 0
-	if(!isitem(O))
-		return 0
-	var/obj/item/I = O
-	if(!(SSmaterials.GetMaterialRef(material_id) in I.custom_materials))
+	if(!isitem(exported))
 		return 0
 
 	var/amount = I.custom_materials[SSmaterials.GetMaterialRef(material_id)]

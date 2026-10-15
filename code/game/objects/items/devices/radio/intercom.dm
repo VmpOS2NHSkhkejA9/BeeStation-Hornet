@@ -8,6 +8,7 @@
 	dog_fashion = null
 	unscrewed = FALSE
 	layer = ABOVE_WINDOW_LAYER
+	item_flags = NO_BLOOD_ON_ITEM
 
 /obj/item/radio/intercom/unscrewed
 	unscrewed = TRUE
@@ -23,8 +24,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/radio/intercom)
 	GLOB.intercoms_list += src
 
 /obj/item/radio/intercom/Destroy()
-	. = ..()
 	GLOB.intercoms_list -= src
+	return ..()
 
 /obj/item/radio/intercom/examine(mob/user)
 	. = ..()
@@ -34,7 +35,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/radio/intercom)
 	else
 		. += span_notice("It's <i>unscrewed</i> from the wall, and can be <b>detached</b>.")
 
-/obj/item/radio/intercom/attackby(obj/item/I, mob/living/user, params)
+/obj/item/radio/intercom/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(I.tool_behaviour == TOOL_SCREWDRIVER)
 		if(unscrewed)
 			user.visible_message(span_notice("[user] starts tightening [src]'s screws..."), span_notice("You start screwing in [src]..."))
@@ -95,7 +96,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/radio/intercom)
 	return TRUE
 
 
-/obj/item/radio/intercom/Hear(message, atom/movable/speaker, message_langs, raw_message, radio_freq, list/spans, list/message_mods = list())
+/obj/item/radio/intercom/Hear(atom/movable/speaker, message_language, raw_message, radio_freq, list/spans, list/message_mods = list(), message_range)
 	if(message_mods[RADIO_EXTENSION] == MODE_INTERCOM)
 		return  // Avoid hearing the same thing twice
 	return ..()

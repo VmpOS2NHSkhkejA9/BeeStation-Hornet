@@ -1,12 +1,9 @@
 /obj/machinery/recharge_station
-	name = "cyborg recharging station"
-	desc = "This device recharges cyborgs and resupplies their materials."
+	name = "recharging station"
+	desc = "This device recharges energy dependent lifeforms, like cyborgs, ethereals and MODsuit users."
 	icon = 'icons/obj/objects.dmi'
 	icon_state = "borgcharger0"
 	density = FALSE
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 5
-	active_power_usage = 1000
 	req_access = list(ACCESS_ROBOTICS)
 	state_open = TRUE
 	circuit = /obj/item/circuitboard/machine/cyborgrecharger
@@ -19,19 +16,20 @@
 	update_icon()
 
 /obj/machinery/recharge_station/RefreshParts()
+	. = ..()
 	recharge_speed = 0
 	repairs = 0
-	for(var/obj/item/stock_parts/capacitor/C in component_parts)
-		recharge_speed += (C.rating * 100) + 66 // Starting boost, but inconsequential at t4
-	for(var/obj/item/stock_parts/manipulator/M in component_parts)
-		repairs += M.rating - 1
+	for(var/datum/stock_part/capacitor/C in component_parts)
+		recharge_speed += 5e-3 * C.tier
+	for(var/datum/stock_part/manipulator/M in component_parts)
+		repairs += M.tier - 1
 	for(var/obj/item/stock_parts/cell/C in component_parts)
-		recharge_speed *= C.maxcharge / 10000
+		recharge_speed *= C.maxcharge
 
 /obj/machinery/recharge_station/examine(mob/user)
 	. = ..()
 	if(in_range(user, src) || isobserver(user))
-		. += span_notice("The status display reads: Recharging <b>[recharge_speed]J</b> per cycle.")
+		. += span_notice("The status display reads: Recharging: <b>[display_power(recharge_speed)]</b>.")
 		if(repairs)
 			. += span_notice("[src] has been upgraded to support automatic repairs.")
 
@@ -55,7 +53,7 @@
 		if (!(. & EMP_PROTECT_SELF))
 			open_machine()
 
-/obj/machinery/recharge_station/attackby(obj/item/P, mob/user, params)
+/obj/machinery/recharge_station/attackby(obj/item/P, mob/user, list/modifiers)
 	if(state_open)
 		if(default_deconstruction_screwdriver(user, "borgdecon2", "borgcharger0", P))
 			return
@@ -77,11 +75,11 @@
 	else
 		open_machine()
 
-/obj/machinery/recharge_station/open_machine()
+/obj/machinery/recharge_station/open_machine(drop = TRUE, density_to_set = FALSE)
 	. = ..()
 	update_use_power(IDLE_POWER_USE)
 
-/obj/machinery/recharge_station/close_machine()
+/obj/machinery/recharge_station/close_machine(mob/user, density_to_set = TRUE)
 	. = ..()
 	if(occupant)
 		update_use_power(ACTIVE_POWER_USE) //It always tries to charge, even if it can't.
@@ -103,7 +101,6 @@
 
 /obj/machinery/recharge_station/proc/restock_modules()
 	if(occupant)
-		var/mob/living/silicon/robot/R = occupant
-		if(R?.module)
-			var/coeff = recharge_speed * 0.025
-			R.module.respawn_consumable(R, coeff)
+		var/mob/living/silicon/robot/robot = occupant
+		if(robot?.model)
+			robot.model.respawn_consumable(robot, recharge_speed * 0.025)

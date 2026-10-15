@@ -18,6 +18,7 @@
  * (generally) inadvisable unless you know what you're doing
  */
 /datum/action/spell/touch
+	abstract_type = /datum/action/spell/touch
 	check_flags = AB_CHECK_CONSCIOUS|AB_CHECK_HANDS_BLOCKED
 	sound = 'sound/items/welder.ogg'
 	invocation = "High Five!"
@@ -125,7 +126,7 @@
 	RegisterSignal(attached_hand, COMSIG_ITEM_AFTERATTACK, PROC_REF(on_hand_hit))
 	RegisterSignal(attached_hand, COMSIG_ITEM_AFTERATTACK_SECONDARY, PROC_REF(on_secondary_hand_hit))
 	RegisterSignal(attached_hand, COMSIG_ITEM_DROPPED, PROC_REF(on_hand_dropped))
-	RegisterSignal(attached_hand, COMSIG_PARENT_QDELETING, PROC_REF(on_hand_deleted))
+	RegisterSignal(attached_hand, COMSIG_QDELETING, PROC_REF(on_hand_deleted))
 
 /// Unregisters all signal procs for the hand.
 /datum/action/spell/touch/proc/unregister_hand_signals()
@@ -135,7 +136,7 @@
 		COMSIG_ITEM_AFTERATTACK,
 		COMSIG_ITEM_AFTERATTACK_SECONDARY,
 		COMSIG_ITEM_DROPPED,
-		COMSIG_PARENT_QDELETING,
+		COMSIG_QDELETING,
 	))
 
 // Touch spells don't go on cooldown OR give off an invocation until the hand is used itself.
@@ -156,7 +157,7 @@
  *
  * When our hand hits an atom, we can cast do_hand_hit() on them.
  */
-/datum/action/spell/touch/proc/on_hand_hit(datum/source, atom/victim, mob/caster, proximity_flag, click_parameters)
+/datum/action/spell/touch/proc/on_hand_hit(datum/source, atom/victim, mob/caster, proximity_flag, list/modifiers)
 	SIGNAL_HANDLER
 	SHOULD_NOT_OVERRIDE(TRUE) // DEFINITELY don't put effects here, put them in cast_on_hand_hit
 
@@ -172,7 +173,7 @@
  *
  * Same as on_hand_hit, but for if right-click was used on hit.
  */
-/datum/action/spell/touch/proc/on_secondary_hand_hit(datum/source, atom/victim, mob/caster, proximity_flag, click_parameters)
+/datum/action/spell/touch/proc/on_secondary_hand_hit(datum/source, atom/victim, mob/caster, proximity_flag, list/modifiers)
 	SIGNAL_HANDLER
 	SHOULD_NOT_OVERRIDE(TRUE) // DEFINITELY don't put effects here, put them in cast_on_secondary_hand_hit
 
@@ -264,7 +265,7 @@
 	return SECONDARY_ATTACK_CALL_NORMAL
 
 /**
- * Signal proc for [COMSIG_PARENT_QDELETING] from our attached hand.
+ * Signal proc for [COMSIG_QDELETING] from our attached hand.
  *
  * If our hand is deleted for a reason unrelated to our spell,
  * unlink it (clear refs) and revert the cooldown
@@ -308,7 +309,7 @@
 	lefthand_file = 'icons/mob/inhands/misc/touchspell_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/touchspell_righthand.dmi'
 	icon_state = "latexballon"
-	item_state = null
+	inhand_icon_state = null
 	item_flags = NEEDS_PERMIT | ABSTRACT
 	w_class = WEIGHT_CLASS_HUGE
 	force = 0

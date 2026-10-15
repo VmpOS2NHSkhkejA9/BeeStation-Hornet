@@ -4,7 +4,7 @@
 	icon = 'icons/obj/janitor.dmi'
 	worn_icon = 'icons/mob/clothing/head/utility.dmi'
 	icon_state = "cone"
-	item_state = null
+	inhand_icon_state = null
 	force = 1
 	throwforce = 3
 	throw_speed = 2
@@ -13,7 +13,6 @@
 	attack_verb_continuous = list("warns", "cautions", "smashes")
 	attack_verb_simple = list("warn", "caution", "smash")
 	resistance_flags = NONE
-	dynamic_hair_suffix = ""
 
 /obj/item/clothing/head/cowboy
 	name = "ranching hat"

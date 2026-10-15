@@ -63,7 +63,9 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/plumbing/synthesizer)
 	if(machine_stat & NOPOWER || !reagent_id || !amount)
 		return
 	if(reagents.total_volume >= amount*delta_time*0.5) //otherwise we get leftovers, and we need this to be precise
+		update_use_power(IDLE_POWER_USE)
 		return
+	update_use_power(ACTIVE_POWER_USE)
 	reagents.add_reagent(reagent_id, amount*delta_time*0.5)
 
 /obj/machinery/plumbing/synthesizer/examine(mob/user)
@@ -82,7 +84,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/plumbing/synthesizer)
 /obj/machinery/plumbing/synthesizer/ui_data(mob/user)
 	var/list/data = list()
 
-	var/is_hallucinating = user.hallucinating()
+	var/is_hallucinating = FALSE
+	if(isliving(user))
+		var/mob/living/living_user = user
+		is_hallucinating = !!living_user.has_status_effect(/datum/status_effect/hallucination)
 	var/list/chemicals = list()
 
 	for(var/A in dispensable_reagents)
@@ -126,7 +131,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/plumbing/synthesizer)
 	if(reagent_id)
 		r_overlay.color = initial(reagent_id.color)
 	else
-		r_overlay.color = "#FFFFFF"
+		r_overlay.color = COLOR_WHITE
 
 	overlays += r_overlay
 	..()

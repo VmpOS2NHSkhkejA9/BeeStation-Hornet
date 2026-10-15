@@ -32,27 +32,20 @@
 	rogue_types = list(/datum/nanite_program/toxic)
 
 /datum/nanite_program/monitoring/enable_passive_effect()
-
 	. = ..()
-
 	if(!ishuman(host_mob))
 		return
 
-	ADD_TRAIT(host_mob, TRAIT_NANITE_SENSORS, TRACKED_SENSORS_TRAIT)
-	if(!HAS_TRAIT(host_mob, TRAIT_SUIT_SENSORS))
-		GLOB.suit_sensors_list += host_mob
+	host_mob.add_traits(list(TRAIT_TRACKED_SENSORS, TRAIT_BASIC_HEALTH_HUD_VISIBLE), NANITES_TRAIT)
+	GLOB.suit_sensors_list |= host_mob
 	host_mob.hud_set_nanite_indicator()
 
 /datum/nanite_program/monitoring/disable_passive_effect()
-
 	. = ..()
-
 	if(!ishuman(host_mob))
 		return
 
-	REMOVE_TRAIT(host_mob, TRAIT_NANITE_SENSORS, TRACKED_SENSORS_TRAIT)
-	if(!HAS_TRAIT(host_mob, TRAIT_SUIT_SENSORS))
-		GLOB.suit_sensors_list -= host_mob
+	host_mob.remove_traits(list(TRAIT_TRACKED_SENSORS, TRAIT_BASIC_HEALTH_HUD_VISIBLE), NANITES_TRAIT)
 	host_mob.hud_set_nanite_indicator()
 
 /datum/nanite_program/self_scan
@@ -172,7 +165,9 @@
 	var/points = 1
 	if(!host_mob.client) //less brainpower
 		points *= 0.25
-	SSresearch.science_tech.add_point_list(list(TECHWEB_POINT_TYPE_GENERIC = points))
+
+	var/datum/techweb/science_web = locate(/datum/techweb/science) in SSresearch.techwebs
+	science_web.add_point_list(list(TECHWEB_POINT_TYPE_GENERIC = points))
 
 /datum/nanite_program/researchplus
 	name = "Neural Network"
@@ -205,7 +200,8 @@
 	var/points = round(SSnanites.neural_network_count / 12, 0.1)
 	if(!C.client) //less brainpower
 		points *= 0.25
-	SSresearch.science_tech.add_point_list(list(TECHWEB_POINT_TYPE_GENERIC = points))
+	var/datum/techweb/science_web = locate(/datum/techweb/science) in SSresearch.techwebs
+	science_web.add_point_list(list(TECHWEB_POINT_TYPE_GENERIC = points))
 
 /datum/nanite_program/access
 	name = "Subdermal ID"
@@ -234,6 +230,7 @@
 		current_item = H.wear_id
 		if(current_item)
 			nanite_access |= current_item.GetAccess()
+	//Swap this to basicmob eventually
 	else if(isanimal(host_mob))
 		var/mob/living/simple_animal/A = host_mob
 		current_item = A.access_card
@@ -255,7 +252,7 @@
 	for(var/mob/living/target in ohearers(5, host_mob))
 		if(prob(15 * max(get_dist(host_mob, target) - 1, 0)))
 			continue
-		if(!(MOB_ORGANIC in target.mob_biotypes) && !(MOB_UNDEAD in target.mob_biotypes) && !HAS_TRAIT(host_mob, TRAIT_NANITECOMPATIBLE))
+		if(!(target.mob_biotypes & MOB_ORGANIC) && !(target.mob_biotypes & MOB_UNDEAD) && !HAS_TRAIT(host_mob, TRAIT_NANITECOMPATIBLE))
 			continue
 		target_hosts += target
 	if(!target_hosts.len)
@@ -284,7 +281,7 @@
 /datum/nanite_program/nanite_sting/on_trigger(comm_message)
 	var/list/mob/living/target_hosts = list()
 	for(var/mob/living/L in oview(1, host_mob))
-		if(!(MOB_ORGANIC in L.mob_biotypes) && !(MOB_UNDEAD in L.mob_biotypes) && !HAS_TRAIT(host_mob, TRAIT_NANITECOMPATIBLE))
+		if(!(L.mob_biotypes & MOB_ORGANIC) && !(L.mob_biotypes & MOB_UNDEAD) && !HAS_TRAIT(host_mob, TRAIT_NANITECOMPATIBLE))
 			continue
 		if(!L.Adjacent(host_mob))
 			continue
@@ -354,7 +351,7 @@
 
 /datum/action/innate/nanite_button
 	name = "Button"
-	icon_icon = 'icons/hud/actions/actions_items.dmi'
+	button_icon = 'icons/hud/actions/actions_items.dmi'
 	check_flags = AB_CHECK_HANDS_BLOCKED|AB_CHECK_INCAPACITATED|AB_CHECK_CONSCIOUS
 	button_icon_state = "power_green"
 	var/datum/nanite_program/dermal_button/program

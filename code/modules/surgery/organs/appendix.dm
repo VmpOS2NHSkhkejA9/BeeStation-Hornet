@@ -22,12 +22,23 @@
 		name = "appendix"
 
 /obj/item/organ/appendix/on_life(delta_time, times_fired)
-	..()
-	if(!(organ_flags & ORGAN_FAILING))
+	. = ..()
+	if(!owner)
 		return
-	var/mob/living/carbon/M = owner
-	if(M)
-		M.adjustToxLoss(2 * delta_time, TRUE, TRUE)//forced to ensure people don't use it to gain tox as slime person
+
+	if(organ_flags & ORGAN_FAILING)
+		// forced to ensure people don't use it to gain tox as slime person
+		owner.adjustToxLoss(2 * delta_time, forced = TRUE)
+
+/obj/item/organ/appendix/feel_for_damage(self_aware)
+	var/effective_stage = floor(!!inflamed + (damage / maxHealth))
+	switch(effective_stage)
+		if(1)
+			return span_warning("Your [self_aware ? "appendix" : "lower abdomen"] feels a little off.")
+		if(2)
+			return span_warning("Your [self_aware ? "appendix" : "lower right abdomen"] feels sore.")
+		if(3 to INFINITY)
+			return span_boldwarning("Your [self_aware ? "appendix" : "lower right abdomen"] feels like it's on fire!")
 
 /obj/item/organ/appendix/get_availability(datum/species/owner_species, mob/living/owner_mob)
 	return owner_species.mutantappendix

@@ -20,10 +20,10 @@
 		var/obj/item/clothing/CS = wear_suit
 		var/obj/item/clothing/CH = head
 		if (CS.clothing_flags & CH.clothing_flags & THICKMATERIAL)
-			return 1
+			return TRUE
 	if(HAS_TRAIT(src, TRAIT_BEEFRIEND))
-		return 1
-	return 0
+		return TRUE
+	return FALSE
 
 
 /obj/structure/beebox
@@ -93,7 +93,7 @@
 		if(bee_resources >= BEE_RESOURCE_HONEYCOMB_COST)
 			if(honeycombs.len < get_max_honeycomb())
 				bee_resources = max(bee_resources-BEE_RESOURCE_HONEYCOMB_COST, 0)
-				var/obj/item/reagent_containers/cup/glass/honeycomb/HC = new(src)
+				var/obj/item/food/honeycomb/HC = new(src)
 				if(queen_bee.beegent)
 					HC.set_reagent(queen_bee.beegent.type)
 				honeycombs += HC
@@ -144,7 +144,7 @@
 		. += span_warning("There's no room for more honeycomb!")
 
 
-/obj/structure/beebox/attackby(obj/item/I, mob/user, params)
+/obj/structure/beebox/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/honey_frame))
 		var/obj/item/honey_frame/HF = I
 		if(honey_frames.len < BEEBOX_MAX_FRAMES)
@@ -231,7 +231,7 @@
 					var/amtH = HF.honeycomb_capacity
 					var/fallen = 0
 					while(honeycombs.len && amtH) //let's pretend you always grab the frame with the most honeycomb on it
-						var/obj/item/reagent_containers/cup/glass/honeycomb/HC = pick_n_take(honeycombs)
+						var/obj/item/food/honeycomb/HC = pick_n_take(honeycombs)
 						if(HC)
 							HC.forceMove(drop_location())
 							amtH--

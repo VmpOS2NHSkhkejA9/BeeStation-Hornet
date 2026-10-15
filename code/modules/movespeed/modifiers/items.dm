@@ -20,3 +20,7 @@
 /datum/movespeed_modifier/drawing_firearm
 	variable = TRUE
 	movetypes = GROUND
+
+/datum/movespeed_modifier/sphere
+	multiplicative_slowdown = -0.5
+

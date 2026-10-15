@@ -2,22 +2,22 @@
 #define FIRING_PIN_REMOVAL_DELAY 50
 
 /obj/item/gun
+	abstract_type = /obj/item/gun
 	name = "gun"
 	desc = "It's a gun. It's pretty terrible, though."
 	icon = 'icons/obj/guns/projectile.dmi'
 	icon_state = "detective"
-	item_state = "gun"
+	inhand_icon_state = "gun"
 	worn_icon_state = "gun"
-	flags_1 =  CONDUCT_1
+	obj_flags = CONDUCTS_ELECTRICITY
 	slot_flags = ITEM_SLOT_BELT
-	item_flags = SLOWS_WHILE_IN_HAND | NO_WORN_SLOWDOWN
+	item_flags = SLOWS_WHILE_IN_HAND | NO_WORN_SLOWDOWN | NEEDS_PERMIT
 	custom_materials = list(/datum/material/iron=2000)
 	w_class = WEIGHT_CLASS_LARGE
 	throwforce = 5
 	throw_speed = 3
 	throw_range = 5
 	force = 5
-	item_flags = NEEDS_PERMIT || ISWEAPON
 	attack_verb_continuous = list("strikes", "hits", "bashes")
 	attack_verb_simple = list("strike", "hit", "bash")
 	max_integrity = 500
@@ -39,7 +39,7 @@
 	var/can_sawoff = FALSE
 	var/sawn_name = null				//used if gun has a special sawn-off rename
 	var/sawn_desc = null				//description change if weapon is sawn-off
-	var/sawn_item_state = null			//used if gun has a special sawn-off in-hand sprite
+	var/sawn_inhand_icon_state = null			//used if gun has a special sawn-off in-hand sprite
 	var/sawn_off = FALSE
 	var/burst_size = 1					//how large a burst is
 	var/fire_delay = 0					//rate of fire for burst firing and semi auto
@@ -100,6 +100,9 @@
 	/// Maximum amount of projectile variance for damaged guns
 	var/damage_variance = 50
 
+	/// Can we hold someone at gunpoint with this?
+	var/can_gunpoint = TRUE
+
 /obj/item/gun/Initialize(mapload)
 	. = ..()
 	if(pin)
@@ -128,12 +131,11 @@
 		RegisterSignal(src, COMSIG_TWOHANDED_WIELD, PROC_REF(wield))
 		RegisterSignal(src, COMSIG_TWOHANDED_UNWIELD, PROC_REF(unwield))
 
-/obj/item/gun/ComponentInitialize()
-	. = ..()
 	//Smaller weapons are better when used in a single hand.
 	if(requires_wielding)
 		AddComponent(/datum/component/two_handed, unwield_on_swap = TRUE, auto_wield = TRUE, ignore_attack_self = TRUE, force_wielded = force, force_unwielded = force, block_power_wielded = block_power, block_power_unwielded = block_power)
-	AddComponent(/datum/component/aiming)
+	if (can_gunpoint)
+		AddComponent(/datum/component/aiming)
 
 /obj/item/gun/proc/wield()
 	is_wielded = TRUE
@@ -214,13 +216,14 @@
 	if(azoom)
 		azoom.Grant(user)
 
-/obj/item/gun/dropped(mob/user)
+/obj/item/gun/dropped(mob/user, silent = FALSE)
 	..()
 	if(azoom)
 		azoom.Remove(user)
 	if(zoomed)
 		zoom(user, user.dir)
-	update_icon()
+	if(!QDELING(src))
+		update_appearance(UPDATE_ICON_STATE)
 	user.client?.clear_cooldown_cursor()
 	if (equip_timer_id)
 		deltimer(equip_timer_id)
@@ -293,50 +296,79 @@
 				continue
 			O.emp_act(severity)
 
-/obj/item/gun/afterattack(atom/target, mob/living/user, flag, params, aimed)
+/obj/item/gun/attack_atom(obj/O, mob/living/user, list/modifiers)
+	if (user.combat_mode || (flags_1 & ISWEAPON))
+		..()
+		return TRUE
+	return FALSE
+
+/obj/item/gun/attack_turf(turf/T, mob/living/user)
+	if (user.combat_mode || (flags_1 & ISWEAPON))
+		..()
+		return TRUE
+	return FALSE
+
+/obj/item/gun/attack(mob/M, mob/living/user)
+	if (user.combat_mode || (flags_1 & ISWEAPON))
+		..()
+		return TRUE
+	return FALSE
+
+/obj/item/gun/afterattack(atom/target, mob/user, proximity_flag, list/modifiers)
 	. = ..()
-	return pull_trigger(target, user, flag, params, aimed)
+	// Cancel the attack chain if we fire
+	return . || pull_trigger(target, user, modifiers, GUN_NOT_AIMED)
+
+/obj/item/gun/ranged_attack(atom/target, mob/living/user, list/modifiers)
+	. = ..()
+	// Cancel the attack chain if we fire
+	return . || pull_trigger(target, user, modifiers, GUN_NOT_AIMED)
 
 /// Represents the user pulling the trigger while aiming at the target
-/obj/item/gun/proc/pull_trigger(atom/target, mob/living/user, flag, params, aimed)
+/obj/item/gun/proc/pull_trigger(atom/target, mob/living/user, list/modifiers, aimed = GUN_NOT_AIMED)
 	if(QDELETED(target))
-		return
+		return TRUE
 	if(firing_burst)
-		return
+		return TRUE
+	if(target in user.contents) //can't shoot stuff inside us.
+		return FALSE
+	var/flag = user.Adjacent(target, TRUE)
 	if(flag) //It's adjacent, is the user, or is on the user's person
-		if(target in user.contents) //can't shoot stuff inside us.
-			return
-		if(!ismob(target) || user.combat_mode) //melee attack
-			return
+		if (!isturf(target) && (user.combat_mode || (item_flags & ISWEAPON)))
+			return FALSE
 		if(target == user && !user.is_zone_selected(BODY_ZONE_PRECISE_MOUTH)) //so we can't shoot ourselves (unless mouth selected)
-			return
+			return FALSE
 	add_fingerprint(user)
+
+	// Return true, but act as intercepted so we don't start hitting things
+	if (SEND_SIGNAL(src, COMSIG_MOB_PULL_TRIGGER, target, user, modifiers, aimed) & CANCEL_TRIGGER_PULL)
+		return TRUE
 
 	if(istype(user))//Check if the user can use the gun, if the user isn't alive(turrets) assume it can.
 		var/mob/living/L = user
 		if(!can_trigger_gun(L))
-			return
+			return FALSE
 
 	if(flag)
 		var/mob/living/living_target = target
 		if (!user.client || user.client.prefs.read_player_preference(/datum/preference/choiced/zone_select) == PREFERENCE_BODYZONE_INTENT)
 			if(user.is_zone_selected(BODY_ZONE_PRECISE_MOUTH))
-				handle_suicide(user, target, params)
-				return
+				handle_suicide(user, target, modifiers)
+				return TRUE
 		// On simplified mode, contextually determine if we want to suicide them
 		// If the target is ourselves, they are buckled, restrained or lying down then suicide them
 		else if(user.is_zone_selected(BODY_ZONE_HEAD) && istype(living_target) && (user == target || HAS_TRAIT(living_target, TRAIT_HANDS_BLOCKED) || living_target.buckled || living_target.IsUnconscious()))
-			handle_suicide(user, target, params)
-			return
+			handle_suicide(user, target, modifiers)
+			return TRUE
 
 	// Play the clicking sound if we can't shoot
 	if(!can_shoot())
 		shoot_with_empty_chamber(user)
-		return
+		return FALSE
 
 	// Not ready to fire
 	if (ranged_cooldown>world.time)
-		return
+		return FALSE
 
 	//Exclude lasertag guns from the TRAIT_CLUMSY check.
 	if(clumsy_check)
@@ -344,7 +376,7 @@
 			if (HAS_TRAIT(user, TRAIT_CLUMSY) && prob(40))
 				if(aimed == GUN_AIMED_POINTBLANK)
 					to_chat(user, span_userdanger("In a cruel twist of fate you fumble your grip and accidentally shoot yourself in the head!"))
-					process_fire(user, user, FALSE, params, BODY_ZONE_HEAD)
+					process_fire(user, user, FALSE, modifiers, BODY_ZONE_HEAD)
 					user.dropItemToGround(src, TRUE)
 					if(chambered.harmful)
 						var/obj/item/organ/brain/target_brain = user.get_organ_slot(ORGAN_SLOT_BRAIN)
@@ -353,19 +385,20 @@
 				else
 					to_chat(user, span_userdanger("You shoot yourself in the foot with [src]!"))
 					var/shot_leg = pick(BODY_ZONE_L_LEG, BODY_ZONE_R_LEG)
-					process_fire(user, user, FALSE, params, shot_leg)
+					process_fire(user, user, FALSE, modifiers, shot_leg)
 					user.dropItemToGround(src, TRUE)
-				return
+				return TRUE
 
 	if(weapon_weight == WEAPON_HEAVY && !is_wielded)
 		balloon_alert(user, "You need both hands free to fire [src]!")
-		return
+		return FALSE
 
 	var/zone_override = null
 	if(aimed == GUN_AIMED_POINTBLANK)
 		zone_override = BODY_ZONE_HEAD //Shooting while pressed against someone's temple
 
-	process_fire(target, user, TRUE, params, zone_override, aimed)
+	process_fire(target, user, TRUE, modifiers, zone_override, aimed)
+	return TRUE
 
 /obj/item/gun/can_trigger_gun(mob/living/user)
 	. = ..()
@@ -404,11 +437,11 @@
 	if(!is_wielded && requires_wielding)
 		bonus_spread += spread_unwielded
 	var/sprd = 0
-	sprd = max(min_gun_sprd, abs(sprd)) * SIGN(sprd)
+	sprd = max(min_gun_sprd, abs(sprd)) * sign(sprd)
 	sprd += (1 - get_integrity_ratio()) * damage_variance
 	return sprd
 
-/obj/item/gun/proc/process_burst(mob/living/user, atom/target, message = TRUE, params=null, zone_override = "", iteration = 0)
+/obj/item/gun/proc/process_burst(mob/living/user, atom/target, message = TRUE, list/modifiers, zone_override = "", iteration = 0)
 	SHOULD_NOT_OVERRIDE(TRUE)
 	if(!user || !firing_burst)
 		firing_burst = FALSE
@@ -417,11 +450,11 @@
 		if(iteration > 1 && !(user.is_holding(src))) //for burst firing
 			firing_burst = FALSE
 			return FALSE
-	if (!fire_shot_at(user, target, message, params, zone_override, FALSE) || iteration >= burst_size)
+	if (!fire_shot_at(user, target, message, modifiers, zone_override, FALSE) || iteration >= burst_size)
 		firing_burst = FALSE
 	return TRUE
 
-/obj/item/gun/proc/process_fire(atom/target, mob/living/user, message = TRUE, params = null, zone_override = "", aimed = FALSE)
+/obj/item/gun/proc/process_fire(atom/target, mob/living/user, message = TRUE, list/modifiers, zone_override = "", aimed = FALSE)
 	SHOULD_NOT_OVERRIDE(TRUE)
 	if(HAS_TRAIT(user, TRAIT_PACIFISM)) // If the user has the pacifist trait, then they won't be able to fire [src] if the round chambered inside of [src] is lethal.
 		if(chambered.harmful) // Is the bullet chambered harmful?
@@ -431,16 +464,16 @@
 	if(burst_size > 1)
 		firing_burst = TRUE
 		for(var/i = 1 to burst_size)
-			addtimer(CALLBACK(src, PROC_REF(process_burst), user, target, message, params, zone_override, i), fire_delay * (i - 1))
+			addtimer(CALLBACK(src, PROC_REF(process_burst), user, target, message, modifiers, zone_override, i), fire_delay * (i - 1))
 	else
-		fire_shot_at(user, target, message, params, zone_override, aimed)
+		fire_shot_at(user, target, message, modifiers, zone_override, aimed)
 
 	if(user)
-		user.update_inv_hands()
+		user.update_held_items()
 	SSblackbox.record_feedback("tally", "gun_fired", 1, type)
 	return TRUE
 
-/obj/item/gun/proc/fire_shot_at(mob/living/user, atom/target, message = TRUE, params=null, zone_override = "", aimed = FALSE)
+/obj/item/gun/proc/fire_shot_at(mob/living/user, atom/target, message = TRUE, list/modifiers, zone_override = "", aimed = FALSE)
 	// If we have nothing chambered, fire an empty shot
 	if(!chambered || !chambered.BB)
 		shoot_with_empty_chamber(user)
@@ -450,7 +483,7 @@
 	var/result = before_firing(target, user, aimed)
 	if (result & GUN_HIT_SELF)
 		target = user
-	if(!chambered.fire_casing(target, user, params, get_bullet_spread(user, target), suppressed, zone_override, src))
+	if(!chambered.fire_casing(target, user, modifiers, get_bullet_spread(user, target), suppressed, zone_override, src))
 		shoot_with_empty_chamber(user)
 		firing_burst = FALSE
 		return FALSE
@@ -500,14 +533,14 @@
 			return ..()
 	return
 
-/obj/item/gun/attack_atom(obj/O, mob/living/user, params)
+/obj/item/gun/attack_atom(obj/O, mob/living/user, list/modifiers)
 	if(user.combat_mode)
 		if(bayonet)
 			O.attackby(bayonet, user)
 			return
 	return ..()
 
-/obj/item/gun/attackby(obj/item/I, mob/living/user, params)
+/obj/item/gun/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(user.combat_mode)
 		return ..()
 
@@ -520,6 +553,8 @@
 		balloon_alert(user, "You attach [K] to [src].")
 		bayonet = K
 		update_appearance()
+		// Become a weapon when we gain a bayonet
+		item_flags |= ISWEAPON
 	else
 		return ..()
 
@@ -537,7 +572,7 @@
 
 		if(Adjacent(user) && !issilicon(user))
 			user.put_in_hands(bayonet)
-		return TOOL_ACT_TOOLTYPE_SUCCESS
+		return ITEM_INTERACT_SUCCESS
 
 	else if(pin && user.is_holding(src))
 		user.visible_message(span_warning("[user] attempts to remove [pin] from [src] with [I]."),
@@ -548,7 +583,7 @@
 			user.visible_message(span_notice("[pin] was pried out of [src] by [user], destroying the pin in the process."),
 								span_warning("You pried [pin] out with [I], destroying the pin in the process."), null, 3)
 			QDEL_NULL(pin)
-			return TOOL_ACT_TOOLTYPE_SUCCESS
+			return ITEM_INTERACT_SUCCESS
 
 
 /obj/item/gun/welder_act(mob/living/user, obj/item/I)
@@ -590,14 +625,7 @@
 	if(azoom)
 		azoom.Grant(user)
 
-/obj/item/gun/dropped(mob/user)
-	..()
-	if(azoom)
-		azoom.Remove(user)
-	if(zoomed)
-		zoom(user, user.dir)
-
-/obj/item/gun/proc/handle_suicide(mob/living/carbon/human/user, mob/living/carbon/human/target, params, bypass_timer)
+/obj/item/gun/proc/handle_suicide(mob/living/carbon/human/user, mob/living/carbon/human/target, list/modifiers, bypass_timer)
 	if(!ishuman(user) || !ishuman(target))
 		return
 
@@ -630,7 +658,7 @@
 	if(chambered?.BB)
 		chambered.BB.damage *= 5
 
-	var/fired = process_fire(target, user, TRUE, params, BODY_ZONE_HEAD)
+	var/fired = process_fire(target, user, TRUE, modifiers, BODY_ZONE_HEAD)
 	if(!fired && chambered?.BB)
 		chambered.BB.damage /= 5
 
@@ -642,11 +670,13 @@
 //Happens before the actual projectile creation
 /obj/item/gun/proc/before_firing(atom/target, mob/user, aimed)
 	if(aimed == GUN_AIMED && chambered?.BB)
-		chambered.BB.speed = initial(chambered.BB.speed) * 0.75 // Faster bullets to account for the fact you've given the target a big warning they're about to be shot
-		chambered.BB.damage = initial(chambered.BB.damage) * 1.25
+		// Faster bullets to account for the fact you've given the target a big warning they're about to be shot
+		chambered.BB.speed = initial(chambered.BB.speed) * 0.5
+		chambered.BB.damage = initial(chambered.BB.damage) * 2
 	if(aimed == GUN_AIMED_POINTBLANK)
-		chambered.BB.speed = initial(chambered.BB.speed) * 0.25 // Much faster bullets because you're holding them literally at the barrel of the gun
-		chambered.BB.damage = initial(chambered.BB.damage) * 4 // Execution
+		// Execution kill
+		chambered.BB.speed = initial(chambered.BB.speed) * 0.25
+		chambered.BB.damage = initial(chambered.BB.damage) * 6
 	return SEND_SIGNAL(user, COMSIG_MOB_BEFORE_FIRE_GUN, src, target, aimed)
 
 /obj/item/gun/atom_break(damage_flag)
@@ -666,7 +696,7 @@
 /datum/action/toggle_scope_zoom
 	name = "Toggle Scope"
 	check_flags = AB_CHECK_CONSCIOUS|AB_CHECK_HANDS_BLOCKED|AB_CHECK_INCAPACITATED|AB_CHECK_LYING
-	icon_icon = 'icons/hud/actions/actions_items.dmi'
+	button_icon = 'icons/hud/actions/actions_items.dmi'
 	button_icon_state = "sniper_zoom"
 	var/obj/item/gun/gun = null
 
@@ -714,5 +744,9 @@
 	if(zoomable)
 		azoom = new()
 		azoom.gun = src
+
+/obj/item/gun/try_ducttape(mob/living/user, obj/item/stack/sticky_tape/duct/tape)
+	balloon_alert(user, "Tape would make it too flimsy to fire!")
+	return FALSE
 
 #undef FIRING_PIN_REMOVAL_DELAY

@@ -27,7 +27,10 @@ and clear when youre done! if you dont i will use :newspaper2: on you
 
 /// typecache for turfs that should be considered ok during floorchecks.
 /// A linked turf being anything not in this typecache will cause the holodeck to perform an emergency shutdown.
-GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf/open/floor/holofloor, /turf/closed)))
+GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(
+	/turf/open/floor/holofloor,
+	/turf/closed,
+)))
 
 /obj/machinery/computer/holodeck
 	name = "holodeck control console"
@@ -39,7 +42,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	//new vars
 
 	///what area type this holodeck loads into. linked turns into the nearest instance of this area
-	var/area/mapped_start_area = /area/holodeck/rec_center
+	var/area/mapped_start_area = /area/station/holodeck/rec_center
 
 	///the currently used map template
 	var/datum/map_template/holodeck/template
@@ -53,7 +56,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	//old vars
 
 	///the area that this holodeck loads templates into, used for power and deleting holo objects that leave it
-	var/area/holodeck/linked
+	var/area/station/holodeck/linked
 
 	///what program is loaded right now or is about to be loaded
 	var/program = "recreational-offline"
@@ -98,7 +101,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	bottom_left = locate(linked.x, linked.y, src.z)
 
 	var/area/computer_area = get_area(src)
-	if(istype(computer_area, /area/holodeck))
+	if(istype(computer_area, /area/station/holodeck))
 		log_mapping("Holodeck computer cannot be in a holodeck, This would cause circular power dependency.")
 		qdel(src)
 		return
@@ -136,6 +139,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 			LAZYADD(program_cache, list(info_this))
 
 /obj/machinery/computer/holodeck/ui_interact(mob/user, datum/tgui/ui)
+	. = ..()
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "Holodeck")
@@ -157,7 +161,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 
 /obj/machinery/computer/holodeck/ui_act(action, params)
 	if(..())
-		return
+		return TRUE
 	switch(action)
 		if("load_program")
 			var/program_to_load = params["id"]
@@ -235,10 +239,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	//makes sure that any time a holoturf is inside a baseturf list (e.g. if someone put a wall over it) its set to the OFFLINE turf
 	//so that you cant bring turfs from previous programs into other ones (like putting the plasma burn turf into lounge for example)
 	for(var/turf/closed/holo_turf in linked)
-		for(var/baseturf in holo_turf.baseturfs)
-			if(ispath(baseturf, /turf/open/floor/holofloor))
-				holo_turf.baseturfs -= baseturf
-				holo_turf.baseturfs += /turf/open/floor/holofloor/plating
+		holo_turf.replace_baseturf(/turf/open/floor/holofloor, /turf/open/floor/holofloor/plating)
 
 	log_game("[key_name(usr)] has loaded the holodeck program '[program]' at [loc_name(src)].")
 	template = SSmapping.holodeck_templates[map_id]
@@ -262,7 +263,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 			spawned -= holo_atom
 			continue
 
-		RegisterSignal(holo_atom, COMSIG_PARENT_PREQDELETED, PROC_REF(remove_from_holo_lists))
+		RegisterSignal(holo_atom, COMSIG_PREQDELETED, PROC_REF(remove_from_holo_lists))
 		holo_atom.flags_1 |= HOLOGRAM_1
 
 		if(isholoeffect(holo_atom))//activates holo effects and transfers them from the spawned list into the effects list
@@ -272,10 +273,10 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 			var/atom/holo_effect_product = holo_effect.activate(src)//change name
 			if(istype(holo_effect_product))
 				spawned += holo_effect_product // we want mobs or objects spawned via holoeffects to be tracked as objects
-				RegisterSignal(holo_effect_product, COMSIG_PARENT_PREQDELETED, PROC_REF(remove_from_holo_lists))
+				RegisterSignal(holo_effect_product, COMSIG_PREQDELETED, PROC_REF(remove_from_holo_lists))
 			if(islist(holo_effect_product))
 				for(var/atom/atom_product as anything in holo_effect_product)
-					RegisterSignal(atom_product, COMSIG_PARENT_PREQDELETED, PROC_REF(remove_from_holo_lists))
+					RegisterSignal(atom_product, COMSIG_PREQDELETED, PROC_REF(remove_from_holo_lists))
 			continue
 
 		if(isobj(holo_atom))
@@ -306,7 +307,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	spawned -= holo_atom
 	if(!holo_atom)
 		return
-	UnregisterSignal(holo_atom, COMSIG_PARENT_PREQDELETED)
+	UnregisterSignal(holo_atom, COMSIG_PREQDELETED)
 	var/turf/target_turf = get_turf(holo_atom)
 	for(var/atom/movable/atom_contents as anything in holo_atom) //make sure that things inside of a holoitem are moved outside before destroying it
 		atom_contents.forceMove(target_turf)
@@ -320,7 +321,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	SIGNAL_HANDLER
 
 	spawned -= to_remove
-	UnregisterSignal(to_remove, COMSIG_PARENT_PREQDELETED)
+	UnregisterSignal(to_remove, COMSIG_PREQDELETED)
 
 /obj/machinery/computer/holodeck/process(delta_time=2)
 	if(debug_holodeck)
@@ -439,7 +440,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	return ..()
 
 /obj/machinery/computer/holodeck/small
-	mapped_start_area = /area/holodeck/small
+	mapped_start_area = /area/station/holodeck/small
 	program_type = /datum/map_template/holodeck/small
 	offline_program = "Small - Offline"
 
@@ -454,7 +455,7 @@ GLOBAL_LIST_INIT(typecache_holodeck_linked_floorcheck_ok, typecacheof(list(/turf
 	desc = "This seems to be a proof of a suspicion that our shifts are not real... Nevermind, I was joking."
 	debug_holodeck = TRUE
 
-	mapped_start_area = /area/holodeck/debug
+	mapped_start_area = /area/station/holodeck/debug
 	program_type = /datum/map_template/holodeck/debug
 	offline_program = "debug-offline"
 	req_access = list(ACCESS_CENT_GENERAL)

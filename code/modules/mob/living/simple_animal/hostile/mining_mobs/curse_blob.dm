@@ -5,7 +5,7 @@
 	icon_state = "curseblob"
 	icon_living = "curseblob"
 	icon_aggro = "curseblob"
-	mob_biotypes = list(MOB_SPIRIT)
+	mob_biotypes = MOB_SPIRIT
 	is_flying_animal = TRUE
 	no_flying_animation = TRUE
 	move_to_delay = 5
@@ -18,6 +18,7 @@
 	attack_verb_continuous = "slashes"
 	attack_verb_simple = "slash"
 	attack_sound = 'sound/effects/curseattack.ogg'
+	attack_vis_effect = ATTACK_EFFECT_SLASH
 	throw_message = "passes through the smokey body of"
 	obj_damage = 0
 	environment_smash = ENVIRONMENT_SMASH_NONE
@@ -50,7 +51,7 @@
 	RegisterSignal(move_target, COMSIG_MOB_STATCHANGE, PROC_REF(stat_change))
 	RegisterSignal(move_target, COMSIG_MOVABLE_Z_CHANGED, PROC_REF(target_z_change))
 	RegisterSignal(src, COMSIG_MOVABLE_Z_CHANGED, PROC_REF(our_z_change))
-	RegisterSignal(our_loop, COMSIG_PARENT_QDELETING, PROC_REF(handle_loop_end))
+	RegisterSignal(our_loop, COMSIG_QDELETING, PROC_REF(handle_loop_end))
 
 /mob/living/simple_animal/hostile/asteroid/curseblob/proc/stat_change(datum/source, new_stat)
 	SIGNAL_HANDLER

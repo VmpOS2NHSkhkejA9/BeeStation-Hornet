@@ -1,3 +1,9 @@
+/datum/storage/bag_of_holding
+	max_specific_storage = WEIGHT_CLASS_GIGANTIC
+	max_total_storage = 70
+	max_slots = 30
+	allow_big_nesting = TRUE
+
 /datum/storage/bag_of_holding/attempt_insert(obj/item/to_insert, mob/user, override, force)
 	var/obj/item/resolve_parent = parent?.resolve()
 	if(!resolve_parent)
@@ -22,7 +28,7 @@
 		return
 
 	var/turf/loccheck = get_turf(resolve_parent)
-	to_chat(user, "<span class='danger'>The Bluespace interfaces of the two devices catastrophically malfunction!</span>")
+	to_chat(user, span_danger("The Bluespace interfaces of the two devices catastrophically malfunction!"))
 	qdel(to_insert)
 	playsound(loccheck,'sound/effects/supermatter.ogg', 200, TRUE)
 
@@ -33,3 +39,10 @@
 	user.gib(TRUE, TRUE, TRUE)
 	new/obj/boh_tear(loccheck)
 	qdel(resolve_parent)
+
+/datum/storage/bag_of_holding/hammerspace
+	max_total_storage = 1000
+	max_slots = 200
+	allow_quick_gather = TRUE
+	allow_quick_empty = TRUE
+	numerical_stacking = TRUE

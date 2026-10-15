@@ -10,14 +10,12 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 	effect = "warping"
 	///what runes will be drawn depending on the crossbreed color
 	var/obj/effect/warped_rune/runepath
-	/// the number of "charge" a bluespace crossbreed start with
-	var/warp_charge = INFINITY
 	///time it takes to store the rune back into the crossbreed
 	var/storing_time = 5 SECONDS
 	///time it takes to draw the rune
 	var/drawing_time = 5 SECONDS
 	var/max_cooldown = 30 SECONDS
-	var/cooldown = 0
+	COOLDOWN_DECLARE(drawing_cooldown)
 
 /obj/effect/warped_rune
 	name = "warped rune"
@@ -43,13 +41,9 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 	)
 	AddElement(/datum/element/connect_loc, loc_connections)
 
-/obj/effect/warped_rune/Moved(atom/OldLoc, Dir)
+/obj/effect/warped_rune/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
 	rune_turf = get_turf(src)
-
-/obj/item/slimecross/warping/examine()
-	. = ..()
-	. += "It has [warp_charge] charge left"
 
 ///runes can also be deleted by bluespace crystals relatively fast as an alternative to cleaning them.
 /obj/effect/warped_rune/attackby(obj/item/used_item, mob/user)
@@ -90,8 +84,8 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 		return
 
 	if(istype(target, runepath)) //checks if the target is a rune and then if you can store it
-		if(do_after(user, storing_time,target = target))
-			warping_crossbreed_absorb(target, user)
+		if(do_after(user, storing_time, target = target))
+			qdel(target)
 		return
 
 	if(isturf(target) && locate(/obj/effect/warped_rune) in target) //check if the target is a floor and if there's a rune on said floor
@@ -102,42 +96,26 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 		to_chat(user, span_warning("you cannot draw a rune here!"))
 		return
 
-	if(warp_charge < 1) //check if we have at least 1 charge left.
-		to_chat(user, span_warning("[src] is empty!"))
-		return
-
 	if(!check_cd(user))
 		return
 
 	if(do_after(user, drawing_time,target = target))
-		if(warp_charge >= 1 && (!locate(/obj/effect/warped_rune) in target) && check_cd(user)) //check one last time if a rune has been drawn during the do_after and if there's enough charges left
+		if((!locate(/obj/effect/warped_rune) in target) && check_cd(user))  //check one last time if a rune has been drawn during the do_after and if there's enough charges left
 			warping_crossbreed_spawn(target,user)
-			make_cd()
+			COOLDOWN_START(src, drawing_cooldown, max_cooldown)
 
-
-///spawns the rune, taking away one rune charge
+///spawns the rune
 /obj/item/slimecross/warping/proc/warping_crossbreed_spawn(atom/target, mob/user)
 	playsound(target, 'sound/effects/slosh.ogg', 20, TRUE)
-	warp_charge--
 	new runepath(target)
 	to_chat(user, span_notice("You carefully draw the rune with [src]."))
 
-
-///absorb the rune into the crossbreed adding one more charge to the crossbreed.
-/obj/item/slimecross/warping/proc/warping_crossbreed_absorb(atom/target, mob/user)
-	//to_chat(user, span_notice("You store the rune in [src]."))
-	qdel(target)
-	warp_charge++
-
 /obj/item/slimecross/warping/proc/check_cd(user)
-	if(world.time < cooldown)
+	if(!COOLDOWN_FINISHED(src, drawing_cooldown))
 		if(user)
 			to_chat(user, span_warning("[src] is recharging energy."))
 		return FALSE
 	return TRUE
-
-/obj/item/slimecross/warping/proc/make_cd()
-	cooldown = world.time + max_cooldown
 
 /obj/effect/warped_rune/attack_hand(mob/living/user)
 	. = ..()
@@ -204,7 +182,7 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 
 /obj/effect/warped_rune/orangespace/do_effect(mob/user)
 	var/obj/structure/bonfire/bluespace/B = new (rune_turf)
-	B.StartBurning()
+	B.start_burning()
 	. = ..()
 
 /obj/item/slimecross/warping/purple
@@ -222,13 +200,13 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 		/obj/item/reagent_containers/hypospray/medipen,
 		/obj/item/stack/medical/bruise_pack,
 		/obj/item/stack/medical/ointment,
-		/obj/item/reagent_containers/pill/oxandrolone,
+		/obj/item/reagent_containers/applicator/pill/oxandrolone,
 		/obj/item/storage/pill_bottle/charcoal,
-		/obj/item/reagent_containers/pill/mutadone,
-		/obj/item/reagent_containers/pill/antirad,
-		/obj/item/reagent_containers/pill/patch/styptic,
-		/obj/item/reagent_containers/pill/patch/synthflesh,
-		/obj/item/reagent_containers/pill/patch/silver_sulf,
+		/obj/item/reagent_containers/applicator/pill/mutadone,
+		/obj/item/reagent_containers/applicator/pill/antirad,
+		/obj/item/reagent_containers/applicator/patch/styptic,
+		/obj/item/reagent_containers/applicator/patch/synthflesh,
+		/obj/item/reagent_containers/applicator/patch/silver_sulf,
 		/obj/item/healthanalyzer,
 		/obj/item/surgical_drapes,
 		/obj/item/scalpel,
@@ -258,7 +236,7 @@ put up a rune with bluespace effects, lots of those runes are fluff or act as a 
 		T.MakeSlippery(TURF_WET_PERMAFROST, 1 MINUTES)
 	. = ..()
 
-/obj/effect/warped_rune/cyanspace/ComponentInitialize()
+/obj/effect/warped_rune/cyanspace/Initialize(mapload)
 	. = ..()
 	AddComponent(/datum/component/slippery, 30)
 
@@ -384,7 +362,6 @@ GLOBAL_DATUM(blue_storage, /obj/item/storage/backpack/holding/bluespace)
 	energy = 100
 	bomb = 100
 	bio = 100
-	rad = 100
 	fire = 100
 	acid = 100
 	stamina = 100
@@ -511,11 +488,11 @@ GLOBAL_DATUM(blue_storage, /obj/item/storage/backpack/holding/bluespace)
 	desc = "Who shall we be today? they asked, but not even the canvas would answer."
 	icon_state = "rune_pyrite"
 	remove_on_activation = FALSE
-	var/colour = "#FFFFFF"
+	var/colour = COLOR_WHITE
 
 /obj/effect/warped_rune/pyritespace/Initialize(mapload)
 	. = ..()
-	colour = pick("#FFFFFF", "#FF0000", "#FFA500", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#FF00FF")
+	colour = pick(COLOR_WHITE, COLOR_RED, "#FFA500", COLOR_YELLOW, COLOR_VIBRANT_LIME, COLOR_BLUE, "#4B0082", COLOR_MAGENTA)
 
 /obj/effect/warped_rune/pyritespace/on_entered(datum/source, atom/movable/AM, oldloc)
 	if(isliving(AM))
@@ -538,11 +515,11 @@ GLOBAL_DATUM(blue_storage, /obj/item/storage/backpack/holding/bluespace)
 	if(ishuman(AM))
 		var/mob/living/carbon/human/H = AM
 		add_blood_DNA(list("Non-human DNA" = random_blood_type()))
-		for(var/obj/item/I in H.get_equipped_items(TRUE))
-			I.add_blood_DNA(return_blood_DNA())
+		for(var/obj/item/I in H.get_equipped_items(INCLUDE_POCKETS))
+			I.add_blood_DNA(GET_ATOM_BLOOD_DNA(src))
 			I.update_icon()
 		for(var/obj/item/I in H.held_items)
-			I.add_blood_DNA(return_blood_DNA())
+			I.add_blood_DNA(GET_ATOM_BLOOD_DNA(src))
 			I.update_icon()
 		playsound(src, 'sound/effects/blobattack.ogg', 50, TRUE)
 		activated_on_step = TRUE
@@ -642,7 +619,7 @@ GLOBAL_DATUM(blue_storage, /obj/item/storage/backpack/holding/bluespace)
 		/obj/item/gun/energy/laser/retro/old,
 		/obj/item/storage/toolbox/mechanical/old,
 		/obj/item/storage/toolbox/emergency/old,
-		/obj/effect/spawner/lootdrop/three_course_meal,
+		/obj/effect/spawner/random/food_or_drink/three_course_meal,
 		/mob/living/basic/pet/dog/corgi/puppy/void,
 		/obj/structure/closet/crate/necropolis/tendril,
 		/obj/item/card/emagfake,
@@ -651,8 +628,8 @@ GLOBAL_DATUM(blue_storage, /obj/item/storage/backpack/holding/bluespace)
 	)
 
 	var/static/list/rare_items = list(
-		/obj/effect/spawner/lootdrop/armory_contraband,
-		/obj/effect/spawner/lootdrop/teratoma/major
+		/obj/effect/spawner/random/contraband/armory,
+		/obj/effect/spawner/random/medical/teratoma/major
 	)
 
 
@@ -718,7 +695,7 @@ GLOBAL_DATUM(blue_storage, /obj/item/storage/backpack/holding/bluespace)
 	to_chat(user, span_brass("[src] demands a weapon to enhance."))
 	return
 
-/obj/effect/warped_rune/blackspace/attackby(obj/item/I, mob/living/user, params)
+/obj/effect/warped_rune/blackspace/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(HAS_TRAIT(I, TRAIT_STARGAZED))
 		to_chat(user, span_brass("[I] has already been enhanced!"))
 		return
@@ -817,7 +794,6 @@ GLOBAL_DATUM(warped_room, /datum/map_template/warped_room)
 /area/warped_room
 	name = "warped room"
 	icon_state = "yellow"
-	dynamic_lighting = DYNAMIC_LIGHTING_ENABLED
 	requires_power = FALSE
 	default_gravity = STANDARD_GRAVITY
 	teleport_restriction = TELEPORT_ALLOW_NONE
@@ -828,12 +804,8 @@ GLOBAL_DATUM(warped_room, /datum/map_template/warped_room)
 ///creates the warped room and place an exit rune to exit the room
 /obj/effect/warped_rune/rainbowspace/Initialize(mapload)
 	. = ..()
-	if(!GLOB.warped_room)
-		GLOB.warped_room = new
-		///current x,y,z location of the reserved space for the rune room
-		var/datum/turf_reservation/room_reservation = SSmapping.RequestBlockReservation(GLOB.warped_room.width, GLOB.warped_room.height) //monkey sees valid location
-		GLOB.warped_room.load(locate(room_reservation.bottom_left_coords[1], room_reservation.bottom_left_coords[2], room_reservation.bottom_left_coords[3]))//monkey room activate
-		GLOB.warped_room.exit_rune = new (locate(room_reservation.bottom_left_coords[1] + 3, room_reservation.bottom_left_coords[2] + 6, room_reservation.bottom_left_coords[3]))
+	if(isnull(GLOB.warped_room))
+		INVOKE_ASYNC(src, PROC_REF(generate_warped_room))
 	GLOB.warped_room.rainbow_runes += src
 
 /obj/effect/warped_rune/rainbowspace/do_effect(mob/user)
@@ -843,12 +815,19 @@ GLOBAL_DATUM(warped_room, /datum/map_template/warped_room)
 		customer.forceMove(get_turf(GLOB.warped_room.exit_rune))
 	if(tp_mob)
 		playsound(rune_turf, dir_sound, 20, TRUE)
-	. = ..()
+	return ..()
 
-///Will delete the room when the rune is destroyed if no customer is left in the room.
+/// Will delete the room when the rune is destroyed if no customer is left in the room.
 /obj/effect/warped_rune/rainbowspace/Destroy()
 	GLOB.warped_room?.rainbow_runes -= src
 	return ..()
+
+/obj/effect/warped_rune/rainbowspace/proc/generate_warped_room()
+	GLOB.warped_room = new()
+	// current x,y,z location of the reserved space for the rune room
+	var/datum/turf_reservation/room_reservation = SSmapping.request_turf_block_reservation(GLOB.warped_room.width, GLOB.warped_room.height) // monkey sees valid location
+	GLOB.warped_room.load(locate(room_reservation.bottom_left_coords[1], room_reservation.bottom_left_coords[2], room_reservation.bottom_left_coords[3])) // monkey room activate
+	GLOB.warped_room.exit_rune = new (locate(room_reservation.bottom_left_coords[1] + 3, room_reservation.bottom_left_coords[2] + 6, room_reservation.bottom_left_coords[3]))
 
 ///anyone on the exit rune when it is used will be teleported to the rune that was used to teleport to the warped room
 /obj/effect/warped_room_exit/attack_hand(mob/living/user)
@@ -867,3 +846,4 @@ GLOBAL_DATUM(warped_room, /datum/map_template/warped_room)
 		tp_mob = TRUE
 	if(tp_mob)
 		playsound(get_turf(src), 'sound/effects/phasein.ogg', 20, TRUE)
+

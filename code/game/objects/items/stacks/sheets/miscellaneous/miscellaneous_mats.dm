@@ -14,7 +14,7 @@ Miscellaneous material sheets
 /obj/item/stack/sheet/wax
 	name = "wax"
 	icon_state = "sheet-wax"
-	item_state = "sheet-wax"
+	inhand_icon_state = "sheet-wax"
 	singular_name = "wax block"
 	force = 1
 	throwforce = 2
@@ -49,7 +49,7 @@ GLOBAL_LIST_INIT(sandbag_recipes, list ( \
 	icon_state = "sandbags"
 	w_class = WEIGHT_CLASS_TINY
 
-/obj/item/emptysandbag/attackby(obj/item/W, mob/user, params)
+/obj/item/emptysandbag/attackby(obj/item/W, mob/user, list/modifiers)
 	if(istype(W, /obj/item/stack/ore/glass))
 		var/obj/item/stack/ore/glass/G = W
 		to_chat(user, span_notice("You fill the sandbag."))
@@ -66,7 +66,7 @@ GLOBAL_LIST_INIT(sandbag_recipes, list ( \
 /obj/item/stack/sheet/snow
 	name = "snow"
 	icon_state = "sheet-snow"
-	item_state = "sheet-snow"
+	inhand_icon_state = "sheet-snow"
 	icon = 'icons/obj/stacks/minerals.dmi'
 	singular_name = "snow block"
 	force = 1
@@ -84,7 +84,7 @@ GLOBAL_LIST_INIT(sandbag_recipes, list ( \
 	desc = "Compress dinosaur over millions of years, then refine, split and mold, and voila! You have plastic."
 	singular_name = "plastic sheet"
 	icon_state = "sheet-plastic"
-	item_state = "sheet-plastic"
+	inhand_icon_state = "sheet-plastic"
 	mats_per_unit = list(/datum/material/plastic=MINERAL_MATERIAL_AMOUNT)
 	throwforce = 7
 	merge_type = /obj/item/stack/sheet/plastic
@@ -101,7 +101,7 @@ GLOBAL_LIST_INIT(sandbag_recipes, list ( \
 	singular_name = "cardboard sheet"
 	icon = 'icons/obj/stacks/miscellaneous.dmi'
 	icon_state = "sheet-card"
-	item_state = "sheet-card"
+	inhand_icon_state = "sheet-card"
 	resistance_flags = FLAMMABLE
 	force = 0
 	throwforce = 0
@@ -111,7 +111,7 @@ GLOBAL_LIST_INIT(sandbag_recipes, list ( \
 	return GLOB.cardboard_recipes
 
 
-/obj/item/stack/sheet/cardboard/attackby(obj/item/I, mob/user, params)
+/obj/item/stack/sheet/cardboard/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/stamp/clown) && !istype(loc, /obj/item/storage))
 		var/atom/droploc = drop_location()
 		if(use(1))

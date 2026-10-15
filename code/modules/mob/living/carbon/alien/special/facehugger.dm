@@ -13,7 +13,7 @@
 	desc = "It has some sort of a tube at the end of its tail."
 	icon = 'icons/mob/alien.dmi'
 	icon_state = "facehugger"
-	item_state = "facehugger"
+	inhand_icon_state = "facehugger"
 	w_class = WEIGHT_CLASS_TINY //note: can be picked up by aliens unlike most other items of w_class below 4
 	clothing_flags = MASKINTERNALS
 	throw_range = 5
@@ -28,16 +28,14 @@
 	var/strength = 5
 	var/attached = 0
 
-/obj/item/clothing/mask/facehugger/ComponentInitialize()
-	. = ..()
-	AddElement(/datum/element/atmos_sensitive)
-
 /obj/item/clothing/mask/facehugger/Initialize(mapload)
 	. = ..()
 	var/static/list/loc_connections = list(
 		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
 	)
 	AddElement(/datum/element/connect_loc, loc_connections)
+	AddElement(/datum/element/atmos_sensitive)
+	AddElement(/datum/element/muffles_speech)
 
 /obj/item/clothing/mask/facehugger/compile_monkey_icon()
 	//If the icon, for this type of item, is already made by something else, don't make it again
@@ -53,13 +51,13 @@
 
 /obj/item/clothing/mask/facehugger/dead
 	icon_state = "facehugger_dead"
-	item_state = "facehugger_inactive"
+	inhand_icon_state = "facehugger_inactive"
 	worn_icon_state = "facehugger_dead"
 	stat = DEAD
 
 /obj/item/clothing/mask/facehugger/impregnated
 	icon_state = "facehugger_impregnated"
-	item_state = null
+	inhand_icon_state = null
 	worn_icon_state = "facehugger_impregnated"
 	stat = DEAD
 
@@ -68,8 +66,8 @@
 	if(atom_integrity < 90)
 		Die()
 
-/obj/item/clothing/mask/facehugger/attackby(obj/item/O, mob/user, params)
-	return O.attack_atom(src, user, params)
+/obj/item/clothing/mask/facehugger/attackby(obj/item/O, mob/user, list/modifiers)
+	return O.attack_atom(src, user, modifiers)
 
 //ATTACK HAND IGNORING PARENT RETURN VALUE
 /obj/item/clothing/mask/facehugger/attack_hand(mob/user, list/modifiers)
@@ -123,8 +121,9 @@
 		return Leap(AM)
 	return FALSE
 
-/obj/item/clothing/mask/facehugger/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback, quickstart = TRUE)
-	if(!..())
+/obj/item/clothing/mask/facehugger/throw_at(atom/target, range, speed, mob/thrower, spin=1, diagonals_first = 0, datum/callback/callback, force, quickstart = TRUE)
+	. = ..()
+	if(!.)
 		return
 	if(stat == CONSCIOUS)
 		icon_state = "[initial(icon_state)]_thrown"
@@ -175,7 +174,7 @@
 
 		if(ishuman(M))
 			var/mob/living/carbon/human/H = M
-			if(H.is_mouth_covered(head_only = 1))
+			if(H.is_mouth_covered(ITEM_SLOT_HEAD))
 				H.visible_message(span_danger("[src] smashes against [H]'s [H.head]!"), \
 									span_userdanger("[src] smashes against your [H.head]!"))
 				Die()
@@ -255,7 +254,7 @@
 		return
 
 	icon_state = "[initial(icon_state)]_dead"
-	item_state = "facehugger_inactive"
+	inhand_icon_state = "facehugger_inactive"
 	stat = DEAD
 
 	visible_message(span_danger("[src] curls up into a ball!"))
@@ -268,9 +267,9 @@
 		return TRUE
 
 	var/mob/living/carbon/C = M
-	if(ishuman(C) && !(ITEM_SLOT_MASK in C.dna.species.no_equip))
+	if(ishuman(C) && !(C.dna.species.no_equip_flags & ITEM_SLOT_MASK))
 		var/mob/living/carbon/human/H = C
-		if(H.is_mouth_covered(head_only = 1))
+		if(H.is_mouth_covered(ITEM_SLOT_HEAD))
 			return FALSE
 		return TRUE
 	return FALSE

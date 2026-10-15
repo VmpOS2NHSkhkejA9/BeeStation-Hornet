@@ -9,6 +9,7 @@ GLOBAL_LIST_EMPTY(conveyors_by_id)
 	desc = "A conveyor belt."
 	layer = GAS_PUMP_LAYER
 	processing_flags = NONE
+	trade_flags = TRADE_NOT_SELLABLE
 	var/operating = 0	// 1 if running forward, -1 if backwards, 0 if off
 	var/operable = 1	// true if can operate (no broken segments in this belt run)
 	var/forwards		// this is the default (forward) direction, set by the map dir
@@ -93,7 +94,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/conveyor)
 	. = ..()
 	update_move_direction()
 
-/obj/machinery/conveyor/Moved(atom/OldLoc, Dir)
+/obj/machinery/conveyor/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
 	if(!.)
 		return
@@ -112,9 +113,9 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/conveyor)
 		neighbors["[direction]"] = TRUE
 		valid.neighbors["[turn(direction, 180)]"] = TRUE
 		RegisterSignal(valid, COMSIG_MOVABLE_MOVED, PROC_REF(nearby_belt_changed), override=TRUE)
-		RegisterSignal(valid, COMSIG_PARENT_QDELETING, PROC_REF(nearby_belt_changed), override=TRUE)
+		RegisterSignal(valid, COMSIG_QDELETING, PROC_REF(nearby_belt_changed), override=TRUE)
 		valid.RegisterSignal(src, COMSIG_MOVABLE_MOVED, PROC_REF(nearby_belt_changed), override=TRUE)
-		valid.RegisterSignal(src, COMSIG_PARENT_QDELETING, PROC_REF(nearby_belt_changed), override=TRUE)
+		valid.RegisterSignal(src, COMSIG_QDELETING, PROC_REF(nearby_belt_changed), override=TRUE)
 
 /obj/machinery/conveyor/proc/nearby_belt_changed(datum/source)
 	SIGNAL_HANDLER
@@ -206,7 +207,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/conveyor)
 		moving_loop.delay = 0.2 SECONDS
 		return
 
-	var/static/list/unconveyables = typecacheof(list(/obj/effect, /mob/dead))
+	var/static/list/unconveyables = typecacheof(list(
+		/obj/effect,
+		/mob/dead,
+	))
 	if(!istype(moving) || is_type_in_typecache(moving, unconveyables) || moving == src)
 		return
 	moving.AddComponent(/datum/component/convey, movedir, 0.2 SECONDS)
@@ -217,7 +221,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/conveyor)
 	SSmove_manager.stop_looping(thing, SSconveyors)
 
 // attack with item, place item on conveyor
-/obj/machinery/conveyor/attackby(obj/item/I, mob/living/user, params)
+/obj/machinery/conveyor/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(I.tool_behaviour == TOOL_CROWBAR)
 		user.visible_message(span_notice("[user] struggles to pry up \the [src] with \the [I]."), \
 		span_notice("You struggle to pry up \the [src] with \the [I]."))
@@ -391,7 +395,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/conveyor_switch)
 
 		//Run sanity check on the switch for one way direction.
 		if(oneway)
-			if(SIGN(position) != SIGN(oneway)) //If our signs don't match...
+			if(sign(position) != sign(oneway)) //If our signs don't match...
 				position = 0 // Set position to zero to stop the conveyor since we can't go that way.
 	else
 		if(position == 0)
@@ -523,7 +527,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/stack/conveyor)
 	transfer_fingerprints_to(C)
 	use(1)
 
-/obj/item/stack/conveyor/attackby(obj/item/I, mob/user, params)
+/obj/item/stack/conveyor/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	if(istype(I, /obj/item/conveyor_switch_construct))
 		to_chat(user, span_notice("You link the switch to the conveyor belt assembly."))

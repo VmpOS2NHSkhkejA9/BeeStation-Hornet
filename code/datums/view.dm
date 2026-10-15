@@ -38,8 +38,8 @@
 		assertFormat()
 	else
 		resetFormat()
-	var/datum/hud/our_hud = chief?.mob?.hud_used
-	our_hud.view_audit_buttons() // Make sure our hud's buttons are in our new size
+	if(chief?.mob)
+		SEND_SIGNAL(chief.mob, COMSIG_VIEWDATA_UPDATE, getView())
 
 /datum/view_data/proc/assertFormat()//T-Pose
 	winset(chief, "mapwindow.map", "zoom=0")
@@ -56,7 +56,7 @@
 /datum/view_data/proc/isZooming()
 	return (width || height)
 
-/datum/view_data/proc/resetToDefault(var/new_default)
+/datum/view_data/proc/resetToDefault(new_default)
 	width = 0
 	height = 0
 	if(new_default != null)
@@ -136,7 +136,7 @@
 				_y = -offset
 			if(WEST)
 				_x = -offset
-		animate(chief, pixel_x = world.icon_size*_x, pixel_y = world.icon_size*_y, 0, FALSE, LINEAR_EASING, ANIMATION_END_NOW)
+		animate(chief, pixel_x = ICON_SIZE_X*_x, pixel_y = ICON_SIZE_Y*_y, 0, FALSE, LINEAR_EASING, ANIMATION_END_NOW)
 	//Ready for this one?
 	setTo(radius)
 

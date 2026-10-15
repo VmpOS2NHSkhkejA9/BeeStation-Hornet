@@ -1,4 +1,5 @@
 /obj/item/organ/cyberimp/chest
+	abstract_type = /obj/item/organ/cyberimp/chest
 	name = "cybernetic torso implant"
 	desc = "Implants for the organs in your torso."
 	icon_state = "chest_implant"
@@ -9,7 +10,7 @@
 	name = "Nutriment pump implant"
 	desc = "This implant will synthesize and pump into your bloodstream a small amount of nutriment when you are starving."
 	icon_state = "chest_implant"
-	implant_color = "#00AA00"
+	implant_color = COLOR_DARK_LIME
 	var/hunger_threshold = NUTRITION_LEVEL_STARVING
 	var/synthesizing = FALSE
 	var/malfunctioning = FALSE
@@ -81,18 +82,21 @@
 			to_chat(owner, span_notice("You feel a faint buzzing as your reviver implant starts patching your wounds..."))
 
 /obj/item/organ/cyberimp/chest/reviver/proc/heal()
+	var/need_mob_update = FALSE
 	if(owner.getOxyLoss())
-		owner.adjustOxyLoss(-5)
+		need_mob_update += owner.adjustOxyLoss(-5, updating_health = FALSE)
 		revive_cost += 5
 	if(owner.getBruteLoss())
-		owner.adjustBruteLoss(-2)
+		need_mob_update += owner.adjustBruteLoss(-2, updating_health = FALSE)
 		revive_cost += 40
 	if(owner.getFireLoss())
-		owner.adjustFireLoss(-2)
+		need_mob_update += owner.adjustFireLoss(-2, updating_health = FALSE)
 		revive_cost += 40
 	if(owner.getToxLoss())
-		owner.adjustToxLoss(-1)
+		need_mob_update += owner.adjustToxLoss(-1, updating_health = FALSE)
 		revive_cost += 40
+	if(need_mob_update)
+		owner.updatehealth()
 
 /obj/item/organ/cyberimp/chest/reviver/emp_act(severity)
 	. = ..()
@@ -101,10 +105,10 @@
 	if(prob(30/severity))
 		to_chat(owner, span_userdanger("You feel a sharp pain in your chest, your reviver implant seems to have shorted out!"))
 		owner.Knockdown((3 SECONDS))
-		Destroy()
+		qdel(src)
 
 /obj/item/organ/cyberimp/chest/reviver/syndicate
-	syndicate_implant = TRUE
+	organ_flags = ORGAN_ROBOTIC | ORGAN_HIDDEN
 
 /obj/item/organ/cyberimp/chest/thrusters
 	name = "implantable thrusters set"
@@ -143,14 +147,16 @@
 		on = TRUE
 		if(allow_thrust(THRUST_REQUIREMENT_SPACEMOVE))
 			ion_trail.start()
-			JETPACK_SPEED_CHECK(owner, MOVESPEED_ID_CYBER_THRUSTER, -1, TRUE)
 			RegisterSignal(owner, COMSIG_MOVABLE_MOVED, PROC_REF(move_react))
+			RegisterSignal(owner, COMSIG_MOVABLE_SPACEMOVE, PROC_REF(spacemove_react))
+			JETPACK_SPEED_CHECK(owner, MOVESPEED_ID_CYBER_THRUSTER, -1, TRUE)
 			if(!silent)
 				to_chat(owner, span_notice("You turn your thrusters set on."))
 	else
 		ion_trail.stop()
-		owner.remove_movespeed_modifier(/datum/movespeed_modifier/jetpack/cybernetic)
 		UnregisterSignal(owner, COMSIG_MOVABLE_MOVED)
+		UnregisterSignal(owner, COMSIG_MOVABLE_SPACEMOVE)
+		owner.remove_movespeed_modifier(/datum/movespeed_modifier/jetpack/cybernetic)
 		if(!silent)
 			to_chat(owner, span_notice("You turn your thrusters set off."))
 		on = FALSE
@@ -164,6 +170,12 @@
 	SIGNAL_HANDLER
 
 	allow_thrust(THRUST_REQUIREMENT_SPACEMOVE)
+
+/obj/item/organ/cyberimp/chest/thrusters/proc/spacemove_react(mob/user, movement_dir)
+	SIGNAL_HANDLER
+
+	if(on && movement_dir)
+		return COMSIG_MOVABLE_STOP_SPACEMOVE
 
 /obj/item/organ/cyberimp/chest/thrusters/proc/allow_thrust(num, use_fuel = TRUE)
 	if(!on || !owner)

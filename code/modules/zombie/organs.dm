@@ -25,11 +25,19 @@
 	GLOB.zombie_infection_list -= src
 	. = ..()
 
+/obj/item/organ/zombie_infection/feel_for_damage(self_aware)
+	// keep stealthy for now, revisit later
+	return ""
+
 /obj/item/organ/zombie_infection/Insert(mob/living/carbon/M, special = FALSE, drop_if_replaced = TRUE, pref_load = FALSE)
 	. = ..()
 	if(!.)
 		return .
 	START_PROCESSING(SSobj, src)
+	// Find all antag datums and mark romerol objectives as complete
+	for (var/datum/antagonist/antagonist as anything in GLOB.active_antagonists)
+		for (var/datum/objective/romerol/objective in antagonist.objectives)
+			objective.released = TRUE
 
 /obj/item/organ/zombie_infection/Remove(mob/living/carbon/M, special = 0, pref_load = FALSE)
 	. = ..()
@@ -47,7 +55,7 @@
 		return
 	if(!(src in owner.internal_organs))
 		Remove(owner, TRUE)
-	if(MOB_INORGANIC in owner.mob_biotypes)//does not process in inorganic things
+	if(owner.mob_biotypes & MOB_MINERAL)//does not process in inorganic things
 		return
 	if (causes_damage && !iszombie(owner) && owner.stat != DEAD)
 		owner.adjustOrganLoss(ORGAN_SLOT_BRAIN, 1 * delta_time)
@@ -67,7 +75,7 @@
 	var/flags = TIMER_STOPPABLE
 	timer_id = addtimer(CALLBACK(src, PROC_REF(zombify), owner), revive_time, flags)
 
-/obj/item/organ/zombie_infection/proc/zombify(var/mob/living/carbon/C)
+/obj/item/organ/zombie_infection/proc/zombify(mob/living/carbon/C)
 	timer_id = null
 
 	if(!converts_living && owner.stat != DEAD)
@@ -81,6 +89,7 @@
 
 	//Fully heal the zombie's damage the first time they rise
 	C.setOrganLoss(ORGAN_SLOT_BRAIN, 0)
+	C.cure_all_traumas(TRAUMA_RESILIENCE_ABSOLUTE)
 	if(C.heal_and_revive(0, span_danger("[C] suddenly convulses, as [C.p_they()][stand_up ? " stagger to [C.p_their()] feet and" : ""] gain a ravenous hunger in [C.p_their()] eyes!")))
 		return
 	C.grab_ghost()

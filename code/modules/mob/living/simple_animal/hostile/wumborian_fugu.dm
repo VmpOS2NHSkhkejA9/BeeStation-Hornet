@@ -8,7 +8,7 @@
 	icon_aggro = "Fugu0"
 	icon_dead = "Fugu_dead"
 	icon_gib = "syndicate_gib"
-	mob_biotypes = list(MOB_ORGANIC, MOB_BEAST)
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	mouse_opacity = MOUSE_OPACITY_ICON
 	move_to_delay = 5
 	friendly_verb_continuous = "floats near"
@@ -25,6 +25,7 @@
 	attack_verb_continuous = "chomps"
 	attack_verb_simple = "chomp"
 	attack_sound = 'sound/weapons/punch1.ogg'
+	attack_vis_effect = ATTACK_EFFECT_BITE
 	throw_message = "is avoided by the"
 	vision_range = 5
 	aggro_vision_range = 9
@@ -53,7 +54,7 @@
 		E.trigger()
 	..()
 
-/mob/living/simple_animal/hostile/asteroid/fugu/adjustHealth(amount, updating_health = TRUE, forced = FALSE)
+/mob/living/simple_animal/hostile/asteroid/fugu/adjustHealth(amount, updating_health = TRUE, forced = FALSE, required_bodytype)
 	if(!forced && wumbo)
 		return FALSE
 	. = ..()
@@ -64,7 +65,7 @@
 
 /datum/action/innate/fugu
 	button_icon_state = null
-	icon_icon = 'icons/hud/actions/actions_animal.dmi'
+	button_icon = 'icons/hud/actions/actions_animal.dmi'
 
 /datum/action/innate/fugu/expand
 	name = "Inflate"
@@ -118,7 +119,7 @@
 /obj/item/fugu_gland
 	name = "wumborian fugu gland"
 	desc = "The key to the wumborian fugu's ability to increase its mass arbitrarily, this disgusting remnant can apply the same effect to other creatures, giving them great strength."
-	icon = 'icons/obj/surgery.dmi'
+	icon = 'icons/obj/medical/organs/organs.dmi'
 	icon_state = "fugu_gland"
 	item_flags = NOBLUDGEON
 	w_class = WEIGHT_CLASS_NORMAL
@@ -145,7 +146,3 @@
 		A.environment_smash |= ENVIRONMENT_SMASH_STRUCTURES | ENVIRONMENT_SMASH_RWALLS
 		to_chat(user, span_info("You increase the size of [A], giving it a surge of strength!"))
 		qdel(src)
-
-/obj/item/fugu_gland/extrapolator_act(mob/living/user, obj/item/extrapolator/extrapolator, dry_run = FALSE)
-	. = ..()
-	EXTRAPOLATOR_ACT_ADD_DISEASES(., fugu_diseases)

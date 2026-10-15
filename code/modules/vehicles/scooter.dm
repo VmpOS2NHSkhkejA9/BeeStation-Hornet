@@ -4,8 +4,7 @@
 	icon_state = "scooter"
 	are_legs_exposed = TRUE
 
-/obj/vehicle/ridden/scooter/Initialize(mapload)
-	. = ..()
+/obj/vehicle/ridden/scooter/add_riding_element()
 	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/scooter)
 
 /obj/vehicle/ridden/scooter/wrench_act(mob/living/user, obj/item/I)
@@ -21,7 +20,7 @@
 		qdel(src)
 	return TRUE
 
-/obj/vehicle/ridden/scooter/Moved()
+/obj/vehicle/ridden/scooter/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
 	for(var/m in buckled_mobs)
 		var/mob/living/buckled_mob = m
@@ -54,10 +53,12 @@
 
 /obj/vehicle/ridden/scooter/skateboard/Initialize(mapload)
 	. = ..()
-	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/scooter/skateboard)
 	sparks = new
 	sparks.set_up(1, 0, src)
 	sparks.attach(src)
+
+/obj/vehicle/ridden/scooter/skateboard/add_riding_element()
+	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/scooter/skateboard)
 
 /obj/vehicle/ridden/scooter/skateboard/Destroy()
 	if(sparks)
@@ -152,7 +153,7 @@
 
 
 /obj/vehicle/ridden/scooter/skateboard/proc/pick_up_board(mob/living/carbon/skater)
-	if (skater.incapacitated() || !Adjacent(skater))
+	if (skater.incapacitated || !Adjacent(skater))
 		return
 	if(has_buckled_mobs())
 		to_chat(skater, span_warning("You can't lift this up when somebody's on it."))
@@ -178,7 +179,7 @@
 /obj/vehicle/ridden/scooter/skateboard/hoverboard/screwdriver_act(mob/living/user, obj/item/I)
 	return FALSE
 
-/obj/vehicle/ridden/scooter/skateboard/hoverboard/attackby(obj/item/I, mob/user, params)
+/obj/vehicle/ridden/scooter/skateboard/hoverboard/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/stack/rods))
 		return
 	else
@@ -200,7 +201,7 @@
 	icon_state = "scooter_frame"
 	w_class = WEIGHT_CLASS_NORMAL
 
-/obj/item/scooter_frame/attackby(obj/item/I, mob/user, params)
+/obj/item/scooter_frame/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/stack/sheet/iron))
 		if(!I.tool_start_check(user, amount=5))
 			return
@@ -219,7 +220,7 @@
 	qdel(src)
 	return TRUE
 
-/obj/vehicle/ridden/scooter/skateboard/attackby(obj/item/I, mob/user, params)
+/obj/vehicle/ridden/scooter/skateboard/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/stack/rods))
 		if(!I.tool_start_check(user, amount=2))
 			return
@@ -266,8 +267,7 @@
 	///Component typepath to attach in [/obj/vehicle/ridden/scooter/skateboard/wheelys/proc/make_ridable()]
 	var/component_type = /datum/component/riding/vehicle/scooter/skateboard/wheelys
 
-/obj/vehicle/ridden/scooter/skateboard/wheelys/Initialize(mapload)
-	. = ..()
+/obj/vehicle/ridden/scooter/skateboard/wheelys/add_riding_element()
 	AddElement(/datum/element/ridable, /datum/component/riding/vehicle/scooter/skateboard/wheelys)
 
 /obj/vehicle/ridden/scooter/skateboard/wheelys/post_unbuckle_mob(mob/living/M)

@@ -14,6 +14,8 @@
 	. = ..()
 	atom_storage.max_slots = 1
 
+	AddElement(/datum/element/falling_hazard, damage = 5, hardhat_safety = TRUE, crushes = FALSE, impact_sound = drop_sound)
+
 /obj/item/storage/book/attack_self(mob/user)
 	to_chat(user, span_notice("The pages of [title] have been cut out!"))
 
@@ -28,18 +30,16 @@
 	desc = "Apply to head repeatedly."
 	icon = 'icons/obj/storage/book.dmi'
 	icon_state = "bible"
-	item_state = "bible"
+	inhand_icon_state = "bible"
 	lefthand_file = 'icons/mob/inhands/misc/books_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/books_righthand.dmi'
 	var/mob/affecting = null
 	var/deity_name = "Christ"
 	force_string = "holy"
 
-/obj/item/storage/book/bible/ComponentInitialize()
+/obj/item/storage/book/bible/Initialize(mapload)
 	. = ..()
-	AddComponent(/datum/component/anti_magic, \
-	_source = src, \
-	antimagic_flags = (MAGIC_RESISTANCE|MAGIC_RESISTANCE_HOLY))
+	AddComponent(/datum/component/anti_magic, source = src, antimagic_flags = MAGIC_RESISTANCE_HOLY)
 
 /obj/item/storage/book/bible/suicide_act(mob/living/user)
 	user.visible_message(span_suicide("[user] is offering [user.p_them()]self to [deity_name]! It looks like [user.p_theyre()] trying to commit suicide!"))
@@ -52,7 +52,7 @@
 	if(!current_skin && H.mind.holy_role == HOLY_ROLE_HIGHPRIEST)
 		if(GLOB.bible_icon_state)//If the original has been reskinned but this one hasn't been, we make it look like the original
 			icon_state = GLOB.bible_icon_state
-			item_state = GLOB.bible_item_state
+			inhand_icon_state = GLOB.bible_inhand_icon_state
 			if(icon_state == "honk1" || icon_state == "honk2")
 				var/mob/living/carbon/C = H
 				if(C.has_dna())
@@ -104,14 +104,14 @@
 
 /obj/item/storage/book/bible/proc/reskin_bible(mob/M)//Total override of the proc because I need some new things added to it
 	var/choice = show_radial_menu(M, src, unique_reskin, radius = 42, require_near = TRUE, tooltips = TRUE)
-	if(!QDELETED(src) && choice && !current_skin && !M.incapacitated() && in_range(M,src))
+	if(!QDELETED(src) && choice && !current_skin && !M.incapacitated && in_range(M,src))
 		if(!unique_reskin[choice])
 			return
 		current_skin = choice
 		icon_state = unique_reskin_icon[choice]
 		GLOB.bible_icon_state = icon_state
-		item_state = unique_reskin_icon[choice]
-		GLOB.bible_item_state = item_state
+		inhand_icon_state = unique_reskin_icon[choice]
+		GLOB.bible_inhand_icon_state = inhand_icon_state
 		if(choice == "Clown Bible" || choice == "Banana Bible")
 			var/mob/living/carbon/C = M
 			if(C.has_dna())
@@ -122,32 +122,32 @@
 		SSblackbox.record_feedback("text", "religion_book", 1, "[choice]")//I don't know why it's here but I'm keeping it in case it breaks something
 	return
 
-/obj/item/storage/book/bible/proc/bless(mob/living/L, mob/living/user)
+/obj/item/storage/book/bible/proc/bless(mob/living/blessed, mob/living/user)
 	if(GLOB.religious_sect)
-		return GLOB.religious_sect.sect_bless(L,user)
-	if(!ishuman(L))
+		return GLOB.religious_sect.sect_bless(blessed, user)
+
+	if(!ishuman(blessed))
 		return
 
-	var/mob/living/carbon/human/H = L
-
-	for(var/X in H.bodyparts)
-		var/obj/item/bodypart/BP = X
-		if(!IS_ORGANIC_LIMB(BP))
+	var/mob/living/carbon/human/built_in_his_image = blessed
+	for(var/obj/item/bodypart/bodypart as anything in built_in_his_image.get_bodyparts())
+		if(!IS_ORGANIC_LIMB(bodypart))
 			to_chat(user, span_warning("[src.deity_name] refuses to heal this metallic taint!"))
 			return 0
 
 	var/heal_amt = 10
-	var/list/hurt_limbs = H.get_damaged_bodyparts(1, 1, null, BODYTYPE_ORGANIC)
+	var/list/hurt_limbs = built_in_his_image.get_damaged_bodyparts(1, 1, null, BODYTYPE_ORGANIC)
+	if(!length(hurt_limbs))
+		return
 
-	if(hurt_limbs.len)
-		for(var/X in hurt_limbs)
-			var/obj/item/bodypart/affecting = X
-			if(affecting.heal_damage(heal_amt, heal_amt, null, BODYTYPE_ORGANIC))
-				H.update_damage_overlays()
-		H.visible_message(span_notice("[user] heals [H] with the power of [deity_name]!"))
-		to_chat(H, span_boldnotice("May the power of [deity_name] compel you to be healed!"))
-		playsound(src.loc, "punch", 25, 1, -1)
-		SEND_SIGNAL(H, COMSIG_ADD_MOOD_EVENT, "blessing", /datum/mood_event/blessing)
+	for(var/obj/item/bodypart/affecting as anything in hurt_limbs)
+		if(affecting.heal_damage(heal_amt, heal_amt, required_bodytype = BODYTYPE_ORGANIC))
+			built_in_his_image.update_damage_overlays()
+
+	built_in_his_image.visible_message(span_notice("[user] heals [built_in_his_image] with the power of [deity_name]!"))
+	to_chat(built_in_his_image, span_boldnotice("May the power of [deity_name] compel you to be healed!"))
+	playsound(src.loc, "punch", 25, 1, -1)
+	SEND_SIGNAL(built_in_his_image, COMSIG_ADD_MOOD_EVENT, "blessing", /datum/mood_event/blessing)
 	return 1
 
 /obj/item/storage/book/bible/attack(mob/living/M, mob/living/carbon/human/user, heal_mode = TRUE)
@@ -185,7 +185,7 @@
 			smack = 0
 		else if(iscarbon(M))
 			var/mob/living/carbon/C = M
-			if(!istype(C.head, /obj/item/clothing/head/helmet))
+			if(isnull(C.head) || istype(C.head.get_armor(), /datum/armor/none))
 				C.adjustOrganLoss(ORGAN_SLOT_BRAIN, 5, 60)
 				to_chat(C, span_danger("You feel dumber."))
 
@@ -224,15 +224,15 @@
 			var/obj/item/storage/book/bible/B = A
 			B.name = name
 			B.icon_state = icon_state
-			B.item_state = item_state
+			B.inhand_icon_state = inhand_icon_state
 
-	else if(istype(A, /obj/item/soulstone) && !iscultist(user))
+	else if(istype(A, /obj/item/soulstone) && !IS_CULTIST(user))
 		var/obj/item/soulstone/SS = A
 		if(SS.theme == THEME_HOLY)
 			return
 		to_chat(user, span_notice("You begin to exorcise [SS]."))
 		playsound(src,'sound/hallucinations/veryfar_noise.ogg',40,1)
-		if(do_after(user, 40, target = SS))
+		if(do_after(user, 4 SECONDS, target = SS))
 			playsound(src,'sound/effects/pray_chaplain.ogg',60,1)
 			SS.required_role = null
 			SS.theme = THEME_HOLY
@@ -240,8 +240,8 @@
 			for(var/mob/M in SS.contents)
 				if(M.mind)
 					SS.icon_state = "purified_soulstone2"
-					if(iscultist(M))
-						SSticker.mode.remove_cultist(M.mind, FALSE, FALSE)
+					if(IS_CULTIST(M))
+						M.mind.remove_antag_datum(/datum/antagonist/cult)
 			for(var/mob/living/simple_animal/shade/EX in SS)
 				EX.icon_state = "ghost1"
 				EX.name = "Purified [initial(EX.name)]"
@@ -254,15 +254,17 @@
 	new /obj/item/reagent_containers/cup/glass/bottle/whiskey(src)
 
 /obj/item/storage/book/bible/syndicate
+	name = "Syndicate Tome"
+	desc = "A very ominous tome resembling a bible."
 	icon_state ="ebook"
 	deity_name = "The Syndicate"
+	item_flags = NO_BLOOD_ON_ITEM
 	throw_speed = 2
-	throwforce = 18
 	throw_range = 7
+	throwforce = 18
 	force = 18
 	hitsound = 'sound/weapons/sear.ogg'
 	damtype = BURN
-	name = "Syndicate Tome"
 	attack_verb_continuous = list("attacks", "burns", "blesses", "damns", "scorches")
 	attack_verb_simple = list("attack", "burn", "bless", "damn", "scorch")
 	var/uses = 1
