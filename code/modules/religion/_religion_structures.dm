@@ -17,9 +17,6 @@
 	. = ..()
 	reflect_sect_in_icons()
 	AddElement(/datum/element/climbable)
-
-/obj/structure/altar_of_gods/ComponentInitialize()
-	. = ..()
 	AddComponent(/datum/component/religious_tool, ALL, FALSE, CALLBACK(src, PROC_REF(reflect_sect_in_icons)))
 
 /obj/structure/altar_of_gods/attack_hand(mob/living/user)
@@ -37,7 +34,7 @@
 	pushed_mob.forceMove(loc)
 	return ..()
 
-/obj/structure/altar_of_gods/attackby(obj/item/I, mob/living/user, params)
+/obj/structure/altar_of_gods/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(istype(I, /obj/item/nullrod))
 		if(user.mind?.holy_role == NONE)
 			to_chat(user, span_warning("Only the faithful may control the disposition of [src]!"))

@@ -10,6 +10,7 @@
 	size = 4
 	tgui_id = "NtosStationAlertConsole"
 	program_icon = "bell"
+	power_consumption = 50 WATT
 	/// If there is any station alert
 	var/has_alert = FALSE
 	/// Station alert datum for showing alerts UI
@@ -51,13 +52,3 @@
 	has_alert = FALSE
 	if(length(alert_control.listener.alarms))
 		has_alert = TRUE
-
-/datum/computer_file/program/alarm_monitor/on_start(mob/user)
-	. = ..(user)
-	if(!.)
-		return
-	GLOB.alarmdisplay += src
-
-/datum/computer_file/program/alarm_monitor/kill_program(forced = FALSE)
-	GLOB.alarmdisplay -= src
-	return ..()

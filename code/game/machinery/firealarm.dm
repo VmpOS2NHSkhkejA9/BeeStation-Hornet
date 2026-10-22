@@ -19,9 +19,9 @@
 	max_integrity = 250
 	integrity_failure = 0.4
 	armor_type = /datum/armor/machinery_firealarm
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 2
-	active_power_usage = 6
+	mouse_over_pointer = MOUSE_HAND_POINTER
+	idle_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.05
+	active_power_usage = BASE_MACHINE_ACTIVE_CONSUMPTION * 0.02
 	power_channel = AREA_USAGE_ENVIRON
 	resistance_flags = FIRE_PROOF
 	layer = ABOVE_WINDOW_LAYER
@@ -30,7 +30,7 @@
 
 	light_power = 0
 	light_range = 7
-	light_color = "#ff3232"
+	light_color = COLOR_VIVID_RED
 
 	//Trick to get the glowing overlay visible from a distance
 	luminosity = 1
@@ -50,7 +50,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/firealarm)
 
 
 /datum/armor/machinery_firealarm
-	rad = 100
 	fire = 90
 	acid = 30
 
@@ -266,7 +265,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/firealarm)
 	my_area.fault_location = name
 	soundloop.start() //Manually pulled fire alarms will make the sound, rather than the doors.
 	SEND_SIGNAL(src, COMSIG_FIREALARM_ON_TRIGGER)
-	use_power = active_power_usage
+	update_use_power(ACTIVE_POWER_USE)
 
 /**
  * Resets all firelocks in the area. Also tells the area to disable alarm lighting, if it was enabled.
@@ -281,13 +280,14 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/firealarm)
 	// Clears all fire doors and their effects for now
 	// They'll reclose if there's a problem
 	for(var/obj/machinery/door/firedoor/firelock in my_area.firedoors)
-		firelock.crack_open()
+		if (firelock.alarm_type == FIRELOCK_ALARM_TYPE_GENERIC)
+			firelock.crack_open()
 	if(user)
 		balloon_alert(user, "reset alarm")
 		user.log_message("reset a fire alarm.", LOG_GAME)
 	soundloop.stop()
 	SEND_SIGNAL(src, COMSIG_FIREALARM_ON_RESET)
-	use_power = idle_power_usage
+	update_use_power(IDLE_POWER_USE)
 
 /obj/machinery/firealarm/proc/try_lock(mob/user, force_lock = FALSE)
 	if(allowed(user) || !user || force_lock)
@@ -328,7 +328,7 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/firealarm, "Push")
 /obj/machinery/firealarm/attack_silicon(mob/user)
 	return attack_hand(user)
 
-/obj/machinery/firealarm/attackby(obj/item/W, mob/living/user, params)
+/obj/machinery/firealarm/attackby(obj/item/W, mob/living/user, list/modifiers)
 	add_fingerprint(user)
 
 	if(istype(W, /obj/item/card/id)||istype(W, /obj/item/modular_computer/tablet/pda)) // trying to unlock the cover with an ID card
@@ -452,7 +452,7 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/firealarm, "Push")
 			if(prob(33))
 				alarm()
 
-/obj/machinery/firealarm/singularity_pull(S, current_size)
+/obj/machinery/firealarm/singularity_pull(obj/anomaly/singularity/singularity, current_size)
 	if (current_size >= STAGE_FIVE) // If the singulo is strong enough to pull anchored objects, the fire alarm experiences integrity failure
 		deconstruct()
 	..()
@@ -529,7 +529,7 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/machinery/firealarm, 26)
 		return
 	area.party = TRUE
 	if (!party_overlay)
-		party_overlay = iconstate2appearance('icons/turf/areas.dmi', "party")
+		party_overlay = iconstate2appearance('icons/area/areas.dmi', "party")
 	area.add_overlay(party_overlay)
 
 /////////////////////// CIRCUITS //////////////////////////////////////

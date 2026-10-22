@@ -14,6 +14,7 @@
 	azimuth_angle_2 = 180
 	door_anim_time = 5
 	door_hinge = 5
+	custom_price = 190
 
 /obj/structure/closet/crate/coffin/examine(mob/user)
 	. = ..()
@@ -28,8 +29,8 @@
 	desc = "For those departed who are not so dear."
 	icon_state = "blackcoffin"
 	icon = 'icons/vampires/vamp_obj.dmi'
-	open_sound = 'sound/vampires/coffin_open.ogg'
-	close_sound = 'sound/vampires/coffin_close.ogg'
+	open_sound = 'sound/effects/antag/vampire/coffin_open.ogg'
+	close_sound = 'sound/effects/antag/vampire/coffin_close.ogg'
 	breakout_time = 30 SECONDS
 	pry_lid_timer = 20 SECONDS
 	resistance_flags = NONE
@@ -51,8 +52,8 @@
 	desc = "For those too scared of having their place of rest disturbed."
 	icon_state = "securecoffin"
 	icon = 'icons/vampires/vamp_obj.dmi'
-	open_sound = 'sound/vampires/coffin_open.ogg'
-	close_sound = 'sound/vampires/coffin_close.ogg'
+	open_sound = 'sound/effects/antag/vampire/coffin_open.ogg'
+	close_sound = 'sound/effects/antag/vampire/coffin_close.ogg'
 	breakout_time = 35 SECONDS
 	pry_lid_timer = 35 SECONDS
 	resistance_flags = FIRE_PROOF | LAVA_PROOF | ACID_PROOF
@@ -172,7 +173,7 @@
 	if(manual)
 		to_chat(resident, span_cultitalic("You have unclaimed your coffin! This also unclaims all your other Vampire structures!"))
 	else
-		to_chat(resident, span_cultitalic("You sense that the link with your coffin and your sacred lair has been broken! You will need to seek another."))
+		to_chat(resident, span_cultitalic("You sense that the link with your coffin and your lair has been broken! You will need to seek another."))
 	// Remove resident. Because this objec (GC?) we need to give them a way to see they don't have a home anymore.
 	resident = null
 
@@ -196,29 +197,23 @@
 
 	// Vampire functionality
 	if(user in src)
-		var/datum/antagonist/vampire/vampiredatum = IS_VAMPIRE(user)
-		if(!vampiredatum)
+		var/datum/antagonist/vampire/vampire = IS_VAMPIRE(user)
+		if(!vampire)
 			return FALSE
 
-		if(!vampiredatum.coffin && !resident)
-			switch(tgui_alert(user, "Do you wish to claim this as your coffin? [get_area(src)] will be your lair.", "Claim Lair", list("Yes", "No")))
+		if(!vampire.coffin && !resident)
+			switch(tgui_alert(user, "Do you wish to claim this as your coffin? [get_area(src)] will be your lair.", "Claim lair", list("Yes", "No")))
 				if("Yes")
 					claim_coffin(user)
 				if("No")
 					return
 		LockMe(user)
 
-		// If we're in a clan, level up. If not, choose a clan.
-		if(vampiredatum.my_clan)
-			vampiredatum.spend_rank()
-		else
-			vampiredatum.assign_clan_and_bane()
-
 		// You're in a Coffin, everything else is done, you're likely here to heal. Let's offer them the opportunity to do so.
-		vampiredatum.check_begin_torpor()
+		vampire.check_begin_torpor()
 
 /// You cannot weld or deconstruct an owned coffin. Only the owner can destroy their own coffin.
-/obj/structure/closet/crate/coffin/attackby(obj/item/item, mob/user, params)
+/obj/structure/closet/crate/coffin/attackby(obj/item/item, mob/user, list/modifiers)
 	if(!resident)
 		return ..()
 	if(user != resident)
@@ -231,7 +226,7 @@
 		return
 
 	if(locked && item.tool_behaviour == TOOL_CROWBAR)
-		var/pry_time = pry_lid_timer * item.toolspeed // Pry speed must be affected by the speed of the tool.
+		var/pry_time = pry_lid_timer * item.get_toolspeed(user) // Pry speed must be affected by the speed of the tool.
 		user.visible_message(
 			span_notice("[user] tries to pry the lid off of [src] with [item]."),
 			span_notice("You begin prying the lid off of [src] with [item]. This should take about [DisplayTimeText(pry_time)]."),

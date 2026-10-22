@@ -50,16 +50,9 @@ Stabilized extracts:
 			continue
 		effectpath = effect
 		break
-	var/datum/status_effect/stabilized/current_effect = holder.has_status_effect(effectpath)
-	if(!current_effect)
-		// No effect exists, apply it
-		holder.apply_status_effect(effectpath, src)
-		return PROCESS_KILL
-	else if(current_effect.duration != -1)
-		// Effect exists but is temporary (fading), refresh it to permanent
-		holder.apply_status_effect(effectpath, src)
-		return PROCESS_KILL
-	// Effect already exists and is permanent, stop processing
+	if (holder.has_status_effect(effectpath))
+		return
+	holder.apply_status_effect(effectpath, src)
 	return PROCESS_KILL
 
 //Colors and subtypes:

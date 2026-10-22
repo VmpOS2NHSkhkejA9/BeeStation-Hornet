@@ -3,14 +3,14 @@
 	desc = "A combined label printer and applicator in a portable device, designed to be easy to operate and use."
 	icon = 'icons/obj/bureaucracy.dmi'
 	icon_state = "labeler0"
-	item_state = "flight"
+	inhand_icon_state = "flight"
 	w_class = WEIGHT_CLASS_TINY
 	var/label = null
 	var/labels_left = 30
 	var/mode = 0
 
 /obj/item/hand_labeler/suicide_act(mob/living/user)
-	user.visible_message(span_suicide("[user] is pointing [src] at [user.p_them()]self. [user.p_theyre(TRUE)] going to label [user.p_them()]self as a suicide!"))
+	user.visible_message(span_suicide("[user] is pointing [src] at [user.p_them()]self. [user.p_Theyre()] going to label [user.p_them()]self as a suicide!"))
 	labels_left = max(labels_left - 1, 0)
 
 	var/old_real_name = user.real_name
@@ -83,7 +83,7 @@
 	else
 		to_chat(user, span_notice("You turn off [src]."))
 
-/obj/item/hand_labeler/attackby(obj/item/I, mob/user, params)
+/obj/item/hand_labeler/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	if(istype(I, /obj/item/hand_labeler_refill))
 		to_chat(user, span_notice("You insert [I] into [src]."))
@@ -120,7 +120,7 @@
 	icon = 'icons/obj/bureaucracy.dmi'
 	desc = "A roll of paper. Use it on a hand labeler to refill it."
 	icon_state = "labeler_refill"
-	item_state = "electropack"
+	inhand_icon_state = "electropack"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
 	w_class = WEIGHT_CLASS_TINY

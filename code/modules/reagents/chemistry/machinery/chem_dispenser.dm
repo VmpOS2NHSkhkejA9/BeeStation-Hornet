@@ -18,8 +18,8 @@
 	icon = 'icons/obj/chemical.dmi'
 	icon_state = "dispenser"
 	base_icon_state = "dispenser"
-	use_power = IDLE_POWER_USE
 	idle_power_usage = 40
+	active_power_usage = 40	// standby overhead
 	interaction_flags_machine = INTERACT_MACHINE_OPEN | INTERACT_MACHINE_ALLOW_SILICON | INTERACT_MACHINE_OFFLINE
 	resistance_flags = FIRE_PROOF | ACID_PROOF
 	circuit = /obj/item/circuitboard/machine/chem_dispenser
@@ -28,8 +28,6 @@
 	var/obj/item/stock_parts/cell/cell
 	var/powerefficiency = 0.1
 	var/amount = 30
-	var/recharge_amount = 10
-	var/recharge_counter = 0
 	var/mutable_appearance/beaker_overlay
 	var/working_state = "dispenser_working"
 	var/nopower_state = "dispenser_nopower"
@@ -106,20 +104,30 @@
 		. += span_notice("[src]'s maintenance hatch is open!")
 	if(in_range(user, src) || isobserver(user))
 		. += "<span class='notice'>The status display reads:\n"+\
-		"Recharging <b>[recharge_amount]</b> power units per interval.\n"+\
+		"Recharging <b>[display_power(cell.chargerate)]</b> per interval.\n"+\
 		"Power efficiency increased by <b>[round((powerefficiency*1000)-100, 1)]%</b>.</span>"
 	. += "<span class='notice'>Use <b>RMB</b> to eject a stored beaker.</span>"
 
+/* Regarding Cells
+	Ideally this machine would be able to operate without a cell, taking power directly from the grid.
+	The cell could function as an "upgrade" as a backup battery.
+	However, there isn't a good enough method to do so right now (take power from the grid)
+	and creating it would be a bit out of scope right now.a
+	Leaving this here for future reference!
+*/
+
 /obj/machinery/chem_dispenser/process(delta_time)
-	if (recharge_counter >= 8)
-		if(!is_operational)
-			return
-		var/usedpower = cell.give(recharge_amount)
-		if(usedpower)
-			use_power(250*recharge_amount)
-		recharge_counter = 0
+	if(!is_operational)
 		return
-	recharge_counter += delta_time
+	if(cell.percent() < 100)
+		var/to_recharge = min(cell.chargerate, (cell.maxcharge - cell.charge))
+		// Per-tick transfer into the cell
+		use_power(to_recharge / POWER_TRANSFER_LOSS)
+		cell.give(to_recharge)
+		update_use_power(ACTIVE_POWER_USE)
+		ui_update()
+	else
+		update_use_power(IDLE_POWER_USE)
 
 /obj/machinery/chem_dispenser/proc/display_beaker()
 	var/mutable_appearance/b_o = beaker_overlay || mutable_appearance(icon, "disp_beaker")
@@ -178,11 +186,6 @@
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "ChemDispenser")
-		if(user.hallucinating())
-			ui.set_autoupdate(FALSE) //to not ruin the immersion by constantly changing the fake chemicals
-			//Seems like a pretty bad way to do it, but I think a better one would deserve a wider refactor including at least sleeper
-		else
-			ui.set_autoupdate(TRUE) // Cell charge
 		ui.open()
 
 /obj/machinery/chem_dispenser/ui_data(mob/user)
@@ -212,8 +215,10 @@
 
 	var/chemicals[0]
 	var/is_hallucinating = FALSE
-	if(user.hallucinating())
-		is_hallucinating = TRUE
+	if(isliving(user))
+		var/mob/living/living_user = user
+		is_hallucinating = !!living_user.has_status_effect(/datum/status_effect/hallucination)
+
 	for(var/re in dispensable_reagents)
 		var/datum/reagent/temp = GLOB.chemical_reagents_list[re]
 		if(temp)
@@ -253,7 +258,6 @@
 					"volume" = created_amount,
 					"path" = result_path,
 					"description" = result_path::description,
-					"addiction" = result_path::addiction_threshold,
 					"overdose" = result_path::overdose_threshold,
 				))
 			//if (!results.len)
@@ -290,6 +294,12 @@
 			. = TRUE
 
 	if(!is_operational)
+		if(machine_stat & BROKEN)
+			to_chat(usr, span_warning("\The [src] is broken."))
+		if(machine_stat & NOPOWER)
+			to_chat(usr, span_warning("\The [src] is not currently powered."))
+		if(machine_stat & MAINT)
+			to_chat(usr, span_warning("\The [src]'s maintenance panel is open."))
 		return
 
 	switch(action)
@@ -311,8 +321,10 @@
 				if(beaker && dispensable_reagents.Find(reagent))
 					var/datum/reagents/R = beaker.reagents
 					var/free = R.maximum_volume - R.total_volume
-					var/actual = min(amount * multiplier, (cell.charge * powerefficiency)*10, free)
-					if(!cell.use(actual / powerefficiency))
+					// Balancing var, used to easier balance power requirement of chem dispensing (per unit of chem)
+					var/charge_per_unit = 25 WATT
+					var/actual = min(amount * multiplier, (cell.charge * powerefficiency), free)
+					if(!cell.use((actual * charge_per_unit) / powerefficiency))
 						say("Not enough energy to complete operation!")
 						return
 					R.add_reagent(reagent, actual)
@@ -333,9 +345,9 @@
 /obj/machinery/chem_dispenser/wrench_act(mob/living/user, obj/item/tool)
 	. = ..()
 	default_unfasten_wrench(user, tool)
-	return TOOL_ACT_TOOLTYPE_SUCCESS
+	return ITEM_INTERACT_SUCCESS
 
-/obj/machinery/chem_dispenser/attackby(obj/item/I, mob/living/user, params)
+/obj/machinery/chem_dispenser/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(default_deconstruction_screwdriver(user, icon_state, icon_state, I))
 		update_appearance()
 		return
@@ -347,6 +359,7 @@
 		if(!user.transferItemToLoc(B, src))
 			return
 		replace_beaker(user, B)
+		ui_update()
 		to_chat(user, span_notice("You add [B] to [src]."))
 		updateUsrDialog()
 	else if(!user.combat_mode && !istype(I, /obj/item/card/emag) && !istype(I, /obj/item/stock_parts/cell))
@@ -363,7 +376,7 @@
 	if(. & EMP_PROTECT_SELF)
 		return
 	var/list/datum/reagents/R = list()
-	var/total = min(rand(7,15), FLOOR(cell.charge*powerefficiency, 1))
+	var/total = min(rand(7,15), floor(cell.charge*powerefficiency))
 	var/datum/reagents/Q = new(total*10)
 	if(beaker && beaker.reagents)
 		R += beaker.reagents
@@ -379,17 +392,23 @@
 	visible_message(span_danger("[src] malfunctions, spraying chemicals everywhere!"))
 
 /obj/machinery/chem_dispenser/RefreshParts()
-	recharge_amount = initial(recharge_amount)
+	. = ..()
 	var/newpowereff = 0.0666666
-	for(var/obj/item/stock_parts/cell/P in component_parts)
-		cell = P
-	for(var/obj/item/stock_parts/matter_bin/M in component_parts)
-		newpowereff += 0.0166666666*M.rating
-	for(var/obj/item/stock_parts/capacitor/C in component_parts)
-		recharge_amount *= C.rating
-	for(var/obj/item/stock_parts/manipulator/M in component_parts)
-		if (M.rating > 3)
+	var/parts_rating = 0
+	for(var/obj/item/stock_parts/cell/stock_cell in component_parts)
+		cell = stock_cell
+	for(var/datum/stock_part/matter_bin/matter_bin in component_parts)
+		newpowereff += 0.0166666666 * matter_bin.tier
+		parts_rating += matter_bin.tier
+	for(var/datum/stock_part/capacitor/capacitor in component_parts)
+		//recharge_amount *= capacitor.tier
+		parts_rating += capacitor.tier
+	for(var/datum/stock_part/manipulator/manipulator in component_parts)
+		if (manipulator.tier > 3)
 			dispensable_reagents |= upgrade_reagents
+		else
+			dispensable_reagents -= upgrade_reagents
+		parts_rating += manipulator.tier
 	powerefficiency = round(newpowereff, 0.01)
 
 /obj/machinery/chem_dispenser/proc/replace_beaker(mob/living/user, obj/item/reagent_containers/new_beaker)
@@ -425,9 +444,6 @@
 
 /obj/machinery/chem_dispenser/attack_ai_secondary(mob/user, list/modifiers)
 	return attack_hand_secondary(user, modifiers)
-
-/obj/machinery/chem_dispenser/AltClick(mob/user)
-	return ..() // This hotkey is BLACKLISTED since it's used by /datum/component/simple_rotation
 
 /obj/machinery/chem_dispenser/drinks
 	name = "soda dispenser"
@@ -479,7 +495,7 @@
 
 /obj/machinery/chem_dispenser/drinks/Initialize(mapload)
 	. = ..()
-	AddComponent(/datum/component/simple_rotation)
+	AddElement(/datum/element/simple_rotation)
 
 /obj/machinery/chem_dispenser/drinks/setDir()
 	var/old = dir

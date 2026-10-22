@@ -3,7 +3,7 @@
 	desc = "A sterile automatic implant injector."
 	icon = 'icons/obj/syringe.dmi'
 	icon_state = "implanter0"
-	item_state = "syringe_0"
+	inhand_icon_state = "syringe_0"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 	throw_speed = 3
@@ -38,7 +38,7 @@
 				else
 					to_chat(user, span_warning("[src] fails to implant [M]."))
 
-/obj/item/implanter/attackby(obj/item/W, mob/user, params)
+/obj/item/implanter/attackby(obj/item/W, mob/user, list/modifiers)
 	if(istype(W, /obj/item/pen))
 		if(!user.is_literate())
 			to_chat(user, span_notice("You prod at [src] with [W]!"))

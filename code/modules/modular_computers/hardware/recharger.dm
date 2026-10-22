@@ -19,10 +19,10 @@
 	if(cell.charge >= cell.maxcharge && !hacked) // If hacked, will continue to absorb power regardless of cell charge
 		return
 	if(hacked)
-		charge_rate = cell.maxcharge / GLOB.CELLRATE
+		charge_rate = cell.chargerate
 		playsound(src, 'sound/items/timer.ogg', 50, FALSE, ignore_walls = TRUE)
 	if(use_power(charge_rate, charging = 1))
-		holder.give_power(charge_rate * GLOB.CELLRATE)
+		holder.give_power(charge_rate)
 
 /obj/item/computer_hardware/recharger/APC
 	name = "area power connector"
@@ -35,8 +35,8 @@
 	if(ismachinery(holder.physical))
 		var/obj/machinery/M = holder.physical
 		if(hacked)
-			M.directly_use_power(amount)
-			return 1
+			if(M.directly_use_power(amount))
+				return 1
 		if(M.powered())
 			M.use_power(amount)
 			return 1

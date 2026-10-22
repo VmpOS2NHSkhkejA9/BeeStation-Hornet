@@ -83,6 +83,7 @@
 	.["user"]["job"] = "No Job"
 	.["user"]["points"] = 0
 	.["user"]["currency_type"] = currency_type
+	.["stock"] = list()
 
 	if(isliving(user))
 		var/mob/living/carbon/human/H = user
@@ -171,7 +172,7 @@
 /obj/machinery/gear_requisition/proc/RedeemVoucher(obj/item/mining_voucher/voucher, mob/redeemer)
 	return
 
-/obj/machinery/gear_requisition/attackby(obj/item/I, mob/user, params)
+/obj/machinery/gear_requisition/attackby(obj/item/I, mob/user, list/modifiers)
 	if(default_deconstruction_screwdriver(user, "mining-open", "mining", I))
 		return
 	if(default_deconstruction_crowbar(I))
@@ -248,7 +249,7 @@
 		new /datum/data/requisition_equipment("Minebot Upgrade: Armor", /obj/item/minebot_upgrade/health, 400, "Mining Bot"),
 		new /datum/data/requisition_equipment("Minebot Upgrade: Ore Scoop", /obj/item/minebot_upgrade/ore_pickup, 400, "Mining Bot"),
 		new /datum/data/requisition_equipment("Minebot Upgrade: Medical", /obj/item/minebot_upgrade/medical, 800, "Mining Bot"),
-		new /datum/data/requisition_equipment("Minebot Upgrade: A.I.", /obj/item/slimepotion/slime/sentience/mining, 1000, "Mining Bot"),
+		new /datum/data/requisition_equipment("Minebot Upgrade: A.I.", /obj/item/slimepotion/sentience/mining, 1000, "Mining Bot"),
 		new /datum/data/requisition_equipment("Minebot Weatherproof Chassis", /obj/item/minebot_upgrade/antiweather, 1200, "Mining Bot"),
 	//Various novelty items
 		new /datum/data/requisition_equipment("1000 Space Cash", /obj/item/stack/spacecash/c1000, 2000, "Novelty"),
@@ -257,7 +258,7 @@
 		new /datum/data/requisition_equipment("Pizza", /obj/item/pizzabox/margherita, 200, "Novelty"),
 		new /datum/data/requisition_equipment("Whiskey", /obj/item/reagent_containers/cup/glass/bottle/whiskey, 100, "Novelty"),
 		new /datum/data/requisition_equipment("Absinthe", /obj/item/reagent_containers/cup/glass/bottle/absinthe/premium, 100, "Novelty"),
-		new /datum/data/requisition_equipment("Cigar", /obj/item/clothing/mask/cigarette/cigar/havana, 150, "Novelty"),
+		new /datum/data/requisition_equipment("Cigar", /obj/item/cigarette/cigar/havana, 150, "Novelty"),
 		new /datum/data/requisition_equipment("Soap", /obj/item/soap/nanotrasen, 200, "Novelty"),
 		new /datum/data/requisition_equipment("Laser Pointer", /obj/item/laser_pointer, 300, "Novelty"),
 		new /datum/data/requisition_equipment("Toy Alien", /obj/item/clothing/mask/facehugger/toy, 300, "Novelty"),
@@ -276,7 +277,7 @@
 	src.cost = cost
 	src.category = category
 
-/obj/machinery/gear_requisition/mining/attackby(obj/item/I, mob/user, params)
+/obj/machinery/gear_requisition/mining/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/mining_voucher))
 		var/obj/item/mining_voucher/V = I
 		if(src.vendor_type == V.voucher_type)
@@ -358,7 +359,7 @@
 	icon_state = "data_1"
 	var/points = 500
 
-/obj/item/card/mining_point_card/attackby(obj/item/I, mob/user, params)
+/obj/item/card/mining_point_card/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/card/id))
 		if(points)
 			var/obj/item/card/id/C = I

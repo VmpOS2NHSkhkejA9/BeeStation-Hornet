@@ -1,4 +1,5 @@
 /obj/item/gun/ballistic
+	abstract_type = /obj/item/gun/ballistic
 	desc = "Now comes in flavors like GUN. Uses 10mm ammo, for some reason."
 	name = "projectile gun"
 	icon_state = "pistol"
@@ -37,7 +38,7 @@
 	var/alarmed = FALSE
 	//Additional info related to the actual chambering, and to allow loading bullets directly into battery / into var/chambered
 	//Copies the caliber of the magazine in the gun during Initialize() | Must be explicitly set on the gun if it spawns without a magazine ;)
-	var/caliber = null
+	var/list/caliber = list()
 	var/direct_loading = FALSE //A gun with this allows the internal magazine to be loaded without removing, ontop of directly chambering rounds
 	//Six bolt types:
 	//BOLT_TYPE_STANDARD: Gun has a bolt, it stays closed while not cycling. The gun must be racked to have a bullet chambered when a mag is inserted.
@@ -73,10 +74,13 @@
 		return
 	if (!magazine)
 		magazine = new mag_type(src)
-	if (!caliber)
-		caliber = magazine.caliber
+	caliber = magazine.caliber
 	chamber_round()
 	update_icon()
+
+/obj/item/gun/ballistic/Destroy()
+	QDEL_NULL(magazine)
+	return ..()
 
 /obj/item/gun/ballistic/fire_sounds()
 	var/frequency_to_use
@@ -120,17 +124,10 @@
 	if(vname in list(NAMEOF(src, internal_magazine), NAMEOF(src, magazine), NAMEOF(src, chambered), NAMEOF(src, empty_indicator), NAMEOF(src, sawn_off), NAMEOF(src, bolt_locked), NAMEOF(src, bolt_type)))
 		update_appearance()
 
-/obj/item/gun/ballistic/update_icon()
-	if (QDELETED(src))
-		return
-	..()
-	if(current_skin)
-		icon_state = "[unique_reskin_icon[current_skin]][sawn_off ? "_sawn" : ""]"
-	else
-		icon_state = "[initial(icon_state)][sawn_off ? "_sawn" : ""]"
-
 /obj/item/gun/ballistic/update_overlays()
 	. = ..()
+	if (QDELETED(src))
+		return
 	switch(bolt_type)
 		if(BOLT_TYPE_LOCKING, BOLT_TYPE_PUMP, BOLT_TYPE_TWO_STEP)
 			. += "[icon_state]_bolt[bolt_locked ? "_locked" : ""]"
@@ -166,6 +163,8 @@
 				. += "[icon_state]_mag_[capacity_number]"
 
 /obj/item/gun/ballistic/update_icon_state()
+	if (QDELETED(src))
+		return
 	. = ..()
 	if(current_skin)
 		icon_state = "[unique_reskin_icon[current_skin]][sawn_off ? "_sawn" : ""]"
@@ -240,8 +239,7 @@
 		to_chat(user, span_notice("You rack the [bolt_wording] of \the [src]."))
 	if (chambered)
 		eject_chamber()
-	else
-		chamber_round()
+	chamber_round()
 	if (bolt_type == BOLT_TYPE_LOCKING && !chambered)
 		bolt_locked = TRUE
 		playsound(src, lock_back_sound, lock_back_sound_volume, lock_back_sound_vary)
@@ -269,6 +267,7 @@
 		if (bolt_type == BOLT_TYPE_OPEN && !bolt_locked)
 			chamber_round()
 		update_icon()
+		alarmed = FALSE
 		return TRUE
 	else
 		to_chat(user, span_warning("You cannot seem to get \the [src] out of your hands!"))
@@ -294,9 +293,9 @@
 			magazine = null
 	else
 		magazine = null
-	user.put_in_hands(old_mag)
+	user?.put_in_hands(old_mag)
 	old_mag.update_icon()
-	if (display_message)
+	if (user && display_message)
 		to_chat(user, span_notice("You pull the [magazine_wording] out of \the [src]."))
 	update_icon()
 
@@ -306,7 +305,7 @@
 		return FALSE
 	return chambered && ..()
 
-/obj/item/gun/ballistic/attackby(obj/item/A, mob/user, params)
+/obj/item/gun/ballistic/attackby(obj/item/A, mob/user, list/modifiers)
 	..()
 	if (.)
 		return
@@ -335,7 +334,7 @@
 		if(!chambered && istype(A, /obj/item/ammo_casing) && bolt_locked && bolt_type != BOLT_TYPE_OPEN)
 			var/obj/item/ammo_casing/AC = A
 			//If the gun isn't chambered in the same caliber as the cartridge, don't load it.
-			if(src.caliber != AC.caliber)
+			if (!(AC.caliber in src.caliber))
 				to_chat(user, span_warning("\The [src] isn't chambered in this caliber!"))
 				return
 			chambered = AC
@@ -348,7 +347,7 @@
 			to_chat(user, span_warning("There's nowhere to load a [cartridge_wording] into!"))
 			return
 		//Otherwise, try loading into the internal magazine next.
-		var/num_loaded = magazine.attackby(A, user, params, TRUE)
+		var/num_loaded = magazine.attackby(A, user, modifiers, TRUE)
 		if (num_loaded)
 			to_chat(user, span_notice("You load [num_loaded] [cartridge_wording]\s into \the [src]."))
 			playsound(src, load_sound, load_sound_volume, load_sound_vary)
@@ -436,7 +435,7 @@
 			bolt_locked = TRUE
 			update_icon()
 
-/obj/item/gun/ballistic/pull_trigger(atom/target, mob/living/user, flag, params, aimed)
+/obj/item/gun/ballistic/pull_trigger(atom/target, mob/living/user, flag, list/modifiers, aimed)
 	prefire_empty_checks()
 	return ..()
 
@@ -506,7 +505,8 @@
 		rounds.Add(chambered)
 		if(drop_all)
 			chambered = null
-	rounds.Add(magazine.ammo_list(drop_all))
+	if (magazine)
+		rounds.Add(magazine.ammo_list(drop_all))
 	return rounds
 
 #define BRAINS_BLOWN_THROW_RANGE 3
@@ -576,10 +576,10 @@
 		inhand_x_dimension = 32
 		inhand_y_dimension = 32
 		w_class = WEIGHT_CLASS_LARGE
-		if (sawn_item_state)
-			item_state = sawn_item_state
+		if (sawn_inhand_icon_state)
+			inhand_icon_state = sawn_inhand_icon_state
 		else
-			item_state = "gun"
+			inhand_icon_state = "gun"
 		worn_icon_state = "gun"
 		slot_flags &= ~ITEM_SLOT_BACK	//you can't sling it on your back
 		slot_flags |= ITEM_SLOT_BELT	//but you can wear it on your belt (poorly concealed under a trenchcoat, ideally)

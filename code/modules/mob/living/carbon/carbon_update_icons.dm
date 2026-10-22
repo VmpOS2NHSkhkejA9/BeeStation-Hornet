@@ -1,0 +1,356 @@
+/mob/living/carbon/update_obscured_slots(obscured_flags)
+	..()
+	update_body()
+
+/mob/living/carbon
+	var/list/overlays_standing[TOTAL_LAYERS]
+
+/mob/living/carbon/proc/apply_overlay(cache_index)
+	if((. = overlays_standing[cache_index]))
+		add_overlay(.)
+	SEND_SIGNAL(src, COMSIG_CARBON_APPLY_OVERLAY, cache_index, .)
+
+/mob/living/carbon/proc/remove_overlay(cache_index)
+	var/I = overlays_standing[cache_index]
+	if(I)
+		cut_overlay(I)
+		overlays_standing[cache_index] = null
+		. = TRUE
+	else
+		. = FALSE
+	SEND_SIGNAL(src, COMSIG_CARBON_REMOVE_OVERLAY, cache_index, I)
+	return .
+
+/mob/living/carbon/regenerate_icons()
+	if(HAS_TRAIT(src, TRAIT_NO_TRANSFORM))
+		return
+	icon_render_keys = list() //Clear this bad larry out
+	update_held_items()
+	update_worn_handcuffs()
+	update_worn_legcuffs()
+	update_body()
+	update_appearance(UPDATE_OVERLAYS)
+
+/mob/living/carbon/update_held_items()
+	remove_overlay(HANDS_LAYER)
+	if (handcuffed)
+		drop_all_held_items()
+		return
+
+	var/list/hands = list()
+	for(var/obj/item/I in held_items)
+		if(client && hud_used && hud_used.hud_version != HUD_STYLE_NOHUD)
+			I.screen_loc = ui_hand_position(get_held_index_of_item(I))
+			client.screen += I
+			if(length(observers))
+				for(var/mob/dead/observe as anything in observers)
+					if(observe.client && observe.client.eye == src)
+						observe.client.screen += I
+					else
+						observers -= observe
+						if(!observers.len)
+							observers = null
+							break
+
+		var/icon_file = I.lefthand_file
+		if(get_held_index_of_item(I) % 2 == 0)
+			icon_file = I.righthand_file
+
+		hands += I.build_worn_icon(src, default_layer = HANDS_LAYER, default_icon_file = icon_file, isinhands = TRUE)
+
+	overlays_standing[HANDS_LAYER] = hands
+	apply_overlay(HANDS_LAYER)
+
+/mob/living/carbon/get_fire_overlay(stacks, on_fire)
+	var/fire_icon = "human_[stacks > MOB_BIG_FIRE_STACK_THRESHOLD ? "big_fire" : "small_fire"]"
+
+	if(!GLOB.fire_appearances[fire_icon])
+		GLOB.fire_appearances[fire_icon] = mutable_appearance(
+			'icons/mob/effects/onfire.dmi',
+			fire_icon,
+			-HIGHEST_LAYER,
+			appearance_flags = RESET_COLOR | KEEP_APART,
+		)
+
+	return GLOB.fire_appearances[fire_icon]
+
+/mob/living/carbon/update_damage_overlays()
+	remove_overlay(DAMAGE_LAYER)
+
+	var/mutable_appearance/damage_overlay
+	for(var/obj/item/bodypart/iter_part as anything in get_bodyparts())
+		if(!iter_part.dmg_overlay_type)
+			continue
+		if(isnull(damage_overlay) && (iter_part.brutestate || iter_part.burnstate))
+			damage_overlay = mutable_appearance('icons/mob/dam_mob.dmi', "blank", CALCULATE_MOB_OVERLAY_LAYER(DAMAGE_LAYER), appearance_flags = KEEP_TOGETHER)
+		if(iter_part.brutestate)
+			var/image/brute_overlay = image('icons/mob/dam_mob.dmi', "[iter_part.dmg_overlay_type]_[iter_part.body_zone]_[iter_part.brutestate]0")
+			if(iter_part.use_damage_color && !HAS_TRAIT(src, TRAIT_NOBLOOD))
+				//Set damage_color to species blood color
+				iter_part.damage_color = src.dna.blood_type.blood_color
+				brute_overlay.color = iter_part.damage_color
+			damage_overlay.add_overlay(brute_overlay)
+		if(iter_part.burnstate)
+			damage_overlay.add_overlay("[iter_part.dmg_overlay_type]_[iter_part.body_zone]_0[iter_part.burnstate]")
+
+	if(isnull(damage_overlay))
+		return
+
+	overlays_standing[DAMAGE_LAYER] = damage_overlay
+	apply_overlay(DAMAGE_LAYER)
+
+
+/mob/living/carbon/update_worn_mask(update_obscured = TRUE)
+	remove_overlay(FACEMASK_LAYER)
+
+	if(!get_bodypart(BODY_ZONE_HEAD)) //Decapitated
+		return
+
+	if(client && hud_used && hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_MASK) + 1])
+		var/atom/movable/screen/inventory/inv = hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_MASK) + 1]
+		inv.update_icon()
+
+	if(wear_mask)
+		if(update_obscured)
+			update_obscured_slots(wear_mask.flags_inv)
+		if(!(check_obscured_slots() & ITEM_SLOT_MASK))
+			overlays_standing[FACEMASK_LAYER] = wear_mask.build_worn_icon(src, default_layer = FACEMASK_LAYER, default_icon_file = 'icons/mob/clothing/mask.dmi')
+		update_hud_wear_mask(wear_mask)
+
+	apply_overlay(FACEMASK_LAYER)
+
+/mob/living/carbon/update_worn_neck(update_obscured = TRUE)
+	remove_overlay(NECK_LAYER)
+
+	if(client && hud_used && hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_NECK) + 1])
+		var/atom/movable/screen/inventory/inv = hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_NECK) + 1]
+		inv.update_icon()
+
+	if(wear_neck)
+		if(update_obscured)
+			update_obscured_slots(wear_neck.flags_inv)
+		if(!(check_obscured_slots() & ITEM_SLOT_NECK))
+			overlays_standing[NECK_LAYER] = wear_neck.build_worn_icon(src, default_layer = NECK_LAYER, default_icon_file = 'icons/mob/clothing/neck.dmi')
+		update_hud_neck(wear_neck)
+
+	apply_overlay(NECK_LAYER)
+
+/mob/living/carbon/update_worn_back(update_obscured = TRUE)
+	remove_overlay(BACK_LAYER)
+
+	if(client && hud_used && hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_BACK) + 1])
+		var/atom/movable/screen/inventory/inv = hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_BACK) + 1]
+		inv.update_icon()
+
+	if(back)
+		if(update_obscured)
+			update_obscured_slots(back.flags_inv)
+		overlays_standing[BACK_LAYER] = back.build_worn_icon(src, default_layer = BACK_LAYER, default_icon_file = 'icons/mob/clothing/back.dmi')
+		update_hud_back(back)
+
+	apply_overlay(BACK_LAYER)
+
+/mob/living/carbon/update_worn_head(update_obscured = TRUE)
+	remove_overlay(HEAD_LAYER)
+
+	if(!get_bodypart(BODY_ZONE_HEAD)) //Decapitated
+		return
+
+	if(client && hud_used && hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_HEAD) + 1])
+		var/atom/movable/screen/inventory/inv = hud_used.inv_slots[TOBITSHIFT(ITEM_SLOT_HEAD) + 1]
+		inv.update_icon()
+
+	if(head)
+		if(update_obscured)
+			update_obscured_slots(head.flags_inv)
+		if(!(check_obscured_slots() & ITEM_SLOT_HEAD))
+			overlays_standing[HEAD_LAYER] = head.build_worn_icon(default_layer = HEAD_LAYER, default_icon_file = 'icons/mob/clothing/head/default.dmi')
+		update_hud_head(head)
+
+	apply_overlay(HEAD_LAYER)
+
+/mob/living/carbon/update_worn_handcuffs(update_obscured = TRUE)
+	remove_overlay(HANDCUFF_LAYER)
+	if(handcuffed)
+		if(update_obscured)
+			update_obscured_slots(handcuffed.flags_inv)
+		overlays_standing[HANDCUFF_LAYER] = mutable_appearance('icons/mob/mob.dmi', "handcuff1", CALCULATE_MOB_OVERLAY_LAYER(HANDCUFF_LAYER))
+		apply_overlay(HANDCUFF_LAYER)
+
+
+//mob HUD updates for items in our inventory
+
+//update whether handcuffs appears on our hud.
+/mob/living/carbon/proc/update_hud_handcuffed()
+	if(hud_used)
+		for(var/hand in hud_used.hand_slots)
+			var/atom/movable/screen/inventory/hand/H = hud_used.hand_slots[hand]
+			if(H)
+				H.update_icon()
+
+//update whether our head item appears on our hud.
+/mob/living/carbon/proc/update_hud_head(obj/item/I)
+	return
+
+//update whether our mask item appears on our hud.
+/mob/living/carbon/proc/update_hud_wear_mask(obj/item/I)
+	return
+
+//update whether our neck item appears on our hud.
+/mob/living/carbon/proc/update_hud_neck(obj/item/I)
+	return
+
+//update whether our back item appears on our hud.
+/mob/living/carbon/proc/update_hud_back(obj/item/I)
+	return
+
+
+
+//Overlays for the worn overlay so you can overlay while you overlay
+//eg: ammo counters, primed grenade flashing, etc.
+//"icon_file" is used automatically for inhands etc. to make sure it gets the right inhand file
+//Clothing layer is the layer that clothing would usually appear on
+/obj/item/proc/worn_overlays(mutable_appearance/standing, isinhands = FALSE, icon_file, item_layer, atom/origin)
+	SHOULD_CALL_PARENT(TRUE)
+	RETURN_TYPE(/list)
+
+	. = list()
+	if(blocks_emissive != EMISSIVE_BLOCK_NONE)
+		. += emissive_blocker(standing.icon, standing.icon_state, src)
+	SEND_SIGNAL(src, COMSIG_ITEM_GET_WORN_OVERLAYS, ., standing, isinhands, icon_file)
+
+/mob/living/carbon/update_body(is_creating = FALSE)
+	if(!ismonkey(src))
+		dna.species.handle_body(src)
+		dna.update_body_size()
+	update_body_parts(is_creating)
+
+///Checks to see if any bodyparts need to be redrawn, then does so. update_limb_data = TRUE redraws the limbs to conform to the owner.
+///Returns an integer representing the number of limbs that were updated.
+/mob/living/carbon/proc/update_body_parts(update_limb_data)
+	update_damage_overlays()
+	var/limb_count_update = 0
+	var/list/new_limbs = list()
+	for(var/body_zone, limb_untyped in get_bodyparts_by_zones())
+		var/obj/item/bodypart/limb = limb_untyped
+		if(isnull(limb))
+			if(icon_render_keys[body_zone])
+				icon_render_keys -= body_zone
+				limb_count_update += 1
+			continue
+
+		// Update limb actually doesn't do much, get_limb_icon is the cpu eater.
+		limb.update_limb(is_creating = update_limb_data)
+
+		var/old_key = icon_render_keys[limb.body_zone]
+		var/new_key = limb.get_cache_key()
+
+		if(new_key == old_key)
+			new_limbs += limb_icon_cache[new_key]
+
+		else
+			limb_icon_cache[new_key] ||= limb.get_limb_icon(dropped = FALSE)
+			new_limbs += limb_icon_cache[new_key]
+			icon_render_keys[limb.body_zone] = new_key
+			limb_count_update += 1
+
+	. = limb_count_update
+	if(!.)
+		return
+
+	remove_overlay(BODYPARTS_LAYER)
+
+	if(new_limbs.len)
+		overlays_standing[BODYPARTS_LAYER] = new_limbs
+
+	apply_overlay(BODYPARTS_LAYER)
+
+/////////////////////////
+// Limb Icon Cache 2.0 //
+/////////////////////////
+
+/// Returns a string representing the bodyparts icon cache key
+/obj/item/bodypart/proc/get_cache_key()
+	if(is_husked)
+		return jointext(generate_husk_key(), "-")
+	return jointext(generate_icon_key(), "-")
+
+//Updated by Kapu#1178
+/**
+ * Called from update_body_parts() these procs handle the limb icon cache.
+ * the limb icon cache adds an icon_render_key to a human mob, it represents:
+ * - Gender, if applicable
+ * - The ID of the limb
+ * - Draw color, if applicable
+ * These procs only store limbs as to increase the number of matching icon_render_keys
+ * This cache exists because drawing 6/7 icons for humans constantly is quite a waste
+ * See RemieRichards on irc.rizon.net #coderbus (RIP remie :sob:)
+**/
+/obj/item/bodypart/proc/generate_icon_key()
+	RETURN_TYPE(/list)
+	. = list()
+	if(is_dimorphic)
+		. += limb_gender
+	. += limb_id
+	. += body_zone
+	if(should_draw_greyscale && draw_color)
+		. += draw_color
+	/*
+	for(var/datum/bodypart_overlay/overlay as anything in bodypart_overlays)
+		if(!overlay.can_draw_on_bodypart(src, owner))
+			continue
+		. += "-[jointext(overlay.generate_icon_cache(), "-")]"
+	if(ishuman(owner))
+		var/mob/living/carbon/human/human_owner = owner
+		. += "-[human_owner.mob_height]"
+	*/
+	return .
+
+///Generates a cache key specifically for husks
+/obj/item/bodypart/proc/generate_husk_key()
+	RETURN_TYPE(/list)
+	. = list()
+	if(is_dimorphic)
+		. += limb_gender
+	. += limb_id
+	. += husk_type
+	. += "husk"
+	. += body_zone
+	. += get_husk_blood_color()
+	return .
+
+/obj/item/bodypart/head/generate_icon_key()
+	. = ..()
+	if(lip_style)
+		. += "-[lip_style]"
+		. += "-[lip_color]"
+
+	if(facial_hair_hidden)
+		. += "-FACIAL_HAIR_HIDDEN"
+	else
+		. += "-[facial_hairstyle]"
+		. += "-[override_hair_color || fixed_hair_color || facial_hair_color]"
+		. += "-[facial_hair_alpha]"
+		if(gradient_styles?[GRADIENT_FACIAL_HAIR_KEY])
+			. += "-[gradient_styles[GRADIENT_FACIAL_HAIR_KEY]]"
+			. += "-[gradient_colors[GRADIENT_FACIAL_HAIR_KEY]]"
+
+	if(show_eyeless)
+		. += "-SHOW_EYELESS"
+	if(show_debrained)
+		. += "-SHOW_DEBRAINED"
+		return .
+
+	if(hair_hidden)
+		. += "-HAIR_HIDDEN"
+	else
+		. += "-[hair_style]"
+		. += "-[override_hair_color || fixed_hair_color || hair_color]"
+		. += "-[hair_alpha]"
+		if(gradient_styles?[GRADIENT_HAIR_KEY])
+			. += "-[gradient_styles[GRADIENT_HAIR_KEY]]"
+			. += "-[gradient_colors[GRADIENT_HAIR_KEY]]"
+		if(LAZYLEN(hair_masks))
+			. += "-[jointext(hair_masks, "-")]"
+
+	return .

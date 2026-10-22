@@ -4,8 +4,7 @@
 	icon = 'icons/obj/machines/camera.dmi'
 	icon_state = "camera" //mapping icon to represent upgrade states. if you want a different base icon, update default_camera_icon as well as this.
 	use_power = ACTIVE_POWER_USE
-	idle_power_usage = 5
-	active_power_usage = 10
+	active_power_usage = BASE_MACHINE_ACTIVE_CONSUMPTION * 0.02
 	layer = WALL_OBJ_LAYER
 	resistance_flags = FIRE_PROOF
 	damage_deflection = 12
@@ -33,8 +32,6 @@
 	var/view_range = 7
 	var/short_range = 2
 
-	var/alarm_on = FALSE
-	var/busy = FALSE
 	var/emped = FALSE  //Number of consecutive EMP's on this camera
 	var/in_use_lights = 0
 
@@ -87,7 +84,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 
 	// Calculate area code
 	var/area/camera_area = get_area(src)
-	if (istype(camera_area, /area/space))
+	if (istype(camera_area, /area/misc/space))
 		var/turf/connected_wall = get_step(src, dir)
 		camera_area = get_area(connected_wall)
 
@@ -131,8 +128,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 
 	alarm_manager = new(src)
 
-/obj/machinery/camera/ComponentInitialize()
-	. = ..()
 	AddComponent(/datum/component/jam_receiver, JAMMER_PROTECTION_CAMERAS)
 	RegisterSignal(src, COMSIG_ATOM_JAMMED, PROC_REF(update_jammed))
 	RegisterSignal(src, COMSIG_ATOM_UNJAMMED, PROC_REF(update_jammed))
@@ -154,7 +149,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 		toggle_cam(null, 0) //kick anyone viewing out and remove from the camera chunks
 	GLOB.cameranet.removeCamera(src)
 	GLOB.cameranet.cameras -= src
-	cancelCameraAlarm()
 	if(isarea(myarea))
 		LAZYREMOVE(myarea.cameras, src)
 	QDEL_NULL(alarm_manager)
@@ -208,23 +202,19 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 			emped = emped+1  //Increase the number of consecutive EMP's
 			update_appearance()
 			thisemp = emped //Take note of which EMP this proc is for
-			for(var/i in GLOB.player_list)
-				var/mob/M = i
-				if (M.client.eye == src)
-					M.unset_machine()
-					M.reset_perspective(null)
-					to_chat(M, "The screen bursts into static.")
+			for(var/mob/each_mob as anything in eye_mobs)
+				each_mob.unset_machine()
+				each_mob.set_mob_eye_to(MOB_EYE_SELF)
+				to_chat(each_mob, "The screen bursts into static.")
 
 /obj/machinery/camera/emp_reset()
 	..()
-	triggerCameraAlarm() //camera alarm triggers even if multiple EMPs are in effect.
 	if(emped == thisemp) //Only fix it if the camera hasn't been EMP'd again
 		network = previous_network
 		update_appearance()
 		if(can_use())
 			GLOB.cameranet.addCamera(src)
 		emped = 0 //Resets the consecutive EMP count
-		addtimer(CALLBACK(src, PROC_REF(cancelCameraAlarm)), 100)
 
 /obj/machinery/camera/ex_act(severity, target)
 	if(invuln)
@@ -240,7 +230,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 		return
 	user.electrocute_act(10, src)
 
-/obj/machinery/camera/singularity_pull(S, current_size)
+/obj/machinery/camera/singularity_pull(obj/anomaly/singularity/singularity, current_size)
 	if (status && current_size >= STAGE_FIVE) // If the singulo is strong enough to pull anchored objects and the camera is still active, turn off the camera as it gets ripped off the wall.
 		toggle_cam(null, 0)
 	..()
@@ -286,7 +276,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 
 	return TRUE
 
-/obj/machinery/camera/attackby(obj/item/attacking_item, mob/living/user, params)
+/obj/machinery/camera/attackby(obj/item/attacking_item, mob/living/user, list/modifiers)
 	// UPGRADES
 	if(panel_open)
 		var/obj/structure/camera_assembly/assembly = assembly_ref?.resolve()
@@ -413,7 +403,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 		return
 	. = ..()
 	if(.)
-		triggerCameraAlarm()
 		toggle_cam(null, 0)
 
 /obj/machinery/camera/deconstruct(disassembled = TRUE)
@@ -443,6 +432,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 
 /obj/machinery/camera/proc/toggle_cam(mob/user, displaymessage = TRUE)
 	status = !status
+	if(status)
+		update_use_power(IDLE_POWER_USE)
+	else
+		update_use_power(ACTIVE_POWER_USE)
 	update_camera(user, displaymessage)
 
 /obj/machinery/camera/proc/update_camera(mob/user, displaymessage = TRUE)
@@ -468,8 +461,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 	var/change_msg = "deactivates"
 	if(status)
 		change_msg = "reactivates"
-		triggerCameraAlarm()
-		addtimer(CALLBACK(src, PROC_REF(cancelCameraAlarm)), 100)
 	if(displaymessage)
 		if(user)
 			visible_message(span_danger("[user] [change_msg] [src]!"))
@@ -483,19 +474,10 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/camera)
 	// now disconnect anyone using the camera
 	//Apparently, this will disconnect anyone even if the camera was re-activated.
 	//I guess that doesn't matter since they can't use it anyway?
-	for(var/mob/O in GLOB.player_list)
-		if (O.client && O.client.eye == src)
-			O.unset_machine()
-			O.reset_perspective(null)
-			to_chat(O, "The screen bursts into static.")
-
-/obj/machinery/camera/proc/triggerCameraAlarm()
-	alarm_on = TRUE
-	alarm_manager.send_alarm(ALARM_CAMERA, src, src)
-
-/obj/machinery/camera/proc/cancelCameraAlarm()
-	alarm_on = FALSE
-	alarm_manager.clear_alarm(ALARM_CAMERA)
+	for(var/mob/each_mob as anything in eye_mobs)
+		each_mob.unset_machine()
+		each_mob.set_mob_eye_to(MOB_EYE_SELF)
+		to_chat(each_mob, "The screen bursts into static.")
 
 /obj/machinery/camera/proc/can_use()
 	if(!status)

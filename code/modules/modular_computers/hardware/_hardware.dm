@@ -38,7 +38,7 @@
 	/// What define is used to qualify this piece of hardware? Important for upgraded versions of the same hardware.
 	var/device_type
 	/// If the hardware can be "hotswapped" (ejected when another is installed)
-	var/hotswap = FALSE
+	var/hotswap = TRUE
 	/// If this has been opened by a screwdriver
 	var/open = FALSE
 	/// If this has been opened by a screwdriver
@@ -49,8 +49,10 @@
 	var/hacked = FALSE
 	/// A Serial Number used in hacking and other niffty things
 	var/serial_code
+	/// Hardware tier, basicly how advanced it is
+	var/rating
 
-/obj/item/computer_hardware/New(var/obj/L)
+/obj/item/computer_hardware/New(obj/L)
 	..()
 	pixel_x = base_pixel_x + rand(-8, 8)
 	pixel_y = base_pixel_y + rand(-8, 8)
@@ -76,10 +78,9 @@
 	playsound(src, 'sound/items/flashlight_on.ogg', 50, TRUE)
 	return
 
-/obj/item/computer_hardware/attackby(obj/item/I, mob/living/user)
-	if(try_insert(I, user))
+/obj/item/computer_hardware/attackby(obj/item/attacking_item, mob/living/user)
+	if(application_attackby(attacking_item, user))
 		return TRUE
-
 	return ..()
 
 /obj/item/computer_hardware/welder_act(mob/living/user, obj/item/I)
@@ -150,7 +151,7 @@
 /obj/item/computer_hardware/multitool_act_secondary(mob/living/user, obj/item/tool)
 	var/time_to_hack = 3 SECONDS
 	var/fail_chance = 15
-	if(user.mind?.assigned_role == (JOB_NAME_SCIENTIST || JOB_NAME_RESEARCHDIRECTOR))	// Scientist buff
+	if(user.mind?.assigned_role.title == JOB_NAME_SCIENTIST || user.mind?.assigned_role.title == JOB_NAME_RESEARCHDIRECTOR)	// Scientist buff
 		time_to_hack = 2 SECONDS
 		fail_chance = 5
 	if(HAS_TRAIT(user, TRAIT_COMPUTER_WHIZ))	// Trait buff
@@ -229,7 +230,8 @@
 	. += "Hardware Integrity Test... (Corruption: [damage]/[max_damage]) [damage > damage_failure ? "FAIL" : damage > damage_malfunction ? "WARN" : "PASS"]"
 	if(!enabled)
 		. += "<span class='cfc_soul_glimmer_humour'>Warning</span> // Hardware Disabled"
-	. += "Current power consumption :: [power_usage]"
+	if(power_usage)
+		. += "Current power consumption :: [display_power_persec(power_usage)]"
 	if(expansion_hw)
 		. += "INFO :: Component requires Expansion Bay slot."
 	if(hacked)
@@ -255,7 +257,7 @@
 
 	return TRUE // Good to go.
 
-/obj/item/computer_hardware/examine(var/mob/user)
+/obj/item/computer_hardware/examine(mob/user)
 	. = ..()
 	if(damage > damage_failure)
 		. += span_danger("It seems to be severely damaged!")
@@ -274,7 +276,6 @@
 
 /// Called when component is installed into PC.
 /obj/item/computer_hardware/proc/on_install(obj/item/modular_computer/install_into, mob/living/user = null)
-	install_into.ui_update(user)
 	return
 
 /// Called when component is removed from PC.
@@ -283,8 +284,8 @@
 		try_eject(forced = TRUE)
 	remove_from.ui_update(user)
 
-/// Called when someone tries to insert something in it - paper in printer, card in card reader, etc.
-/obj/item/computer_hardware/proc/try_insert(obj/item/I, mob/living/user = null)
+/// Called when attacking a tablet with an item, checking if any application uses it. Return TRUE to cancel the attack chain.
+/obj/item/computer_hardware/proc/application_attackby(obj/item/attacking_item, mob/living/user)
 	return FALSE
 
 /**

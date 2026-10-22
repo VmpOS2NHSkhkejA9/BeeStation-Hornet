@@ -61,7 +61,7 @@
 	//Setup our typing
 	artifact_material = material_type || pick_weight(SSxenoarchaeology.xenoartifact_material_weights)
 	artifact_material = new artifact_material()
-	atom_parent.custom_price = atom_parent.custom_price || artifact_material.custom_price
+	atom_parent.item_price = atom_parent.item_price || artifact_material.custom_price
 
 	//Build appearance from material
 	old_appearance = atom_parent.appearance
@@ -76,7 +76,7 @@
 
 	//If we're force-generating traits
 	if(traits)
-		for(var/datum/xenoartifact_trait/T as() in traits)
+		for(var/datum/xenoartifact_trait/T as anything in traits)
 			add_individual_trait(T)
 
 	//Otherwise, randomly generate our own traits - Additional option to patch traits missing from trait list
@@ -105,7 +105,7 @@
 	//Setup description stuff
 	RegisterSignal(parent, COMSIG_ATOM_EXAMINE, PROC_REF(on_examined))
 
-/datum/component/xenoartifact/Destroy(force, silent)
+/datum/component/xenoartifact/Destroy(force)
 	if(!QDELETED(parent))
 		var/atom/atom_parent = parent
 		//Remove discovery component
@@ -120,7 +120,7 @@
 		old_appearance = null
 	//Delete our traits
 	for(var/i in traits_catagories)
-		for(var/datum/xenoartifact_trait/T as() in traits_catagories[i])
+		for(var/datum/xenoartifact_trait/T as anything in traits_catagories[i])
 			traits_catagories[i] -= T
 			if(!QDELETED(T))
 				qdel(T)
@@ -171,7 +171,7 @@
 /datum/component/xenoartifact/proc/get_extra_cooldowns()
 	var/time = 0 SECONDS
 	for(var/i in traits_catagories)
-		for(var/datum/xenoartifact_trait/T as() in traits_catagories[i])
+		for(var/datum/xenoartifact_trait/T as anything in traits_catagories[i])
 			time += T.cooldown
 	return time
 
@@ -231,7 +231,7 @@
 	//Special case for observers that shows all the traits
 	if(isobserver(user))
 		for(var/i in traits_catagories)
-			for(var/datum/xenoartifact_trait/T as() in traits_catagories[i])
+			for(var/datum/xenoartifact_trait/T as anything in traits_catagories[i])
 				if(T.label_name)
 					examine_text += "<span class='info'>- [T.label_name]</span>"
 
@@ -241,7 +241,7 @@
 	var/list/description_category = list()
 	//Get descriptions from each category
 	for(var/i in traits_catagories)
-		for(var/datum/xenoartifact_trait/T as() in traits_catagories[i])
+		for(var/datum/xenoartifact_trait/T as anything in traits_catagories[i])
 			if(!description_category[i])
 				description_category[i] = list()
 			if(T.material_desc) //Avoid adding null, so later logic works
@@ -261,7 +261,7 @@
 	var/total_weight = 0
 	//Get descriptions from each category
 	for(var/i in traits_catagories)
-		for(var/datum/xenoartifact_trait/T as() in traits_catagories[i])
+		for(var/datum/xenoartifact_trait/T as anything in traits_catagories[i])
 			total_weight += T.weight
 	return total_weight
 
@@ -269,7 +269,7 @@
 	var/total_conductivity = 0
 	//Get descriptions from each category
 	for(var/i in traits_catagories)
-		for(var/datum/xenoartifact_trait/T as() in traits_catagories[i])
+		for(var/datum/xenoartifact_trait/T as anything in traits_catagories[i])
 			total_conductivity += T.conductivity
 	return total_conductivity
 
@@ -312,7 +312,7 @@
 	do_mask = old_mask
 	//States
 	calcified = TRUE
-	atom_parent.custom_price /= 2
+	atom_parent.item_price /= 2
 	//Disable artifact
 	cooldown_override = TRUE
 
@@ -323,7 +323,7 @@
 	var/atom/movable/atom_parent = parent
 	//Stats
 	calibrated = TRUE
-	atom_parent.custom_price *= 2
+	atom_parent.item_price *= 2
 	//Effect
 	calibrated_holder = new(atom_parent)
 	var/obj/emitter/spiral/S = calibrated_holder.add_emitter(/obj/emitter/spiral, "calibration", 11)
@@ -356,7 +356,7 @@
 		//Throw on some outlines
 		//TODO: Check if this fix is still needed in 515 - Racc from 514 : PLAYTEST
 		atom_parent.add_filter("outline_fix", 2, outline_filter(0)) //This fixes a weird byond thing. BLEND_INSET_OVERLAY will encrouch on outline 1 if we dont do this
-		atom_parent.add_filter("outline_1", 3, outline_filter(1, "#000", flags = OUTLINE_SHARP))
+		atom_parent.add_filter("outline_1", 3, outline_filter(1, COLOR_BLACK, flags = OUTLINE_SHARP))
 		atom_parent.add_filter("outline_2", 4, outline_filter(1, artifact_material.material_color, flags = OUTLINE_SHARP))
 
 ///Create a hint beam from the artifact to the target

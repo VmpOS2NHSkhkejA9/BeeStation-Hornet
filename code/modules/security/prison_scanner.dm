@@ -5,7 +5,7 @@
 	desc = "A device used to check objects made in the workshop, to have them cashed out for sentence reductions."
 	icon = 'icons/obj/device.dmi'
 	icon_state = "export_scanner"
-	item_state = "radio"
+	inhand_icon_state = "radio"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
 	item_flags = NOBLUDGEON
@@ -21,7 +21,7 @@
 	if(!linked_id)
 		. += "[span_notice("[src] is currently unlinked")]."
 
-/obj/item/prison_scanner/attackby(obj/item/I, mob/living/user, params)
+/obj/item/prison_scanner/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(istype(I, /obj/item/card/id/prisoner))
 		var/obj/item/card/id/prisoner/C = I
 		if(!linked_id)

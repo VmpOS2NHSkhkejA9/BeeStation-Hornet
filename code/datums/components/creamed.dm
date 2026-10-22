@@ -2,7 +2,8 @@ GLOBAL_LIST_INIT(creamable, typecacheof(list(
 	/mob/living/carbon/human,
 	/mob/living/carbon/monkey,
 	/mob/living/basic/pet/dog/corgi,
-	/mob/living/silicon/ai)))
+	/mob/living/silicon/ai,
+)))
 
 /**
   * # Creamed component
@@ -22,7 +23,7 @@ GLOBAL_LIST_INIT(creamable, typecacheof(list(
 
 	if(ishuman(parent))
 		var/mob/living/carbon/human/H = parent
-		if(islizard(H))
+		if(H.bodytype & BODYTYPE_SNOUTED)
 			creamface.icon_state = "creampie_lizard"
 		else
 			creamface.icon_state = "creampie_human"
@@ -37,7 +38,7 @@ GLOBAL_LIST_INIT(creamable, typecacheof(list(
 	var/atom/A = parent
 	A.add_overlay(creamface)
 
-/datum/component/creamed/Destroy(force, silent)
+/datum/component/creamed/Destroy(force)
 	var/atom/A = parent
 	A.cut_overlay(creamface)
 	qdel(creamface)

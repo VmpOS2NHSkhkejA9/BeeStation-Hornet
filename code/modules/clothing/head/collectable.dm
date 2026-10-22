@@ -30,6 +30,7 @@
 */
 
 /obj/item/clothing/head/collectable
+	abstract_type = /obj/item/clothing/head/collectable
 	name = "collectable hat"
 	desc = "A rare collectable hat."
 	icon = 'icons/obj/clothing/head/costume.dmi'
@@ -50,7 +51,6 @@
 	desc = "It just latches right in place!"
 	icon_state = "slime"
 	clothing_flags = SNUG_FIT
-	dynamic_hair_suffix = ""
 
 /obj/item/clothing/head/collectable/xenom
 	name = "collectable xenomorph helmet"
@@ -64,8 +64,7 @@
 	icon = 'icons/obj/clothing/head/utility.dmi'
 	worn_icon = 'icons/mob/clothing/head/utility.dmi'
 	icon_state = "chef"
-	item_state = "chef"
-	dynamic_hair_suffix = ""
+	inhand_icon_state = "chef"
 	dog_fashion = /datum/dog_fashion/head/chef
 
 /obj/item/clothing/head/collectable/paper
@@ -81,7 +80,7 @@
 	icon = 'icons/obj/clothing/head/hats.dmi'
 	worn_icon = 'icons/mob/clothing/head/hats.dmi'
 	icon_state = "tophat"
-	item_state = "that"
+	inhand_icon_state = "that"
 
 /obj/item/clothing/head/collectable/captain
 	name = "collectable captain's hat"
@@ -89,7 +88,7 @@
 	icon = 'icons/obj/clothing/head/hats.dmi'
 	worn_icon = 'icons/mob/clothing/head/hats.dmi'
 	icon_state = "captain"
-	item_state = null
+	inhand_icon_state = null
 	dog_fashion = /datum/dog_fashion/head/captain
 
 /obj/item/clothing/head/collectable/police
@@ -98,7 +97,6 @@
 	icon = 'icons/obj/clothing/head/hats.dmi'
 	worn_icon = 'icons/mob/clothing/head/hats.dmi'
 	icon_state = "policehelm"
-	dynamic_hair_suffix = ""
 
 	dog_fashion = /datum/dog_fashion/head/warden
 
@@ -117,14 +115,14 @@
 	icon = 'icons/obj/clothing/head/utility.dmi'
 	worn_icon = 'icons/mob/clothing/head/utility.dmi'
 	icon_state = "welding"
-	item_state = "welding"
+	inhand_icon_state = "welding"
 	clothing_flags = SNUG_FIT
 
 /obj/item/clothing/head/collectable/slime
 	name = "collectable slime hat"
 	desc = "Just like a real brain slug!"
 	icon_state = "headslime"
-	item_state = null
+	inhand_icon_state = null
 	clothing_flags = SNUG_FIT
 
 /obj/item/clothing/head/collectable/flatcap
@@ -134,31 +132,29 @@
 	greyscale_config = /datum/greyscale_config/beret
 	greyscale_config_worn = /datum/greyscale_config/beret/worn
 	greyscale_colors = "#8F7654"
-	item_state = null
+	inhand_icon_state = null
 
 /obj/item/clothing/head/collectable/pirate
 	name = "collectable pirate hat"
 	desc = "You'd make a great Dread Syndie Roberts!"
 	icon_state = "pirate"
-	item_state = null
+	inhand_icon_state = null
 	dog_fashion = /datum/dog_fashion/head/pirate
 
 /obj/item/clothing/head/collectable/kitty
 	name = "collectable kitty ears"
 	desc = "The fur feels... a bit too realistic."
 	icon_state = "kitty"
-	item_state = null
+	inhand_icon_state = null
 	clothing_flags = SNUG_FIT
-	dynamic_hair_suffix = ""
 	dog_fashion = /datum/dog_fashion/head/kitty
 
 /obj/item/clothing/head/collectable/rabbitears
 	name = "collectable rabbit ears"
 	desc = "Not as lucky as the feet!"
 	icon_state = "bunny"
-	item_state = null
+	inhand_icon_state = null
 	clothing_flags = SNUG_FIT
-	dynamic_hair_suffix = ""
 	dog_fashion = /datum/dog_fashion/head/rabbit
 
 /obj/item/clothing/head/collectable/wizard
@@ -175,7 +171,7 @@
 	icon = 'icons/obj/clothing/head/utility.dmi'
 	worn_icon = 'icons/mob/clothing/head/utility.dmi'
 	icon_state = "hardhat0_yellow"
-	item_state = null
+	inhand_icon_state = null
 	clothing_flags = SNUG_FIT
 	dog_fashion = /datum/dog_fashion/head
 
@@ -185,7 +181,6 @@
 	icon = 'icons/obj/clothing/head/hats.dmi'
 	worn_icon = 'icons/mob/clothing/head/hats.dmi'
 	icon_state = "hoscap"
-	dynamic_hair_suffix = ""
 
 /obj/item/clothing/head/collectable/HoP
 	name = "collectable HoP hat"
@@ -202,7 +197,7 @@
 	icon = 'icons/obj/clothing/head/helmet.dmi'
 	worn_icon = 'icons/mob/clothing/head/helmet.dmi'
 	icon_state = "thunderdome"
-	item_state = "thunderdome"
+	inhand_icon_state = "thunderdome"
 	clothing_flags = SNUG_FIT
 	flags_inv = HIDEHAIR
 
@@ -212,6 +207,6 @@
 	icon = 'icons/obj/clothing/head/helmet.dmi'
 	worn_icon = 'icons/mob/clothing/head/helmet.dmi'
 	icon_state = "swatsyndie"
-	item_state = "swatsyndie"
+	inhand_icon_state = "swatsyndie"
 	clothing_flags = SNUG_FIT
 	flags_inv = HIDEHAIR

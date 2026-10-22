@@ -5,11 +5,12 @@
  * @license MIT
  */
 
+import { isEscape, KEY } from 'common/keys';
 import { classes } from 'common/react';
 import { Component, createRef } from 'react';
+
 import { Box } from './Box';
 import { toInputValue } from './Input';
-import { isEscape, KEY } from 'common/keys';
 
 export class TextArea extends Component {
   constructor(props) {
@@ -53,7 +54,9 @@ export class TextArea extends Component {
     this.handleKeyDown = (e) => {
       const { editing } = this.state;
       const { onChange, onInput, onEnter, onKey } = this.props;
-      if (e.key === KEY.Enter) {
+      // Shift+Enter makes a new line instead of sending.
+      if (e.key === KEY.Enter && onEnter && !e.shiftKey) {
+        e.preventDefault();
         this.setEditing(false);
         if (onChange) {
           onChange(e, e.target.value);
@@ -61,9 +64,7 @@ export class TextArea extends Component {
         if (onInput) {
           onInput(e, e.target.value);
         }
-        if (onEnter) {
-          onEnter(e, e.target.value);
-        }
+        onEnter(e, e.target.value);
         if (this.props.selfClear) {
           e.target.value = '';
           e.target.blur();
@@ -94,7 +95,10 @@ export class TextArea extends Component {
         if (e.key === KEY.Tab) {
           e.preventDefault();
           const { value, selectionStart, selectionEnd } = e.target;
-          e.target.value = value.substring(0, selectionStart) + '\t' + value.substring(selectionEnd);
+          e.target.value =
+            value.substring(0, selectionStart) +
+            '\t' +
+            value.substring(selectionEnd);
           e.target.selectionEnd = selectionStart + 1;
         }
       }
@@ -178,10 +182,14 @@ export class TextArea extends Component {
           noborder && 'TextArea--noborder',
           className,
         ])}
-        {...rest}>
+        {...rest}
+      >
         <textarea
           ref={this.textareaRef}
-          className={classes(['TextArea__textarea', scrollbar && 'TextArea__textarea--scrollable'])}
+          className={classes([
+            'TextArea__textarea',
+            scrollbar && 'TextArea__textarea--scrollable',
+          ])}
           placeholder={placeholder}
           onChange={this.handleOnChange}
           onKeyDown={this.handleKeyDown}

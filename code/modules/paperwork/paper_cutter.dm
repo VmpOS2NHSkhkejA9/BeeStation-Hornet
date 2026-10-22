@@ -42,7 +42,7 @@
 		add_overlay("paper")
 
 
-/obj/item/papercutter/attackby(obj/item/P, mob/user, params)
+/obj/item/papercutter/attackby(obj/item/P, mob/user, list/modifiers)
 	if(istype(P, /obj/item/paper) && !storedpaper)
 		if(!user.transferItemToLoc(P, src))
 			return
@@ -93,7 +93,7 @@
 /obj/item/papercutter/MouseDrop(atom/over_object)
 	. = ..()
 	var/mob/M = usr
-	if(M.incapacitated() || !Adjacent(M))
+	if(M.incapacitated || !Adjacent(M))
 		return
 
 	if(over_object == M)
@@ -112,7 +112,7 @@
 	resistance_flags = FLAMMABLE
 	max_integrity = 50
 
-/obj/item/paperslip/attackby(obj/item/I, mob/living/user, params)
+/obj/item/paperslip/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(burn_paper_product_attackby_check(I, user))
 		return
 	return ..()
@@ -129,6 +129,6 @@
 	desc = "The blade of a paper cutter. Most likely removed for polishing or sharpening."
 	icon = 'icons/obj/bureaucracy.dmi'
 	icon_state = "cutterblade"
-	item_state = "knife"
+	inhand_icon_state = "knife"
 	lefthand_file = 'icons/mob/inhands/equipment/kitchen_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/kitchen_righthand.dmi'

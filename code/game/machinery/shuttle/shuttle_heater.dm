@@ -37,7 +37,6 @@
 /datum/armor/shuttle_heater
 	energy = 100
 	bio = 100
-	rad = 100
 	fire = 100
 	acid = 30
 
@@ -78,12 +77,13 @@
 	return TRUE
 
 /obj/machinery/atmospherics/components/unary/shuttle/heater/RefreshParts()
+	. = ..()
 	var/cap = 0
 	var/eff = 0
-	for(var/obj/item/stock_parts/matter_bin/M in component_parts)
-		cap += M.rating
-	for(var/obj/item/stock_parts/micro_laser/L in component_parts)
-		eff += L.rating
+	for(var/datum/stock_part/matter_bin/M in component_parts)
+		cap += M.tier
+	for(var/datum/stock_part/micro_laser/L in component_parts)
+		eff += L.tier
 	gas_capacity = 5000 * ((cap - 1) ** 2) + 1000
 	efficiency_multiplier = round(((eff / 2) / 2.8) ** 2, 0.1)
 	updateGasStats()
@@ -100,17 +100,17 @@
 	air_contents.volume = gas_capacity
 	air_contents.temperature = T20C
 
-/obj/machinery/atmospherics/components/unary/shuttle/heater/proc/hasFuel(var/required)
+/obj/machinery/atmospherics/components/unary/shuttle/heater/proc/hasFuel(required)
 	var/datum/gas_mixture/air_contents = airs[1]
 	var/moles = air_contents.total_moles()
 	return moles >= required
 
-/obj/machinery/atmospherics/components/unary/shuttle/heater/proc/consumeFuel(var/amount)
+/obj/machinery/atmospherics/components/unary/shuttle/heater/proc/consumeFuel(amount)
 	var/datum/gas_mixture/air_contents = airs[1]
 	air_contents.remove(amount)
 	return
 
-/obj/machinery/atmospherics/components/unary/shuttle/heater/attackby(obj/item/I, mob/living/user, params)
+/obj/machinery/atmospherics/components/unary/shuttle/heater/attackby(obj/item/I, mob/living/user, list/modifiers)
 	update_adjacent_engines()
 	if(default_deconstruction_screwdriver(user, icon_state_open, icon_state_closed, I))
 		return TRUE

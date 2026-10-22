@@ -13,7 +13,7 @@
 	attack_verb_simple = list("bludgeon", "smash", "beat")
 	icon = 'icons/obj/pneumaticCannon.dmi'
 	icon_state = "pneumaticCannon"
-	item_state = "bulldog"
+	inhand_icon_state = "bulldog"
 	lefthand_file = 'icons/mob/inhands/weapons/guns_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/weapons/guns_righthand.dmi'
 	armor_type = /datum/armor/item_pneumatic_cannon
@@ -77,7 +77,7 @@
 		out += span_notice("[icon2html(tank, user)] It has \a [tank] mounted onto it.")
 	. += out.Join("\n")
 
-/obj/item/pneumatic_cannon/attackby(obj/item/W, mob/living/user, params)
+/obj/item/pneumatic_cannon/attackby(obj/item/W, mob/living/user, list/modifiers)
 	if(user.combat_mode)
 		return ..()
 	if(istype(W, /obj/item/tank/internals))
@@ -137,7 +137,7 @@
 	loadedWeightClass += I.w_class
 	return TRUE
 
-/obj/item/pneumatic_cannon/afterattack(atom/target, mob/living/user, flag, params)
+/obj/item/pneumatic_cannon/afterattack(atom/target, mob/living/user, flag, list/modifiers)
 	. = ..()
 	if(flag && user.combat_mode)//melee attack
 		return
@@ -145,7 +145,7 @@
 		return
 	Fire(user, target)
 
-/obj/item/pneumatic_cannon/proc/Fire(mob/living/user, var/atom/target)
+/obj/item/pneumatic_cannon/proc/Fire(mob/living/user, atom/target)
 	if(!istype(user) && !target)
 		return
 	var/discharge = 0
@@ -313,7 +313,7 @@
 	desc = "A weapon favored by carp hunters. Fires specialized spears using magnetic energy. A savvy- or desperate- hunter may be able to find more esoteric payloads"
 	icon = 'icons/obj/guns/projectile.dmi'
 	icon_state = "speargun"
-	item_state = "speargun"
+	inhand_icon_state = "speargun"
 	w_class = WEIGHT_CLASS_BULKY
 	force = 10
 	fire_sound = 'sound/weapons/grenadelaunch.ogg'
@@ -324,7 +324,19 @@
 	throw_amount = 1
 	maxWeightClass = WEIGHT_CLASS_BULKY //a single magspear or spear
 	spin_item = FALSE
-	var/static/list/magspear_typecache = typecacheof(list(/obj/item/throwing_star/magspear, /obj/item/spear, /obj/item/stack/rods/fifty, /obj/item/stack/rods, /obj/item/stack/rods/twenty, /obj/item/stack/rods/ten, /obj/item/katana, /obj/item/katana/cursed, /obj/item/toy/katana, /obj/item/spear/explosive, /obj/item/clockwork/weapon/brass_spear))
+	var/static/list/magspear_typecache = typecacheof(list(
+		/obj/item/throwing_star/magspear,
+		/obj/item/spear,
+		/obj/item/stack/rods/fifty,
+		/obj/item/stack/rods,
+		/obj/item/stack/rods/twenty,
+		/obj/item/stack/rods/ten,
+		/obj/item/katana,
+		/obj/item/katana/cursed,
+		/obj/item/toy/katana,
+		/obj/item/spear/explosive,
+		/obj/item/clockwork/weapon/brass_spear,
+	))
 
 /obj/item/pneumatic_cannon/speargun/Initialize(mapload)
 	. = ..()
@@ -334,7 +346,8 @@
 	name = "quiver"
 	desc = "A quiver for holding magspears."
 	icon_state = "quiver"
-	item_state = "quiver"
+	inhand_icon_state = "quiver"
+	worn_icon = 'icons/mob/clothing/back.dmi'
 
 /obj/item/storage/backpack/magspear_quiver/Initialize(mapload)
 	. = ..()
@@ -343,8 +356,8 @@
 	atom_storage.max_total_storage = atom_storage.max_specific_storage * atom_storage.max_slots
 	atom_storage.numerical_stacking = TRUE
 	atom_storage.set_holdable(list(
-		/obj/item/throwing_star/magspear
-		))
+		/obj/item/throwing_star/magspear,
+	))
 
 /obj/item/storage/backpack/magspear_quiver/PopulateContents()
 	for(var/i in 1 to 30)

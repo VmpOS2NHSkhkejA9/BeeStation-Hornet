@@ -39,17 +39,16 @@ Slimecrossing Items
 		saved_part.old_part.heal_damage(INFINITY, INFINITY, INFINITY, null, FALSE)
 		saved_part.old_part.receive_damage(saved_part.brute_dam, saved_part.burn_dam, saved_part.stamina_dam)
 		dont_chop[zone] = TRUE
-	for(var/obj/item/bodypart/BP as() in bodyparts)
+		
+	for(var/obj/item/bodypart/BP as anything in bodyparts)
 		if(dont_chop[BP.body_zone])
 			continue
 		BP.drop_limb(TRUE)
 
 /mob/living/carbon/proc/save_bodyparts()
 	var/list/datum/saved_bodypart/ret = list()
-	for(var/_part in bodyparts)
-		var/obj/item/bodypart/part = _part
+	for(var/obj/item/bodypart/part as anything in get_bodyparts())
 		var/datum/saved_bodypart/saved_part = new(part)
-
 		ret[part.body_zone] = saved_part
 	return ret
 
@@ -91,8 +90,9 @@ Slimecrossing Items
 	name = "hypercharged slime core"
 	desc = "A charged yellow slime extract, infused with even more plasma. It almost hurts to touch."
 	rating = 7 //Roughly 1.5 times the original.
-	maxcharge = 10000 //5 times the normal one.
-	chargerate = 300 //3 times the normal one.
+	maxcharge = 100 KILOWATT //5 times the normal one.
+	custom_price = 600
+	max_demand = 5
 
 //Barrier cube - Chilling Grey
 /obj/item/barriercube
@@ -152,7 +152,6 @@ Slimecrossing Items
 	bullet = 50
 	laser = -50
 	energy = -50
-	rad = 100
 	fire = -80
 	acid = 30
 
@@ -210,7 +209,7 @@ Slimecrossing Items
 	else
 		to_chat(user, span_warning("The device is empty..."))
 
-/obj/item/capturedevice/proc/store(var/mob/living/M)
+/obj/item/capturedevice/proc/store(mob/living/M)
 	M.forceMove(src)
 
 /obj/item/capturedevice/proc/release()
@@ -224,7 +223,7 @@ Slimecrossing Items
 	icon_state = "cerulean_item_crystal"
 	var/amt = 0
 
-/obj/item/cerulean_slime_crystal/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
+/obj/item/cerulean_slime_crystal/afterattack(atom/target, mob/user, proximity_flag, list/modifiers)
 	. = ..()
 	if(!istype(target,/obj/item/stack) || !istype(user,/mob/living/carbon) || !proximity_flag)
 		return

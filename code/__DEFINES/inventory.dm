@@ -68,6 +68,19 @@
 
 #define SLOTS_AMT 20 // Keep this up to date!
 
+DEFINE_BITFIELD(no_equip_flags, list(
+	"EXOSUIT" = ITEM_SLOT_OCLOTHING,
+	"JUMPSUIT" = ITEM_SLOT_ICLOTHING,
+	"GLOVES" = ITEM_SLOT_GLOVES,
+	"GLASSES" = ITEM_SLOT_EYES,
+	"EARPIECES" = ITEM_SLOT_EARS,
+	"MASKS" = ITEM_SLOT_MASK,
+	"HATS" = ITEM_SLOT_HEAD,
+	"SHOES" = ITEM_SLOT_FEET,
+	"BACKPACKS" = ITEM_SLOT_BACK,
+	"TIES" = ITEM_SLOT_NECK,
+))
+
 //SLOT GROUP HELPERS
 #define ITEM_SLOT_POCKETS (ITEM_SLOT_LPOCKET|ITEM_SLOT_RPOCKET)
 
@@ -96,11 +109,20 @@
 ///hides antennae
 #define HIDEANTENNAE (1<<15)
 
+//Bitflags for hair appendage zones
+#define HAIR_APPENDAGE_FRONT (1<<0)
+#define HAIR_APPENDAGE_LEFT (1<<1)
+#define HAIR_APPENDAGE_RIGHT (1<<2)
+#define HAIR_APPENDAGE_REAR (1<<3)
+#define HAIR_APPENDAGE_TOP (1<<4)
+#define HAIR_APPENDAGE_HANGING_FRONT (1<<5)
+#define HAIR_APPENDAGE_HANGING_REAR (1<<6)
+#define HAIR_APPENDAGE_ALL (HAIR_APPENDAGE_FRONT|HAIR_APPENDAGE_LEFT|HAIR_APPENDAGE_RIGHT|HAIR_APPENDAGE_REAR|HAIR_APPENDAGE_TOP|HAIR_APPENDAGE_HANGING_FRONT|HAIR_APPENDAGE_HANGING_REAR)
 
 //bitflags for clothing coverage - also used for limbs
-#define HEAD (1<<0)
-#define CHEST (1<<1)
-#define GROIN (1<<2)
+#define CHEST (1<<0)
+#define GROIN (1<<1)
+#define HEAD (1<<2)
 #define LEG_LEFT (1<<3)
 #define LEG_RIGHT (1<<4)
 #define LEGS (LEG_LEFT | LEG_RIGHT)
@@ -114,11 +136,15 @@
 #define HAND_RIGHT (1<<10)
 #define HANDS (HAND_LEFT | HAND_RIGHT)
 #define NECK (1<<11)
-#define FULL_BODY (~0)
+#define FULL_BODY ALL
 
 //defines for the index of hands
 #define LEFT_HANDS 1
 #define RIGHT_HANDS 2
+/// Checks if the value is "right" - same as ISEVEN, but used primarily for hand or foot index contexts
+#define IS_RIGHT_INDEX(value) (value % 2 == 0)
+/// Checks if the value is "left" - same as ISODD, but used primarily for hand or foot index contexts
+#define IS_LEFT_INDEX(value) (value % 2 != 0)
 
 //flags for female outfits: How much the game can safely "take off" the uniform without it looking weird
 /// For when there's simply no need for a female version of this uniform.
@@ -138,28 +164,29 @@
 //flags for outfits that have mutantrace variants (try not to use this): Currently only needed if you're trying to add tight fitting bootyshorts
 //This system takes priority over Sprite Sheets.
 
+//Flags (actual flags, fucker ^) for /obj/item/var/supports_variations_flags
 ///No alternative sprites based on bodytype
-#define NO_VARIATION (1<<0)
+#define CLOTHING_NO_VARIATION (1<<0)
 ///Has a sprite for digitigrade legs specifically.
-#define DIGITIGRADE_VARIATION (1<<1)
+#define CLOTHING_DIGITIGRADE_VARIATION (1<<1)
 ///The sprite works fine for digitigrade legs as-is.
-#define DIGITIGRADE_VARIATION_NO_NEW_ICON (1<<2)
+#define CLOTHING_DIGITIGRADE_VARIATION_NO_NEW_ICON (1<<2)
 
 #define NOT_DIGITIGRADE				0
 #define FULL_DIGITIGRADE			1
 #define SQUISHED_DIGITIGRADE		2
 
-//! ## flags for covering body parts
-#define GLASSESCOVERSEYES	(1<<0)
-#define MASKCOVERSEYES		(1<<1)		//! get rid of some of the other stupidity in these flags
-#define HEADCOVERSEYES		(1<<2)		//! feel free to realloc these numbers for other purposes
-#define MASKCOVERSMOUTH		(1<<3)		//! on other items, these are just for mask/head
-#define HEADCOVERSMOUTH		(1<<4)
+//flags for covering body parts
+#define GLASSESCOVERSEYES (1<<0)
+#define MASKCOVERSEYES (1<<1) // get rid of some of the other stupidity in these flags
+#define HEADCOVERSEYES (1<<2) // feel free to realloc these numbers for other purposes
+#define MASKCOVERSMOUTH (1<<3) // on other items, these are just for mask/head
+#define HEADCOVERSMOUTH (1<<4)
 
-#define TINT_DARKENED 2			//! Threshold of tint level to apply weld mask overlay
-#define TINT_BLIND 3			//! Threshold of tint level to obscure vision fully
+#define TINT_DARKENED 2 //Threshold of tint level to apply weld mask overlay
+#define TINT_BLIND 3 //Threshold of tint level to obscure vision fully
 
-//Allowed equipment lists for security vests and hardsuits.
+//Allowed equipment lists for security vests.
 
 GLOBAL_LIST_INIT(advanced_hardsuit_allowed, typecacheof(list(
 	/obj/item/ammo_box,
@@ -170,7 +197,8 @@ GLOBAL_LIST_INIT(advanced_hardsuit_allowed, typecacheof(list(
 	/obj/item/melee/tonfa,
 	/obj/item/reagent_containers/peppercloud_deployer,
 	/obj/item/restraints/handcuffs,
-	/obj/item/tank/internals)))
+	/obj/item/tank/internals,
+)))
 
 GLOBAL_LIST_INIT(security_hardsuit_allowed, typecacheof(list(
 	/obj/item/ammo_box,
@@ -183,7 +211,8 @@ GLOBAL_LIST_INIT(security_hardsuit_allowed, typecacheof(list(
 	/obj/item/melee/tonfa,
 	/obj/item/reagent_containers/peppercloud_deployer,
 	/obj/item/restraints/handcuffs,
-	/obj/item/tank/internals)))
+	/obj/item/tank/internals,
+)))
 
 GLOBAL_LIST_INIT(detective_vest_allowed, (list(
 	/obj/item/ammo_box,
@@ -197,7 +226,6 @@ GLOBAL_LIST_INIT(detective_vest_allowed, (list(
 	/obj/item/lighter,
 	/obj/item/melee/baton,
 	/obj/item/melee/tonfa,
-	/obj/item/melee/classic_baton/police,
 	/obj/item/reagent_containers/peppercloud_deployer,
 	/obj/item/restraints/handcuffs,
 	/obj/item/storage/fancy/cigarettes,
@@ -214,7 +242,7 @@ GLOBAL_LIST_INIT(security_vest_allowed, (list(
 	/obj/item/knife/combat,
 	/obj/item/melee/baton,
 	/obj/item/melee/tonfa,
-	/obj/item/melee/classic_baton/police/telescopic,
+	/obj/item/melee/baton/telescopic,
 	/obj/item/reagent_containers/peppercloud_deployer,
 	/obj/item/restraints/handcuffs,
 	/obj/item/tank/internals/emergency_oxygen,
@@ -231,7 +259,7 @@ GLOBAL_LIST_INIT(security_wintercoat_allowed, (list(
 	/obj/item/lighter,
 	/obj/item/melee/baton,
 	/obj/item/melee/tonfa,
-	/obj/item/melee/classic_baton/police/telescopic,
+	/obj/item/melee/baton/telescopic,
 	/obj/item/reagent_containers/peppercloud_deployer,
 	/obj/item/restraints/handcuffs,
 	/obj/item/tank/internals/emergency_oxygen,

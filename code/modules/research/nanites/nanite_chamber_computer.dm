@@ -28,6 +28,7 @@
 	return GLOB.default_state
 
 /obj/machinery/computer/nanite_chamber_control/ui_interact(mob/user, datum/tgui/ui)
+	. = ..()
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "NaniteChamberControl")
@@ -47,7 +48,7 @@
 
 	var/mob/living/L = chamber.occupant
 
-	if(!(MOB_ORGANIC in L.mob_biotypes) && !(MOB_UNDEAD in L.mob_biotypes) && !HAS_TRAIT(L, TRAIT_NANITECOMPATIBLE))
+	if(!(L.mob_biotypes & MOB_ORGANIC) && !(L.mob_biotypes & MOB_UNDEAD) && !HAS_TRAIT(L, TRAIT_NANITECOMPATIBLE))
 		data["status_msg"] = "Occupant not compatible with nanites."
 		return data
 

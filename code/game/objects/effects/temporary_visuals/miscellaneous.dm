@@ -4,16 +4,19 @@
 	duration = 5
 	randomdir = FALSE
 	layer = BELOW_MOB_LAYER
+	color = BLOOD_COLOR_RED
 	var/splatter_type = "splatter"
 
 CREATION_TEST_IGNORE_SUBTYPES(/obj/effect/temp_visual/dir_setting/bloodsplatter)
 
-/obj/effect/temp_visual/dir_setting/bloodsplatter/Initialize(mapload, set_dir)
-	if(set_dir in GLOB.diagonals)
+/obj/effect/temp_visual/dir_setting/bloodsplatter/Initialize(mapload, set_dir, set_color)
+	if(ISDIAGONALDIR(set_dir))
 		icon_state = "[splatter_type][pick(1, 2, 6)]"
 	else
 		icon_state = "[splatter_type][pick(3, 4, 5)]"
 	. = ..()
+	if(set_color)
+		color = set_color
 	var/target_pixel_x = 0
 	var/target_pixel_y = 0
 	switch(set_dir)
@@ -44,6 +47,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/effect/temp_visual/dir_setting/bloodsplatter)
 
 /obj/effect/temp_visual/dir_setting/bloodsplatter/xenosplatter
 	splatter_type = "xsplatter"
+	color = null
 
 /obj/effect/temp_visual/dir_setting/speedbike_trail
 	name = "speedbike trails"
@@ -254,7 +258,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/effect/temp_visual/decoy/fading)
 
 /obj/effect/temp_visual/fire
 	icon = 'icons/effects/fire.dmi'
-	icon_state = "3"
+	icon_state = "heavy"
 	light_range = LIGHT_RANGE_FIRE
 	light_color = LIGHT_COLOR_FIRE
 	duration = 10
@@ -448,9 +452,9 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/effect/temp_visual/love_heart/invisible)
 /obj/effect/temp_visual/love_heart/invisible/Initialize(mapload, mob/seer)
 	. = ..()
 	var/image/I = image(icon = 'icons/effects/effects.dmi', icon_state = "heart", layer = ABOVE_MOB_LAYER, loc = src)
-	add_alt_appearance(/datum/atom_hud/alternate_appearance/basic/one_person, "heart", I, seer)
 	I.alpha = 255
 	I.appearance_flags = RESET_ALPHA
+	add_alt_appearance(/datum/atom_hud/alternate_appearance/basic/one_person, "heart", I, null, seer)
 	animate(I, alpha = 0, time = duration)
 
 /obj/effect/temp_visual/bleed
@@ -467,8 +471,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/effect/temp_visual/bleed)
 	var/size_matrix = matrix()
 	if(size_calc_target)
 		layer = size_calc_target.layer + 0.01
-		var/icon/I = icon(size_calc_target.icon, size_calc_target.icon_state, size_calc_target.dir)
-		size_matrix = matrix() * (I.Height()/world.icon_size)
+		size_matrix = matrix() * (size_calc_target.get_visual_height() / ICON_SIZE_Y)
 		transform = size_matrix //scale the bleed overlay's size based on the target's icon size
 	var/matrix/M = transform
 	if(shrink)
@@ -675,7 +678,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/effect/temp_visual/launchpad)
 	looker?.client?.images -= modsuit_image
 
 /// Update the position of the ping while it's still up. Not sure if i need to use the full proc but just being safe
-/obj/effect/temp_visual/sonar_ping/process(seconds_per_tick)
+/obj/effect/temp_visual/sonar_ping/process(delta_time)
 	var/mob/living/looker = mod_man?.resolve()
 	var/mob/living/creature = pinged_person?.resolve()
 	if(isnull(looker) || isnull(creature))

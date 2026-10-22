@@ -50,7 +50,7 @@
 	screw_delay = 6 SECONDS
 	w_class = WEIGHT_CLASS_BULKY
 
-/obj/item/shell/server/ComponentInitialize()
+/obj/item/shell/server/Initialize(mapload)
 	. = ..()
 	AddComponent(/datum/component/two_handed, require_twohands=TRUE)
 
@@ -62,7 +62,7 @@
 	screw_delay = 10 SECONDS
 	w_class = WEIGHT_CLASS_GIGANTIC
 
-/obj/item/shell/airlock/ComponentInitialize()
+/obj/item/shell/airlock/Initialize(mapload)
 	. = ..()
 	AddComponent(/datum/component/two_handed, require_twohands=TRUE) // that you even are allowed to carry around an airlock frame is weird.
 
@@ -70,6 +70,12 @@
 	name = "brain-computer interface assembly"
 	icon_state = "bci-open"
 	shell_to_spawn = /obj/item/organ/cyberimp/bci
+	w_class = WEIGHT_CLASS_TINY
+
+/obj/item/shell/ipc_control
+	name = "upgrade control module assembly"
+	icon_state = "setup_implant-open"
+	shell_to_spawn = /obj/item/organ/cyberimp/ipc_control
 	w_class = WEIGHT_CLASS_TINY
 
 /obj/item/shell/scanner_gate

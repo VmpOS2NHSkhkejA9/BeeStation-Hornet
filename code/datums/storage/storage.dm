@@ -46,6 +46,9 @@
 	/// If we support smartly removing/inserting things from ourselves
 	var/supports_smart_equip = TRUE
 
+	/// Do we insert items when clicked by them?
+	var/insert_on_attack = TRUE
+
 	/// shows what we can hold in examine text
 	var/can_hold_description
 
@@ -116,12 +119,12 @@
 		qdel(src)
 		return
 
+	ADD_TRAIT(resolve_parent, TRAIT_COMBAT_MODE_SKIP_INTERACTION, REF(src))
 	RegisterSignals(resolve_parent, list(COMSIG_ATOM_ATTACK_PAW, COMSIG_ATOM_ATTACK_HAND), PROC_REF(on_attack))
 	RegisterSignal(resolve_parent, COMSIG_MOUSEDROP_ONTO, PROC_REF(on_mousedrop_onto))
 	RegisterSignal(resolve_parent, COMSIG_MOUSEDROPPED_ONTO, PROC_REF(on_mousedropped_onto))
 
 	RegisterSignal(resolve_parent, COMSIG_ATOM_EMP_ACT, PROC_REF(on_emp_act))
-	RegisterSignal(resolve_parent, COMSIG_ATOM_ATTACKBY, PROC_REF(on_attackby))
 	RegisterSignal(resolve_parent, COMSIG_ITEM_PRE_ATTACK, PROC_REF(on_preattack))
 	RegisterSignal(resolve_parent, COMSIG_OBJ_DECONSTRUCT, PROC_REF(on_deconstruct))
 
@@ -633,7 +636,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	refresh_views()
 
 /// Signal handler for the emp_act() of all contents
-/datum/storage/proc/on_emp_act(datum/source, severity)
+/datum/storage/proc/on_emp_act(datum/source, severity, protection)
 	SIGNAL_HANDLER
 
 	var/obj/item/resolve_location = real_location?.resolve()
@@ -647,7 +650,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 		thing.emp_act(severity)
 
 /// Signal handler for preattack from an object.
-/datum/storage/proc/on_preattack(datum/source, atom/thing, mob/user, params)
+/datum/storage/proc/on_preattack(datum/source, atom/thing, mob/user, list/modifiers)
 	SIGNAL_HANDLER
 
 	if(!allow_quick_gather || thing.atom_storage)
@@ -750,7 +753,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if(!resolve_parent || !resolve_location)
 		return
 
-	if(ismecha(user.loc) || user.incapacitated() || !user.canUseStorage())
+	if(ismecha(user.loc) || user.incapacitated || !user.canUseStorage())
 		return
 
 	resolve_parent.add_fingerprint(user)
@@ -834,27 +837,10 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 	if(!iscarbon(user) && !isdrone(user))
 		return
 	var/mob/living/user_living = user
-	if(user_living.incapacitated())
+	if(user_living.incapacitated)
 		return
 
 	attempt_insert(dropping, user)
-
-/// Signal handler for whenever we're attacked by an object.
-/datum/storage/proc/on_attackby(datum/source, obj/item/thing, mob/user, params)
-	SIGNAL_HANDLER
-
-	var/obj/item/resolve_parent = parent?.resolve()
-	if(!resolve_parent)
-		return
-
-	if(!thing.attackby_storage_insert(src, resolve_parent, user))
-		return
-
-	if(iscyborg(user))
-		return COMPONENT_NO_AFTERATTACK
-
-	attempt_insert(thing, user)
-	return COMPONENT_NO_AFTERATTACK
 
 /// Signal handler for whenever we're attacked by a mob.
 /datum/storage/proc/on_attack(datum/source, mob/user)
@@ -922,7 +908,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 		adjusted_contents = numbered_contents.len
 
 	var/columns = clamp(max_slots, 1, screen_max_columns)
-	var/rows = clamp(CEILING(adjusted_contents / columns, 1), 1, screen_max_rows)
+	var/rows = clamp(ceil(adjusted_contents / columns), 1, screen_max_rows)
 
 	orient_item_boxes(rows, columns, numbered_contents)
 
@@ -1004,7 +990,7 @@ GLOBAL_LIST_EMPTY(cached_storage_typecaches)
 		resolve_parent.balloon_alert(to_show, "can't reach!")
 		return FALSE
 
-	if(!isliving(to_show) || to_show.incapacitated())
+	if(!isliving(to_show) || to_show.incapacitated)
 		return FALSE
 
 	if(locked)

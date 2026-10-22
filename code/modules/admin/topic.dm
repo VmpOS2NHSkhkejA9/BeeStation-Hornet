@@ -48,15 +48,6 @@
 			return
 		cmd_show_exp_panel(M.client)
 
-	else if(href_list["toggleexempt"])
-		if(!check_rights(R_ADMIN))
-			return
-		var/client/C = locate(href_list["toggleexempt"]) in GLOB.clients
-		if(!C)
-			to_chat(usr, span_danger("ERROR: Client not found."))
-			return
-		toggle_exempt_status(C)
-
 	else if(href_list["forceevent"])
 		if(!check_rights(R_FUN))
 			return
@@ -156,7 +147,7 @@
 		if(alert(usr, "This will end the round, are you SURE you want to do this?", "Confirmation", "Yes", "No") == "Yes")
 			if(alert(usr, "Final Confirmation: End the round NOW?", "Confirmation", "Yes", "No") == "Yes")
 				message_admins(span_adminnotice("[key_name_admin(src.owner)] has ended the round."))
-				SSticker.force_ending = 1 //Yeah there we go APC destroyed mission accomplished
+				SSticker.force_ending = ADMIN_FORCE_END_ROUND //Yeah there we go APC destroyed mission accomplished
 				return
 			else
 				message_admins(span_adminnotice("[key_name_admin(src.owner)] decided against ending the round."))
@@ -210,13 +201,13 @@
 			if("robot")
 				M.change_mob_type( /mob/living/silicon/robot , null, null, delmob )
 			if("cat")
-				M.change_mob_type( /mob/living/simple_animal/pet/cat , null, null, delmob )
+				M.change_mob_type( /mob/living/basic/pet/cat , null, null, delmob )
 			if("runtime")
-				M.change_mob_type( /mob/living/simple_animal/pet/cat/Runtime , null, null, delmob )
+				M.change_mob_type( /mob/living/basic/pet/cat/runtime , null, null, delmob )
 			if("corgi")
 				M.change_mob_type( /mob/living/basic/pet/dog/corgi , null, null, delmob )
 			if("ian")
-				M.change_mob_type( /mob/living/basic/pet/dog/corgi/Ian , null, null, delmob )
+				M.change_mob_type( /mob/living/basic/pet/dog/corgi/ian , null, null, delmob )
 			if("pug")
 				M.change_mob_type( /mob/living/basic/pet/dog/pug , null, null, delmob )
 			if("crab")
@@ -639,7 +630,7 @@
 		// We query the admin who sent the adminheal if they are sure
 		if(tgui_alert(usr, "A full adminheal was called on [src], approve or deny?", "Aheal Query", buttons = list("Approve", "Deny")) != "Approve")
 			return
-		L.revive(full_heal = 1, admin_revive = 1)
+		L.revive(ADMIN_HEAL_ALL)
 		message_admins(span_danger("Admin [key_name_admin(src.owner)] healed / revived [key_name_admin(L)]!"))
 		log_admin("[key_name(src.owner)] healed / Revived [key_name(L)].")
 
@@ -777,7 +768,7 @@
 
 		var/Add = href_list["addjobslot"]
 
-		for(var/datum/job/job in SSjob.occupations)
+		for(var/datum/job/job as anything in SSjob.joinable_occupations)
 			if(job.title == Add)
 				job.total_positions += 1
 				break
@@ -791,7 +782,7 @@
 
 		var/Add = href_list["customjobslot"]
 
-		for(var/datum/job/job in SSjob.occupations)
+		for(var/datum/job/job as anything in SSjob.joinable_occupations)
 			if(job.title == Add)
 				var/newtime = null
 				newtime = input(usr, "How many jebs do you want?", "Add wanted posters", "[newtime]") as num|null
@@ -809,7 +800,7 @@
 
 		var/Remove = href_list["removejobslot"]
 
-		for(var/datum/job/job in SSjob.occupations)
+		for(var/datum/job/job as anything in SSjob.joinable_occupations)
 			if(job.title == Remove && job.get_spawn_position_count() - job.current_positions > 0)
 				job.total_positions -= 1
 				break
@@ -822,7 +813,7 @@
 
 		var/Unlimit = href_list["unlimitjobslot"]
 
-		for(var/datum/job/job in SSjob.occupations)
+		for(var/datum/job/job as anything in SSjob.joinable_occupations)
 			if(job.title == Unlimit)
 				job.total_positions = -1
 				break
@@ -835,7 +826,7 @@
 
 		var/Limit = href_list["limitjobslot"]
 
-		for(var/datum/job/job in SSjob.occupations)
+		for(var/datum/job/job as anything in SSjob.joinable_occupations)
 			if(job.title == Limit)
 				job.total_positions = job.current_positions
 				break
@@ -1167,7 +1158,7 @@
 		if(!check_rights(R_ADMIN))
 			return
 		var/code = random_code(5)
-		for(var/obj/machinery/nuclearbomb/selfdestruct/SD in GLOB.nuke_list)
+		for(var/obj/machinery/nuclearbomb/selfdestruct/SD as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/nuclearbomb/selfdestruct))
 			SD.r_code = code
 		message_admins("[key_name_admin(src.owner)] has set the self-destruct \
 			code to \"[code]\".")
@@ -1441,9 +1432,6 @@
 		message_admins("The items consumed by the BoH tear at [ADMIN_VERBOSEJMP(T)] were retrieved by [key_name_admin(src.owner)].")
 		tear.investigate_log("Items consumed at [AREACOORD(T)] retrieved by [key_name(src.owner)].", INVESTIGATE_ENGINES)
 		tear.retrieve_consumed_items()
-
-	else if(href_list["beakerpanel"])
-		beaker_panel_act(href_list)
 
 	else if(href_list["reloadpolls"])
 		GLOB.polls.Cut()

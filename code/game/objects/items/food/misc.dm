@@ -84,16 +84,6 @@
 	SIGNAL_HANDLER
 	return COMPONENT_HANDLED_GRILLING
 
-/obj/item/food/badrecipe/burn()
-	if(QDELETED(src))
-		return
-	var/turf/T = get_turf(src)
-	var/obj/effect/decal/cleanable/ash/A = new /obj/effect/decal/cleanable/ash(T)
-	A.desc += "\nLooks like this used to be \an [name] some time ago."
-	if(resistance_flags & ON_FIRE)
-		SSfire_burning.processing -= src
-	qdel(src)
-
 // We override the parent procs here to prevent burned messes from cooking into burned messes.
 /obj/item/food/badrecipe/make_grillable()
 	return
@@ -172,7 +162,7 @@
 	name = "Powercrepe"
 	desc = "With great power, comes great crepes.  It looks like a pancake filled with jelly but packs quite a punch."
 	icon_state = "powercrepe"
-	item_state = "powercrepe"
+	inhand_icon_state = "powercrepe"
 	food_reagents = list(
 		/datum/reagent/consumable/nutriment = 10,
 		/datum/reagent/consumable/nutriment/vitamin = 5,
@@ -180,9 +170,10 @@
 	)
 	force = 30
 	throwforce = 15
-	block_level = 2
-	block_upgrade_walk = TRUE
-	block_power = 55
+	canblock = TRUE
+	block_power = 0
+	block_flags = BLOCKING_ACTIVE | BLOCKING_UNBLOCKABLE
+
 	attack_weight = 2
 	armour_penetration = 80
 	//wound_bonus = -50
@@ -215,12 +206,13 @@
 	tastes = list("butter" = 1)
 	foodtypes = DAIRY
 	w_class = WEIGHT_CLASS_SMALL
+	dog_fashion = /datum/dog_fashion/head/butter
 
 /obj/item/food/butter/examine(mob/user)
 	. = ..()
 	. += span_notice("If you had a rod you could make <b>butter on a stick</b>.")
 
-/obj/item/food/butter/attackby(obj/item/item, mob/user, params)
+/obj/item/food/butter/attackby(obj/item/item, mob/user, list/modifiers)
 	if(istype(item, /obj/item/stack/rods))
 		var/obj/item/stack/rods/rods = item
 		if(!rods.use(1))//borgs can still fail this if they have no metal

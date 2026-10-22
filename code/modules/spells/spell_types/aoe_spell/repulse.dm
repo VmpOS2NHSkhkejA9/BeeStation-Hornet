@@ -1,4 +1,5 @@
 /datum/action/spell/aoe/repulse
+	abstract_type = /datum/action/spell/aoe/repulse
 	/// The max throw range of the repulsioon.
 	var/max_throw = 5
 	/// A visual effect to be spawned on people who are thrown away.
@@ -64,7 +65,7 @@
 	name = "Tail Sweep"
 	desc = "Throw back attackers with a sweep of your tail."
 	background_icon_state = "bg_alien"
-	icon_icon = 'icons/hud/actions/actions_xeno.dmi'
+	button_icon = 'icons/hud/actions/actions_xeno.dmi'
 	button_icon_state = "tailsweep"
 	sound = 'sound/magic/tail_swing.ogg'
 

@@ -8,21 +8,21 @@
 	icon_state = "iv_drip"
 	anchored = FALSE
 	mouse_drag_pointer = MOUSE_ACTIVE_POINTER
+	use_power = NO_POWER_USE
 	///Who are we sticking our needle in?
 	var/mob/living/carbon/attached
 	///Are we donating or injecting?
 	var/mode = IV_INJECTING
 	///Internal beaker
 	var/obj/item/reagent_containers/beaker
+	custom_price = 50
 	///Typecache of containers we accept
 	var/static/list/drip_containers = typecacheof(list(
 		/obj/item/reagent_containers/blood,
 		/obj/item/reagent_containers/chem_bag,
 		/obj/item/reagent_containers/cup,
 		/obj/item/food, //Fuck it. You want to stab an IV into that 100u blood tomato? Be my guest.
-		/obj/item/reagent_containers/cup
-		)
-	)
+	))
 	var/can_convert = TRUE // If it can be made into an anesthetic machine or not
 
 /obj/machinery/iv_drip/Initialize(mapload)
@@ -36,8 +36,9 @@
 
 /obj/machinery/iv_drip/atom_destruction()
 	if(beaker)
-		beaker.forceMove(drop_location())
-		beaker.SplashReagents(drop_location())
+		var/atom/drop_loc = drop_location()
+		beaker.forceMove(drop_loc)
+		beaker.splash_reagents(drop_loc)
 		beaker.visible_message(span_notice("[beaker] falls to the ground from the destroyed IV drip."))
 		beaker = null
 	return ..()
@@ -111,7 +112,7 @@
 			to_chat(usr, span_warning("There's nothing attached to the IV drip!"))
 
 
-/obj/machinery/iv_drip/attackby(obj/item/W, mob/user, params)
+/obj/machinery/iv_drip/attackby(obj/item/W, mob/user, list/modifiers)
 	if(is_type_in_typecache(W, drip_containers) || IS_EDIBLE(W))
 		if(beaker)
 			to_chat(user, span_warning("There is already a reagent container loaded!"))
@@ -205,7 +206,7 @@
 		return
 	if (!usr.canUseTopic())
 		return
-	if(usr.incapacitated())
+	if(usr.incapacitated)
 		return
 	if(beaker)
 		beaker.forceMove(drop_location())
@@ -222,7 +223,7 @@
 		return
 	if (!usr.canUseTopic())
 		return
-	if(usr.incapacitated())
+	if(usr.incapacitated)
 		return
 	mode = !mode
 	to_chat(usr, "The IV drip is now [mode ? "injecting" : "taking blood"].")
@@ -277,7 +278,7 @@
 	. = ..()
 	beaker = new /obj/item/reagent_containers/cup/saline(src)
 
-/obj/machinery/iv_drip/saline/ComponentInitialize()
+/obj/machinery/iv_drip/saline/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/update_icon_blocker)
 

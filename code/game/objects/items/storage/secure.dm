@@ -36,7 +36,7 @@
 	if(can_hack_open)
 		. += "The service panel is currently <b>[open ? "unscrewed" : "screwed shut"]</b>."
 
-/obj/item/storage/secure/attackby(obj/item/W, mob/user, params)
+/obj/item/storage/secure/attackby(obj/item/W, mob/user, list/modifiers)
 	if(can_hack_open && atom_storage.locked)
 		if (W.tool_behaviour == TOOL_SCREWDRIVER)
 			if (W.use_tool(src, user, 20))
@@ -110,12 +110,11 @@
 				if (length(code) > 5)
 					code = "ERROR"
 		add_fingerprint(usr)
-		for(var/mob/M as() in viewers(1, get_turf(src)))
+		for(var/mob/M as anything in viewers(1, get_turf(src)))
 			if ((M.client && M.machine == src))
 				attack_self(M)
 			return
 	return
-
 
 // -----------------------------
 //        Secure Briefcase
@@ -123,7 +122,7 @@
 /obj/item/storage/secure/briefcase
 	name = "secure briefcase"
 	icon_state = "sec-case"
-	item_state = "sec-case"
+	inhand_icon_state = "sec-case"
 	lefthand_file = 'icons/mob/inhands/equipment/case_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/case_righthand.dmi'
 	desc = "A large briefcase with a digital locking system."
@@ -159,7 +158,7 @@
 	new /obj/item/clothing/suit/armor/vest(src)
 	new /obj/item/gun/ballistic/automatic/pistol(src)
 	new /obj/item/suppressor(src)
-	new /obj/item/melee/classic_baton/police/telescopic(src)
+	new /obj/item/melee/baton/telescopic(src)
 	new /obj/item/clothing/mask/balaclava(src)
 	new /obj/item/bodybag(src)
 	new /obj/item/soap/nanotrasen(src)
@@ -230,7 +229,6 @@ MAPPING_DIRECTIONAL_HELPERS(/obj/item/storage/secure/safe/caps_spare, 32)
 	laser = 100
 	energy = 100
 	bomb = 70
-	rad = 100
 	fire = 80
 	acid = 70
 

@@ -46,7 +46,7 @@
 	color_val = !color_val
 	if(istype(target))
 		current = WEAKREF(target)
-		target.add_atom_colour(color_val? "#ffff00" : "#00ffff", FIXED_COLOUR_PRIORITY)
+		target.add_atom_colour(color_val ? COLOR_YELLOW : COLOR_CYAN, FIXED_COLOUR_PRIORITY)
 
 /obj/item/hot_potato/proc/detonate()
 	var/atom/location = loc
@@ -92,7 +92,7 @@
 	if(active)
 		to_chat(user, span_userdanger("You have a really bad feeling about [src]!"))
 
-/obj/item/hot_potato/afterattack(atom/target, mob/user, adjacent, params)
+/obj/item/hot_potato/afterattack(atom/target, mob/user, adjacent, list/modifiers)
 	. = ..()
 	if(!adjacent || !ismob(target))
 		return

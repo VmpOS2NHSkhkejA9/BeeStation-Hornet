@@ -10,12 +10,13 @@ RLD
 */
 
 /obj/item/construction
+	abstract_type = /obj/item/construction
 	name = "not for ingame use"
 	desc = "A device used to rapidly build and deconstruct. Reload with iron, plasteel, glass or compressed matter cartridges."
 	opacity = FALSE
 	density = FALSE
 	anchored = FALSE
-	flags_1 = CONDUCT_1
+	obj_flags = CONDUCTS_ELECTRICITY
 	item_flags = NOBLUDGEON
 	force = 0
 	throwforce = 10
@@ -65,7 +66,7 @@ RLD
 	silo_mats = null
 	return ..()
 
-/obj/item/construction/attackby(obj/item/W, mob/user, params)
+/obj/item/construction/attackby(obj/item/W, mob/user, list/modifiers)
 	if(istype(W, /obj/item/rcd_upgrade))
 		install_upgrade(W, user)
 		return TRUE
@@ -195,7 +196,7 @@ RLD
 /obj/item/construction/proc/check_menu(mob/living/user)
 	if(!istype(user))
 		return FALSE
-	if(user.incapacitated() || !user.Adjacent(src))
+	if(user.incapacitated || !user.Adjacent(src))
 		return FALSE
 	return TRUE
 
@@ -216,6 +217,7 @@ RLD
 	item_flags = NO_MAT_REDEMPTION | NOBLUDGEON
 	has_ammobar = TRUE
 	actions_types = list(/datum/action/item_action/rcd_scan)
+	custom_price = 100
 	var/mode = RCD_FLOORWALL
 	var/construction_mode = RCD_FLOORWALL
 	var/ranged = FALSE
@@ -259,7 +261,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	. = ..()
 	AddElement(/datum/element/openspace_item_click_handler)
 
-/obj/item/construction/rcd/handle_openspace_click(turf/target, mob/user, proximity_flag, click_parameters)
+/obj/item/construction/rcd/handle_openspace_click(turf/target, mob/user, proximity_flag, list/modifiers)
 	if(proximity_flag)
 		mode = RCD_FLOORWALL
 		rcd_create(target, user)
@@ -308,6 +310,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 
 		var/obj/effect/rcd_hologram/hologram = new(surrounding_turf)
 		hologram.icon = hologram_icon
+		hologram.makeHologram()
 		animate(hologram, alpha = 0, time = fade_time, easing = CIRCULAR_EASING | EASE_IN)
 
 /obj/effect/rcd_hologram
@@ -396,16 +399,17 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	//Not scaling these down to button size because they look horrible then, instead just bumping up radius.
 	return MA
 
-/obj/item/construction/rcd/proc/change_computer_dir(mob/user)
+/obj/item/construction/rcd/proc/change_computer_dir(mob/user, atom/anchor = src, require_near = TRUE)
 	if(!user)
 		return
+
 	var/list/computer_dirs = list(
 		"NORTH" = image(icon = 'icons/hud/radials/radial_generic.dmi', icon_state = "cnorth"),
 		"EAST" = image(icon = 'icons/hud/radials/radial_generic.dmi', icon_state = "ceast"),
 		"SOUTH" = image(icon = 'icons/hud/radials/radial_generic.dmi', icon_state = "csouth"),
 		"WEST" = image(icon = 'icons/hud/radials/radial_generic.dmi', icon_state = "cwest")
 		)
-	var/computerdirs = show_radial_menu(user, src, computer_dirs, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE, tooltips = TRUE)
+	var/computerdirs = show_radial_menu(user, anchor, computer_dirs, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = require_near, tooltips = TRUE)
 	if(!check_menu(user))
 		return
 	switch(computerdirs)
@@ -418,7 +422,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 		if("WEST")
 			computer_dir = 8
 
-/obj/item/construction/rcd/proc/change_airlock_setting(mob/user)
+/obj/item/construction/rcd/proc/change_airlock_setting(mob/user, atom/anchor = src, require_near = TRUE)
 	if(!user)
 		return
 
@@ -466,13 +470,13 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 		"External Maintenance" = get_airlock_image(/obj/machinery/door/airlock/maintenance/external/glass)
 	)
 
-	var/airlockcat = show_radial_menu(user, src, solid_or_glass_choices, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE, tooltips = TRUE)
+	var/airlockcat = show_radial_menu(user, anchor, solid_or_glass_choices, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = require_near, tooltips = TRUE)
 	if(!check_menu(user))
 		return
 	switch(airlockcat)
 		if("Solid")
 			if(advanced_airlock_setting == 1)
-				var/airlockpaint = show_radial_menu(user, src, solid_choices, radius = 42, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE, tooltips = TRUE)
+				var/airlockpaint = show_radial_menu(user, anchor, solid_choices, radius = 42, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = require_near, tooltips = TRUE)
 				if(!check_menu(user))
 					return
 				switch(airlockpaint)
@@ -517,7 +521,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 
 		if("Glass")
 			if(advanced_airlock_setting == 1)
-				var/airlockpaint = show_radial_menu(user, src , glass_choices, radius = 42, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = TRUE, tooltips = TRUE)
+				var/airlockpaint = show_radial_menu(user, anchor, glass_choices, radius = 42, custom_check = CALLBACK(src, PROC_REF(check_menu), user), require_near = require_near, tooltips = TRUE)
 				if(!check_menu(user))
 					return
 				switch(airlockpaint)
@@ -723,7 +727,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	else
 		return FALSE
 
-/obj/item/construction/rcd/pre_attack(atom/A, mob/user, params)
+/obj/item/construction/rcd/pre_attack(atom/A, mob/user, list/modifiers)
 	. = ..()
 	mode = construction_mode
 	if(!A.rcd_vals(user, src))
@@ -731,7 +735,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	rcd_create(A, user)
 	return FALSE
 
-/obj/item/construction/rcd/pre_attack_secondary(atom/target, mob/living/user, params)
+/obj/item/construction/rcd/pre_attack_secondary(atom/target, mob/living/user, list/modifiers)
 	. = ..()
 	mode = RCD_DECONSTRUCT
 	if(!target.rcd_vals(user, src))
@@ -751,7 +755,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 /obj/item/construction/rcd/update_overlays()
 	. = ..()
 	if(has_ammobar)
-		var/ratio = CEILING((matter / max_matter) * ammo_sections, 1)
+		var/ratio = ceil((matter / max_matter) * ammo_sections)
 		. += "[icon_state]_charge[ratio]"
 
 /obj/item/construction/rcd/Initialize(mapload)
@@ -794,7 +798,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 
 /obj/item/construction/rcd/borg/syndicate
 	icon_state = "ircd"
-	item_state = "ircd"
+	inhand_icon_state = "ircd"
 	energyfactor = 66
 
 /obj/item/construction/rcd/loaded
@@ -803,22 +807,30 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 /obj/item/construction/rcd/combat
 	name = "industrial RCD"
 	icon_state = "ircd"
-	item_state = "ircd"
+	inhand_icon_state = "ircd"
 	max_matter = 500
 	matter = 500
 	canRturf = TRUE
 	item_flags = ISWEAPON
+
+/obj/item/construction/rcd/combat/ert
+	name = "ERT RCD"
+	icon_state = "ircd"
+	inhand_icon_state = "ircd"
+	max_matter = 450
+	matter = 450
 
 /obj/item/rcd_ammo
 	name = "compressed matter cartridge"
 	desc = "Highly compressed matter for the RCD."
 	icon = 'icons/obj/ammo.dmi'
 	icon_state = "rcd"
-	item_state = "rcdammo"
+	inhand_icon_state = "rcdammo"
 	w_class = WEIGHT_CLASS_TINY
 	lefthand_file = 'icons/mob/inhands/equipment/tools_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/tools_righthand.dmi'
 	custom_materials = list(/datum/material/iron=12000, /datum/material/glass=8000)
+	custom_price = 60
 	var/ammoamt = 40
 
 /obj/item/rcd_ammo/large
@@ -835,7 +847,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	delay_mod = 0.6
 	ranged = TRUE
 	icon_state = "arcd"
-	item_state = "oldrcd"
+	inhand_icon_state = "oldrcd"
 	has_ammobar = FALSE
 	upgrade = RCD_UPGRADE_FRAMES | RCD_UPGRADE_SIMPLE_CIRCUITS | RCD_UPGRADE_FURNISHING
 
@@ -844,7 +856,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	if(range_check(A,user))
 		pre_attack(A, user)
 
-/obj/item/construction/rcd/arcd/afterattack_secondary(atom/target, mob/user, proximity_flag, click_parameters)
+/obj/item/construction/rcd/arcd/afterattack_secondary(atom/target, mob/user, proximity_flag, list/modifiers)
 	if(range_check(target,user))
 		pre_attack_secondary(target, user)
 	return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
@@ -855,7 +867,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	if(.)
 		user.Beam(A,icon_state="rped_upgrade", time = delay_mod * 5 SECONDS) //5 SECONDS * 0.6 = 3 seconds
 
-/obj/item/construction/rcd/arcd/handle_openspace_click(turf/target, mob/user, proximity_flag, click_parameters)
+/obj/item/construction/rcd/arcd/handle_openspace_click(turf/target, mob/user, proximity_flag, list/modifiers)
 	if(ranged && range_check(target, user))
 		mode = RCD_FLOORWALL
 		rcd_create(target, user)
@@ -887,7 +899,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	var/color_choice = null
 
 
-/obj/item/construction/rld/ui_action_click(mob/user, var/datum/action/A)
+/obj/item/construction/rld/ui_action_click(mob/user, datum/action/A)
 	if(istype(A, /datum/action/item_action/pick_color))
 		color_choice = tgui_color_picker(user,"","Choose Color",color_choice)
 	else
@@ -912,7 +924,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 			to_chat(user, span_notice("You change RLD's mode to 'Deconstruct'."))
 
 
-/obj/item/construction/rld/proc/checkdupes(var/target)
+/obj/item/construction/rld/proc/checkdupes(target)
 	. = list()
 	var/turf/checking = get_turf(target)
 	for(var/obj/machinery/light/dupe in checking)
@@ -1014,7 +1026,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 				G.color = color_choice
 				G.light_color = G.color
 				G.throw_at(A, 9, 3, user)
-				G.on = TRUE
+				G.light_on = TRUE
 				G.update_brightness()
 				return TRUE
 			return FALSE
@@ -1036,7 +1048,7 @@ GLOBAL_VAR_INIT(icon_holographic_window, init_holographic_window())
 	var/list/choices = list()
 	///index, used in the attack self to get the type. stored here since it doesnt change
 	///This list that holds all the plumbing design types the plumberer can construct. Its purpose is to make it easy to make new plumberer subtypes with a different selection of machines.
-	var/list/static/plumbing_design_types
+	var/static/list/plumbing_design_types
 
 	var/list/name_to_type = list()
 	///

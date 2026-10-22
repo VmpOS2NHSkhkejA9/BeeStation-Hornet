@@ -26,9 +26,9 @@
 	. = ..()
 	. += my_paper.examine(user)
 
-/obj/item/sticker/sticky_note/attackby(obj/item/I, mob/living/user, params)
+/obj/item/sticker/sticky_note/attackby(obj/item/I, mob/living/user, list/modifiers)
 	. = ..()
-	my_paper.attackby(I, user, params)
+	my_paper.attackby(I, user, modifiers)
 
 /obj/item/sticker/sticky_note/interact(mob/user)
 	. = ..()
@@ -71,7 +71,7 @@
 /obj/item/sticky_note_pile/MouseDrop(atom/over_object)
 	. = ..()
 	var/mob/living/L = usr
-	if(!istype(L) || L.incapacitated() || !Adjacent(L))
+	if(!istype(L) || L.incapacitated || !Adjacent(L))
 		return
 
 	if(over_object == L)

@@ -32,7 +32,7 @@
 
 /obj/item/xenoarchaeology_labeler/Initialize(mapload)
 	. = ..()
-	ADD_TRAIT(src, TRAIT_ARTIFACT_IGNORE, GENERIC_ITEM_TRAIT)
+	ADD_TRAIT(src, TRAIT_ARTIFACT_IGNORE, INNATE_TRAIT)
 	//Fill enabled filters with all filters
 	for(var/filter in trait_filters)
 		enabled_trait_filters += filter["icon"]
@@ -206,7 +206,7 @@
 
 
 /obj/item/sticker/xenoartifact_label/Initialize(mapload, list/_traits)
-	ADD_TRAIT(src, TRAIT_ARTIFACT_IGNORE, GENERIC_ITEM_TRAIT)
+	ADD_TRAIT(src, TRAIT_ARTIFACT_IGNORE, INNATE_TRAIT)
 	//Setup traits & examine desc
 	traits = _traits?.Copy()
 	if(length(traits))
@@ -218,11 +218,15 @@
 	sticker_icon_state = "[icon_state]_small"
 	return ..()
 
+/obj/item/sticker/xenoartifact_label/Destroy()
+	UnregisterSignal(loc, COMSIG_ATOM_EXAMINE)
+	return ..()
+
 /obj/item/sticker/xenoartifact_label/examine(mob/user)
 	. = ..()
 	. += examine_override
 
-/obj/item/sticker/xenoartifact_label/afterattack(atom/movable/target, mob/user, proximity_flag, click_parameters)
+/obj/item/sticker/xenoartifact_label/afterattack(atom/movable/target, mob/user, proximity_flag, list/modifiers)
 	//If you somehow make traits start working with mobs, remove this isliving() check
 	if(ismob(target) && !isliving(target) || (locate(/obj/item/sticker/xenoartifact_label) in target.contents))
 		to_chat(user, "<span class='warning'>[target] already has a label!</span>")
@@ -233,7 +237,7 @@
 	//Set custom price with the artifact component
 	var/datum/component/xenoartifact/artifact = target.GetComponent(/datum/component/xenoartifact)
 	if(artifact)
-		old_custom_price = target.custom_price
+		old_custom_price = target.item_price
 		//Build list of artifact's traits
 		var/list/traits_catagories = list()
 		for(var/trait in artifact.traits_catagories)
@@ -242,18 +246,21 @@
 		//Compare them to ours
 		for(var/datum/xenoartifact_trait/trait_datum as anything in traits)
 			if(locate(trait_datum) in traits_catagories)
-				target.custom_price *= XENOA_LABEL_REWARD
+				target.item_price *= XENOA_LABEL_REWARD
 			else
-				target.custom_price *= XENOA_LABEL_PUNISHMENT
+				target.item_price *= XENOA_LABEL_PUNISHMENT
 	RegisterSignal(target, COMSIG_ATOM_EXAMINE, PROC_REF(parent_examine))
 
 /obj/item/sticker/xenoartifact_label/unstick(atom/override)
+	if(QDELETED(src))
+		return
+
 	if(sticker_state == STICKER_STATE_STUCK)
 		UnregisterSignal(loc, COMSIG_ATOM_EXAMINE)
 	//Set custom price back
 	var/datum/component/xenoartifact/artifact = loc.GetComponent(/datum/component/xenoartifact)
 	if(artifact)
-		loc.custom_price = old_custom_price
+		loc.item_price = old_custom_price
 	. = ..()
 
 /obj/item/sticker/xenoartifact_label/proc/parent_examine(datum/source, mob/user, list/examine_text)

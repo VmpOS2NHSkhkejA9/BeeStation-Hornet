@@ -1,12 +1,13 @@
 /obj/item/flashlight/oxycandle
-	name = "Oxygen Candle"
+	name = "oxygen candle"
 	desc = "A standard Nakamura Engineering branded emergency oxygen candle. There are instructions on the side that read: 'Remove lid with provided key, strike key on striker surface, insert lit key into designated marked receptacle, wait 5 minutes or until the candle cools'."
 	w_class = WEIGHT_CLASS_MEDIUM
 	slot_flags = null
 	light_range = 2
 	icon_state = "oxycandle"
-	item_state = "oxycandle"
+	inhand_icon_state = "oxycandle"
 	actions_types = list()
+	custom_price = 20
 	/// How many seconds of fuel we have left
 	var/fuel = 300
 	var/on_damage = 7
@@ -39,7 +40,7 @@
 
 /obj/item/flashlight/oxycandle/proc/turn_off()
 	STOP_PROCESSING(SSobj, src)
-	on = FALSE
+	set_light_on(FALSE)
 	force = initial(src.force)
 	damtype = initial(src.damtype)
 	if(ismob(loc))
@@ -59,14 +60,14 @@
 		if(user)
 			balloon_alert(user, "out of fuel!")
 		return
-	if(on)
+	if(light_on)
 		if(user)
 			balloon_alert(user, "already lit!")
 		return
 
 	. = ..()
 	// All good, turn it on.
-	if(!.)
+	if(.)
 		user.visible_message(span_notice("[user] lights \the [src]."), span_notice("You light \the [src]!"))
 		force = on_damage
 		damtype = BURN
@@ -74,27 +75,22 @@
 		user.dropItemToGround(src)
 		START_PROCESSING(SSobj, src)
 
-/obj/item/flashlight/oxycandle/is_hot()
-	return on * heat
+/obj/item/flashlight/oxycandle/get_temperature()
+	return light_on * heat
 
-/obj/item/flashlight/oxycandle/equipped(mob/user, slot)
+/obj/item/flashlight/oxycandle/equipped(mob/living/user, slot)
 	..()
 	if(!iscarbon(user))
 		return
 	var/mob/living/carbon/C = user
 	if(C.gloves)
 		return
-	if(!on)
+	if(!light_on)
 		return
-	var/hit_zone = (C.held_index_to_dir(C.active_hand_index) == "l" ? "l_":"r_") + "arm"
-	var/obj/item/bodypart/affecting = C.get_bodypart(hit_zone)
-	if(affecting)
-		if(affecting.receive_damage(0, rand(10,20)))
-			C.update_damage_overlays()
+	user.apply_damage(rand(10,20), damtype, user.get_active_hand())
 	to_chat(C, span_userdanger("The hot metal burns your bare hand!"))
 	user.dropItemToGround(src)
 	C.emote("scream")
-	return
 
 /obj/item/flashlight/oxycandle/hellfire
 	name = "Portable Hellfire"
@@ -103,7 +99,7 @@
 	light_color = LIGHT_COLOR_BLOOD_MAGIC
 	gasmix = "o2=5;plasma=10;TEMP=700"
 	icon_state = "hellcandle"
-	item_state = "hellcandle"
+	inhand_icon_state = "hellcandle"
 
 /obj/item/flashlight/oxycandle/hellfire/Initialize(mapload)
 	. = ..()

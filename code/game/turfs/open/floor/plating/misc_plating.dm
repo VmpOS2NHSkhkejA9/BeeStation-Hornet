@@ -30,7 +30,7 @@
 /turf/open/floor/plating/abductor2/burn_tile()
 	return //unburnable
 
-/turf/open/floor/plating/abductor2/try_replace_tile(obj/item/stack/tile/T, mob/user, params)
+/turf/open/floor/plating/abductor2/try_replace_tile(obj/item/stack/tile/T, mob/user, list/modifiers)
 	return
 
 /turf/open/floor/plating/ashplanet
@@ -55,7 +55,7 @@
 	heavyfootstep = FOOTSTEP_GENERIC_HEAVY
 	tiled_dirt = FALSE
 
-/turf/open/floor/plating/ashplanet/try_replace_tile(obj/item/stack/tile/T, mob/user, params)
+/turf/open/floor/plating/ashplanet/try_replace_tile(obj/item/stack/tile/T, mob/user, list/modifiers)
 	return
 
 /turf/open/floor/plating/ashplanet/break_tile()
@@ -145,7 +145,7 @@
 	heavyfootstep = FOOTSTEP_GENERIC_HEAVY
 	resistance_flags = INDESTRUCTIBLE
 
-/turf/open/floor/plating/beach/try_replace_tile(obj/item/stack/tile/T, mob/user, params)
+/turf/open/floor/plating/beach/try_replace_tile(obj/item/stack/tile/T, mob/user, list/modifiers)
 	return
 
 /turf/open/floor/plating/beach/sand
@@ -239,7 +239,7 @@
 	if(ishuman(user))
 		var/mob/living/carbon/human/F = user
 		var/datum/species/SS = F.dna.species
-		if(MOB_ROBOTIC in SS.inherent_biotypes)  //ZAP goes the IPC!
+		if(SS.inherent_biotypes & MOB_ROBOTIC)  //ZAP goes the IPC!
 			zap = 2 //You can protect yourself from water damage with thick clothing.
 		if(F.head && isclothing(F.head))
 			var/obj/item/clothing/CH = F.head
@@ -303,7 +303,7 @@
 /turf/open/floor/plating/ironsand/burn_tile()
 	return
 
-/turf/open/floor/plating/ironsand/try_replace_tile(obj/item/stack/tile/T, mob/user, params)
+/turf/open/floor/plating/ironsand/try_replace_tile(obj/item/stack/tile/T, mob/user, list/modifiers)
 	return
 
 /turf/open/floor/plating/ice
@@ -327,7 +327,7 @@
 	. = ..()
 	MakeSlippery(TURF_WET_PERMAFROST, INFINITY, 0, INFINITY, TRUE)
 
-/turf/open/floor/plating/ice/try_replace_tile(obj/item/stack/tile/T, mob/user, params)
+/turf/open/floor/plating/ice/try_replace_tile(obj/item/stack/tile/T, mob/user, list/modifiers)
 	return
 
 /turf/open/floor/plating/ice/smooth

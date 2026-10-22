@@ -24,7 +24,7 @@
 	. = ..()
 	time_created = world.time
 	AddComponent(/datum/component/two_handed, require_twohands=TRUE)
-	AddComponent(/datum/component/radioactive, rad_strength, src) // This should be temporary for it won't make rads go lower than 350
+	AddElement(/datum/element/radioactive)
 	if(process)
 		START_PROCESSING(SSobj, src)
 
@@ -133,7 +133,7 @@
 	else
 		grown_amount = initial_amount * multiplier
 
-/obj/item/fuel_rod/material/attackby(obj/item/attacked_item, mob/user, params)
+/obj/item/fuel_rod/material/attackby(obj/item/attacked_item, mob/user, list/modifiers)
 	var/obj/item/stack/material = attacked_item
 	if(istype(material, material_type))
 		if(!check_material_input(user))
@@ -222,7 +222,7 @@
 	name = "exhausted [name]"
 	desc = "A hilarious heavy-duty fuel rod which fissiles a bit slower than it cowardly counterparts. Its greatly grimacing grwoth stage is now over, and bananium outgrowth hums as if it's blatantly honking bike horns."
 	icon_state = "bananium_used"
-	AddComponent(/datum/component/radioactive, 1250, src)
+	AddElement(/datum/element/radioactive, 10)
 
 /obj/item/sealant
 	name = "Flexi-seal"

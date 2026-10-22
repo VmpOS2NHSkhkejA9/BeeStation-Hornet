@@ -2,8 +2,11 @@
 
 //this singleton datum is used by the events controller to dictate how it selects events
 /datum/round_event_control
-	var/name						//The human-readable name of the event
-	var/typepath					//The typepath of the event datum /datum/round_event
+	abstract_type = /datum/round_event_control
+	var/name //The human-readable name of the event
+	//var/category //The category of the event
+	//var/description //The description of the event
+	var/typepath //The typepath of the event datum /datum/round_event
 
 	var/weight = 10					//The weight this event has in the random-selection process.
 									//Higher weights are more likely to be picked.
@@ -32,8 +35,8 @@
 
 /datum/round_event_control/New()
 	if(config && !wizardevent) // Magic is unaffected by configs
-		earliest_start = CEILING(earliest_start * CONFIG_GET(number/events_min_time_mul), 1)
-		min_players = CEILING(min_players * CONFIG_GET(number/events_min_players_mul), 1)
+		earliest_start = ceil(earliest_start * CONFIG_GET(number/events_min_time_mul))
+		min_players = ceil(min_players * CONFIG_GET(number/events_min_players_mul))
 	if(max_occurrences <= 0)
 		name = "\[Admin only\] [name]"
 
@@ -105,7 +108,7 @@
 	if(random)
 		log_game("Random Event triggering: [name] ([typepath])")
 	if (alert_observers)
-		deadchat_broadcast(span_deadsay("<b>[name]</b> has just been triggered!")) //STOP ASSUMING IT'S BADMINS!
+		deadchat_broadcast(" has just been triggered!", "<b>[name]</b>", message_type=DEADCHAT_ANNOUNCEMENT) //STOP ASSUMING IT'S BADMINS!
 	return E
 
 //Special admins setup
@@ -113,6 +116,7 @@
 	return
 
 /datum/round_event	//NOTE: Times are measured in master controller ticks!
+	abstract_type = /datum/round_event
 	var/processing = TRUE
 	var/datum/round_event_control/control
 

@@ -1,5 +1,6 @@
-import { sortBy } from 'common/collections';
 import { toTitleCase } from 'common/string';
+import { sortBy } from 'es-toolkit';
+
 import { useBackend } from '../backend';
 import { Button, Section, Table } from '../components';
 import { Window } from '../layouts';
@@ -36,7 +37,7 @@ const createSeeds = (seedStrings) => {
     obj.name = toTitleCase(obj.name.replace('pack of ', ''));
     return obj;
   });
-  return sortBy(objs, (item) => item.name);
+  return sortBy(objs, [(item) => item.name]);
 };
 
 export const SeedExtractor = (props) => {

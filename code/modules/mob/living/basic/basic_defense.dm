@@ -31,17 +31,21 @@
 						"<span class='notice'>[user] [response_help_continuous] you.</span>", null, null, list(user))
 		to_chat(user, "<span class='notice'>You [response_help_simple] [src].</span>")
 		playsound(loc, 'sound/weapons/thudswoosh.ogg', 50, TRUE, -1)
+
+		SEND_SIGNAL(user, COMSIG_LIVING_PET_ANIMAL, src)
 	else
 		if(HAS_TRAIT(user, TRAIT_PACIFISM))
 			to_chat(user, "<span class='warning'>You don't want to hurt [src]!</span>")
 			return
 		user.do_attack_animation(src, ATTACK_EFFECT_PUNCH)
-		visible_message("<span class='danger'>[user] [response_harm_continuous] [src]!</span>",\
-						"<span class='userdanger'>[user] [response_harm_continuous] you!</span>", null, COMBAT_MESSAGE_RANGE, list(user))
-		to_chat(user, "<span class='danger'>You [response_harm_simple] [src]!</span>")
+		visible_message(span_danger("[user] [response_harm_continuous] [src]!"),\
+						span_userdanger("[user] [response_harm_continuous] you!"), null, COMBAT_MESSAGE_RANGE, user)
+		to_chat(user, span_danger("You [response_harm_simple] [src]!"))
 		playsound(loc, attacked_sound, 25, TRUE, -1)
+		var/obj/item/bodypart/arm/active_arm = user.get_active_hand()
+		var/damage = active_arm.unarmed_damage
 
-		attack_threshold_check(user.dna.species.punchdamage)
+		attack_threshold_check(damage)
 		log_combat(user, src, "attacked", user)
 		updatehealth()
 		return TRUE
@@ -51,8 +55,12 @@
 	if(!.)
 		return
 	playsound(loc, "punch", 25, TRUE, -1)
-	visible_message(span_danger("[user] punches [src]!"), \
-					span_userdanger("You're punched by [user]!"), null, COMBAT_MESSAGE_RANGE, user)
+	visible_message(
+		span_danger("[user] punches [src]!"), \
+		span_userdanger("You're punched by [user]!"),
+		vision_distance = COMBAT_MESSAGE_RANGE,
+		ignored_mobs = user,
+	)
 	to_chat(user, span_danger("You punch [src]!"))
 	apply_damage(15, damagetype = BRUTE)
 
@@ -77,22 +85,22 @@
 	if(LAZYACCESS(modifiers, RIGHT_CLICK))
 		playsound(loc, 'sound/weapons/pierce.ogg', 25, TRUE, -1)
 		visible_message(span_danger("[user] [response_disarm_continuous] [name]!"), \
-						span_userdanger("[user] [response_disarm_continuous] you!"), null, COMBAT_MESSAGE_RANGE, user)
+			span_userdanger("[user] [response_disarm_continuous] you!"), null, COMBAT_MESSAGE_RANGE, user)
 		to_chat(user, span_danger("You [response_disarm_simple] [name]!"))
 		log_combat(user, src, "disarmed", user)
 		return
-	var/damage = rand(15, 30)
+
 	visible_message(span_danger("[user] slashes at [src]!"), \
-					span_userdanger("You're slashed at by [user]!"), null, COMBAT_MESSAGE_RANGE, user)
+		span_userdanger("You're slashed at by [user]!"), null, COMBAT_MESSAGE_RANGE, user)
 	to_chat(user, span_danger("You slash at [src]!"))
 	playsound(loc, 'sound/weapons/slice.ogg', 25, TRUE, -1)
-	attack_threshold_check(damage)
+	attack_threshold_check(user.melee_damage)
 	log_combat(user, src, "attacked", user)
 
 /mob/living/basic/attack_larva(mob/living/carbon/alien/larva/attacking_larva, list/modifiers)
 	. = ..()
 	if(. && stat != DEAD) //successful larva bite
-		var/damage =attacking_larva.melee_damage
+		var/damage = attacking_larva.melee_damage
 		. = attack_threshold_check(damage)
 		if(.)
 			attacking_larva.amount_grown = min(attacking_larva.amount_grown + damage, attacking_larva.max_grown)
@@ -112,13 +120,13 @@
 			damage *= 1.1
 		return attack_threshold_check(damage)
 
-/mob/living/basic/attack_drone(mob/living/simple_animal/drone/M)
-	if(M.combat_mode) //No kicking dogs even as a rogue drone. Use a weapon.
+/mob/living/basic/attack_drone(mob/living/simple_animal/drone/attacking_drone)
+	if(attacking_drone.combat_mode) //No kicking dogs even as a rogue drone. Use a weapon.
 		return
 	return ..()
 
-/mob/living/basic/attack_drone_secondary(mob/living/simple_animal/drone/M)
-	if(M.combat_mode)
+/mob/living/basic/attack_drone_secondary(mob/living/simple_animal/drone/attacking_drone)
+	if(attacking_drone.combat_mode)
 		return SECONDARY_ATTACK_CANCEL_ATTACK_CHAIN
 	return ..()
 
@@ -128,6 +136,7 @@
 		temp_damage = 0
 	else
 		temp_damage *= damage_coeff[damagetype]
+
 	if(temp_damage >= 0 && temp_damage <= force_threshold)
 		visible_message(span_warning("[src] looks unharmed!"))
 		return FALSE
@@ -146,14 +155,14 @@
 	if(!. || QDELETED(src))
 		return
 	var/bomb_armor = getarmor(null, BOMB)
-	switch (severity)
+	switch(severity)
 		if (EXPLODE_DEVASTATE)
 			if(prob(bomb_armor))
 				apply_damage(500, damagetype = BRUTE)
 			else
 				investigate_log("has been gibbed by an explosion.", INVESTIGATE_DEATHS)
 				gib()
-				return
+
 		if (EXPLODE_HEAVY)
 			var/bloss = 60
 			if(prob(bomb_armor))
@@ -169,17 +178,18 @@
 /mob/living/basic/blob_act(obj/structure/blob/attacking_blob)
 	apply_damage(20, damagetype = BRUTE)
 
-/mob/living/basic/do_attack_animation(atom/A, visual_effect_icon, used_item, no_effect)
+/mob/living/basic/do_attack_animation(atom/attacked_atom, visual_effect_icon, used_item, no_effect)
 	if(!no_effect && !visual_effect_icon && melee_damage)
-		if(melee_damage < 10)
+		if(attack_vis_effect && !iswallturf(attacked_atom)) // override the standard visual effect.
+			visual_effect_icon = attack_vis_effect
+		else if(melee_damage < 10)
 			visual_effect_icon = ATTACK_EFFECT_PUNCH
 		else
 			visual_effect_icon = ATTACK_EFFECT_SMASH
 	..()
 
-
 /mob/living/basic/update_stat()
-	if(status_flags & GODMODE)
+	if(HAS_TRAIT(src, TRAIT_GODMODE))
 		return
 	if(stat != DEAD)
 		if(health <= 0)

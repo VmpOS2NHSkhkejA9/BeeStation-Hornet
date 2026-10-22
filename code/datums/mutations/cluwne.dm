@@ -15,7 +15,7 @@
 
 	playsound(owner.loc, 'sound/misc/bikehorn_creepy.ogg', vol = 50, vary = TRUE)
 	owner.equip_to_slot_or_del(new /obj/item/storage/backpack/clown(owner), ITEM_SLOT_BACK) // this is purely for cosmetic purposes incase they aren't wearing anything in that slot
-	equip_cursed_clothing(/obj/item/clothing/mask/cluwne, ITEM_SLOT_MASK)
+	equip_cursed_clothing(/obj/item/clothing/mask/animal/cluwne, ITEM_SLOT_MASK)
 	equip_cursed_clothing(/obj/item/clothing/under/cluwne, ITEM_SLOT_ICLOTHING)
 	equip_cursed_clothing(/obj/item/clothing/shoes/cluwne, ITEM_SLOT_FEET)
 	equip_cursed_clothing(/obj/item/clothing/gloves/color/white, ITEM_SLOT_GLOVES)
@@ -32,7 +32,7 @@
 			if(6)
 				owner.Stun(1)
 				owner.Knockdown(20)
-				owner.Jitter(500)
+				owner.set_jitter_if_lower(1000)
 
 /datum/mutation/cluwne/on_losing(mob/living/carbon/owner)
 	owner.emote("scream")

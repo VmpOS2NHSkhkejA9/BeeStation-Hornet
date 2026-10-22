@@ -1,12 +1,12 @@
 ////////////////////////////////
 /proc/message_admins(msg)
-	msg = span_admin("[span_prefix("ADMIN LOG:")] [span_messagelinkify(msg)]")
+	msg = span_admin("[span_prefix("ADMIN LOG:")] [span_messagelinkify("[msg]")]")
 	to_chat(GLOB.admins,
 		type = MESSAGE_TYPE_ADMINLOG,
 		html = msg)
 
 /proc/relay_msg_admins(msg)
-	msg = span_admin("[span_prefix("RELAY:")] [span_messagelinkify(msg)]")
+	msg = span_admin("[span_prefix("RELAY:")] [span_messagelinkify("[msg]")]")
 	to_chat(GLOB.admins,
 		type = MESSAGE_TYPE_ADMINLOG,
 		html = msg)
@@ -71,8 +71,7 @@
 		body += "<a href='byond://?_src_=holder;[HrefToken()];modantagrep=set;mob=[REF(M)]'>=</a> "
 		body += "<a href='byond://?_src_=holder;[HrefToken()];modantagrep=zero;mob=[REF(M)]'>0</a>"
 		if(M.client.logged_in)
-			var/antag_tokens = M.client.get_antag_token_count_db()
-			body += "<br><b>Antag Tokens</b>: [antag_tokens] "
+			body += "<br><b>Antag Tokens</b>: [get_antag_token_count_db(M.ckey)] "
 			body += "<a href='byond://?_src_=holder;[HrefToken()];modantagtokens=add;mob=[REF(M)]'>+</a> "
 			body += "<a href='byond://?_src_=holder;[HrefToken()];modantagtokens=subtract;mob=[REF(M)]'>-</a> "
 			body += "<a href='byond://?_src_=holder;[HrefToken()];modantagtokens=set;mob=[REF(M)]'>=</a> "
@@ -118,7 +117,7 @@
 		body += " <A href='byond://?_src_=holder;[HrefToken()];sendtoprison=[REF(M)]'>Prison</A> "
 		body += " <A href='byond://?_src_=holder;[HrefToken()];sendbacktolobby=[REF(M)]'>Send to Lobby</A>"
 		if(M.client.prefs)
-			var/muted = M.client.prefs.muted
+			var/muted = M.client.player_details.muted
 			body += "<br><br><b>Mute: </b> "
 			body += "<A href='byond://?_src_=holder;[HrefToken()];mute=[M.ckey];mute_type=[MUTE_IC]' [(muted & MUTE_IC)?"style='font-weight: bold'":""]>IC</a> "
 			body += "<A href='byond://?_src_=holder;[HrefToken()];mute=[M.ckey];mute_type=[MUTE_OOC]' [(muted & MUTE_OOC)?"style='font-weight: bold'":""]>OOC</a> "
@@ -309,7 +308,7 @@
 	var/confirm = alert("End the round and  restart the game world?", "End Round", "Yes", "Cancel")
 	if(confirm != "Yes")
 		return
-	SSticker.force_ending = 1
+	SSticker.force_ending = ADMIN_FORCE_END_ROUND
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "End Round") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 /datum/admins/proc/announce()
@@ -370,6 +369,13 @@
 	message_admins("[key_name_admin(usr)] toggled Dead OOC.")
 	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Dead OOC", "[GLOB.dooc_allowed ? "Enabled" : "Disabled"]")) //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
+/datum/admins/proc/toggle_vote_dead()
+	set category = "Server"
+	set desc="Toggle the vote for dead players on or off."
+	set name="Toggle Dead Vote"
+
+	SSvote.toggle_dead_voting(usr)
+
 /datum/admins/proc/startnow()
 	set category = "Round"
 	set desc="Start the round RIGHT NOW"
@@ -420,15 +426,38 @@
 	set category = "Server"
 	set desc="Respawn basically"
 	set name="Toggle Respawn"
-	var/new_nores = !CONFIG_GET(flag/norespawn)
-	CONFIG_SET(flag/norespawn, new_nores)
-	if (!new_nores)
-		to_chat(world, "<B>You may now respawn.</B>")
-	else
-		to_chat(world, "<B>You may no longer respawn :(</B>")
-	message_admins(span_adminnotice("[key_name_admin(usr)] toggled respawn to [!new_nores ? "On" : "Off"]."))
-	log_admin("[key_name(usr)] toggled respawn to [!new_nores ? "On" : "Off"].")
-	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Respawn", "[!new_nores ? "Enabled" : "Disabled"]")) //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
+	var/respawn_state = CONFIG_GET(flag/allow_respawn)
+	var/new_state = -1
+	var/new_state_text = ""
+	switch(respawn_state)
+		if(RESPAWN_FLAG_DISABLED) // respawn currently disabled
+			new_state = RESPAWN_FLAG_FREE
+			new_state_text = "Enabled"
+			to_chat(world, span_bold("You may now respawn."))
+
+		if(RESPAWN_FLAG_FREE) // respawn currently enabled
+			new_state = RESPAWN_FLAG_NEW_CHARACTER
+			new_state_text = "Enabled, Different Slot"
+			to_chat(world, span_bold("You may now respawn as a different character."))
+
+		if(RESPAWN_FLAG_NEW_CHARACTER) // respawn currently enabled for different slot characters only
+			new_state = RESPAWN_FLAG_DISABLED
+			new_state_text = "Disabled"
+			to_chat(world, span_bold("You may no longer respawn :("))
+		else
+			WARNING("Invalid respawn state in config: [respawn_state]")
+
+	if(new_state == -1)
+		to_chat(usr, span_warning("The config for respawn is set incorrectly, please complain to your nearest server host (or fix it yourself). \
+			In the meanwhile respawn has been set to \"Off\"."))
+		new_state = RESPAWN_FLAG_DISABLED
+		new_state_text = "Disabled"
+
+	CONFIG_SET(flag/allow_respawn, new_state)
+
+	message_admins(span_adminnotice("[key_name_admin(usr)] toggled respawn to \"[new_state_text]\"."))
+	log_admin("[key_name(usr)] toggled respawn to \"[new_state_text]\".")
+	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Respawn", "[new_state_text]")) // If you are copy-pasting this, ensure the 4th parameter is unique to the new proc!
 
 /datum/admins/proc/delay()
 	set category = "Round"
@@ -458,6 +487,8 @@
 		SSticker.admin_delay_notice = input(usr, "Enter a reason for delaying the round end", "Round Delay Reason") as null|text
 		if(isnull(SSticker.admin_delay_notice))
 			return
+		if(SSticker.reboot_timer)
+			SSticker.cancel_reboot(usr)
 		for(var/client/admin in GLOB.admins)
 			if(check_rights(R_FUN) && !GLOB.battle_royale && admin.tgui_panel && SSticker.current_state == GAME_STATE_FINISHED)
 				admin.tgui_panel.give_br_popup()
@@ -477,17 +508,17 @@
 /datum/admins/proc/unprison(mob/M in GLOB.mob_list)
 	set category = "Admin"
 	set name = "Unprison"
-	if (is_centcom_level(M.z))
-		SSjob.SendToLateJoin(M)
-		message_admins("[key_name_admin(usr)] has unprisoned [key_name_admin(M)]")
-		log_admin("[key_name(usr)] has unprisoned [key_name(M)]")
-	else
-		alert("[M.name] is not prisoned.")
+	if(!is_centcom_level(M.z))
+		tgui_alert(usr, "[M.name] is not prisoned.")
+
+	SSjob.SendToLateJoin(M)
+	message_admins("[key_name_admin(usr)] has unprisoned [key_name_admin(M)]")
+	log_admin("[key_name(usr)] has unprisoned [key_name(M)]")
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Unprison") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
 ////////////////////////////////////////////////////////////////////////////////////////////////ADMIN HELPER PROCS
 
-/datum/admins/proc/spawn_atom()
+/datum/admins/proc/spawn_atom(input as null|text)
 	set category = "Debug"
 	set desc = "(atom path) Spawn an atom"
 	set name = "Spawn"
@@ -495,7 +526,9 @@
 	if(!check_rights(R_SPAWN))
 		return
 
-	var/chosen = pick_closest_path(tgui_input_text(usr, "Spawn an atom:", "Spawn"))
+	if (!input)
+		input = tgui_input_text(usr, "Spawn an atom:", "Spawn")
+	var/chosen = pick_closest_path(input)
 	if(!chosen)
 		return
 	var/turf/T = get_turf(usr)
@@ -567,20 +600,6 @@
 	M.mind.traitor_panel()
 	SSblackbox.record_feedback("tally", "admin_verb", 1, "Traitor Panel") //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
 
-
-/datum/admins/proc/toggletintedweldhelmets()
-	set category = "Debug"
-	set desc="Reduces view range when wearing welding helmets"
-	set name="Toggle tinted welding helmes"
-	GLOB.tinted_weldhelh = !( GLOB.tinted_weldhelh )
-	if (GLOB.tinted_weldhelh)
-		to_chat(world, "<B>The tinted_weldhelh has been enabled!</B>")
-	else
-		to_chat(world, "<B>The tinted_weldhelh has been disabled!</B>")
-	log_admin("[key_name(usr)] toggled tinted_weldhelh.")
-	message_admins("[key_name_admin(usr)] toggled tinted_weldhelh.")
-	SSblackbox.record_feedback("nested tally", "admin_toggle", 1, list("Toggle Tinted Welding Helmets", "[GLOB.tinted_weldhelh ? "Enabled" : "Disabled"]")) //If you are copy-pasting this, ensure the 2nd parameter is unique to the new proc!
-
 /datum/admins/proc/toggleguests()
 	set category = "Server"
 	set desc="Guests can't enter"
@@ -631,13 +650,12 @@
 	var/count = 0
 
 	if(!SSjob.initialized)
-		alert(usr, "You cannot manage jobs before the job subsystem is initialized!")
+		tgui_alert(usr, "You cannot manage jobs before the job subsystem is initialized!")
 		return
 
 	dat += "<table>"
 
-	for(var/j in SSjob.occupations)
-		var/datum/job/job = j
+	for(var/datum/job/job as anything in SSjob.joinable_occupations)
 		count++
 		var/J_title = html_encode(job.title)
 		var/job_positions = job.get_spawn_position_count()
@@ -692,16 +710,15 @@
 			qdel(C)
 	return kicked_client_names
 
-//returns 1 to let the dragdrop code know we are trapping this event
-//returns 0 if we don't plan to trap the event
+//returns TRUE to let the dragdrop code know we are trapping this event
+//returns FALSE if we don't plan to trap the event
 /datum/admins/proc/cmd_ghost_drag(mob/dead/observer/frommob, mob/tomob)
-
 	//this is the exact two check rights checks required to edit a ckey with vv.
-	if (!check_rights(R_VAREDIT,0) || !check_rights(R_SPAWN|R_DEBUG,0))
-		return 0
+	if (!check_rights(R_VAREDIT, FALSE) || !check_rights(R_SPAWN|R_DEBUG, FALSE))
+		return FALSE
 
 	if (!frommob.ckey)
-		return 0
+		return FALSE
 
 	var/question = ""
 	if (tomob.ckey)
@@ -710,10 +727,10 @@
 
 	var/ask = alert(question, "Place ghost in control of mob?", "Yes", "No")
 	if (ask != "Yes")
-		return 1
+		return TRUE
 
 	if (!frommob || !tomob) //make sure the mobs don't go away while we waited for a response
-		return 1
+		return TRUE
 
 	tomob.ghostize(FALSE)
 
@@ -724,24 +741,26 @@
 	tomob.ckey = frommob.ckey
 	qdel(frommob)
 
-	return 1
+	return TRUE
 
-/client/proc/adminGreet(logout)
-	if(SSticker.HasRoundStarted())
-		var/string
-		if(logout && CONFIG_GET(flag/announce_admin_logout))
-			string = pick(
-				"Admin logout: [key_name(src)]")
-		else if(!logout && CONFIG_GET(flag/announce_admin_login))
-			string = pick(
-				"Admin login: [key_name(src)]")
-		if(string)
-			message_admins("[string]")
+/// Sends a message to adminchat when anyone with a holder logs in or logs out.
+/// Is dependent on admin preferences and configuration settings, which means that this proc can fire without sending a message.
+/client/proc/admin_greet(logout = FALSE)
+	if(!SSticker.HasRoundStarted())
+		return
+
+	if(logout && CONFIG_GET(flag/announce_admin_logout))
+		message_admins("Admin logout: [key_name(src)]")
+		return
+
+	if(!logout && CONFIG_GET(flag/announce_admin_login))
+		message_admins("Admin login: [key_name(src)]")
+		return
 
 ///Plays a sound to all admins who have that preference on, with the var being the sound filepath
-/proc/play_sound_to_all_admins(var/sound = null)
+/proc/play_sound_to_all_admins(sound = null)
 	if(isnull(sound))
 		return
-	for(var/client/C as anything in GLOB.admins)
-		if(C.prefs.read_player_preference(/datum/preference/toggle/sound_adminalert))
-			SEND_SOUND(C, sound)
+	for(var/client/admin as anything in GLOB.admins)
+		if(admin.prefs.read_player_preference(/datum/preference/toggle/sound_adminalert))
+			SEND_SOUND(admin, sound)
