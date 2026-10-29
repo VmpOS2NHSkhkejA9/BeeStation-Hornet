@@ -146,23 +146,20 @@
 /obj/machinery/atmospherics/components/unary/cdr/ui_static_data(mob/user)
 	var/list/data = list()
 	data["uid"] = cdr_uid
-	data["area"] = AREACOORD(src)
+	data["area"] = get_area_name(src)
 	data["max_core_health"] = CDR_MAX_CORE_HEALTH
 	return data
 
 /obj/machinery/atmospherics/components/unary/cdr/ui_data(mob/user)
 	var/list/data = list()
 
-	var/list/core_composition_named = list()
-	for(var/gastype in core_composition.moles)
-		core_composition_named[GLOB.meta_gas_info[META_GAS_NAME][gastype]] = core_composition.moles[gastype]
-
 	data["toroid_spin"] = toroid_spin
 	data["parabolic_setting"] = parabolic_setting
 	data["input_volume"] = input_volume
 	data["toroid_flux_mult"] = toroid_flux_mult
 	data["core_temperature"] = core_composition.temperature
-	data["core_composition"] = core_composition_named
+	data["core_composition"] = core_composition.moles
+	data["core_moles"] = core_composition.total_moles()
 	data["can_activate"] = !activated && is_operational
 	data["activated"] = activated
 	data["metallization_ratio"] = metallization_ratio

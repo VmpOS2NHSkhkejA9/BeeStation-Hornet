@@ -1,8 +1,10 @@
-import { Box, Button, Section, Table } from 'tgui-core/components';
+import { useState } from 'react';
+import { Box, Button, Flex, ProgressBar, Section } from 'tgui-core/components';
 
 import { useBackend } from '../backend';
 import { NtosWindow } from '../layouts';
 import { CdrContent, CdrData } from './AtmosCdr/CdrContent';
+import { CdrHelpMenu } from './AtmosCdr/CdrHelpMenu';
 
 export const NtosCdr = (props) => {
   type CdrDataList = Record<string, CdrData>;
@@ -14,52 +16,69 @@ export const NtosCdr = (props) => {
 
   const { act, data } = useBackend<Data>();
   const { cdr_data, selected_cdr_uid } = data;
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
   const activeCdr = Object.values(cdr_data).find(
     (cdr) => cdr.uid === selected_cdr_uid,
   );
+  // height={800} width={460}
   return (
-    <NtosWindow height={400} width={700}>
+    <NtosWindow height={activeCdr ? 750 : 400} width={activeCdr ? 460 : 700}>
       <NtosWindow.Content scrollable>
         {activeCdr ? (
           <Box>
-            <Button
-              icon="arrow-left"
-              onClick={() =>
-                act('select_cdr', {
-                  select_cdr: null,
-                })
-              }
-            >
-              Back
-            </Button>
-            <CdrContent {...activeCdr} />
+            <Section
+              fitted
+              title={`${activeCdr.uid}. at ${activeCdr.area}`}
+              buttons={
+              <Box>
+                <Button
+                  icon="arrow-left"
+                  onClick={() => act('select_cdr', { select_cdr: null })}>
+                  Back
+                </Button>
+                <Button
+                  icon="question"
+                  selected={helpMenuOpen}
+                  onClick={() => setHelpMenuOpen(!helpMenuOpen)}>
+                  Help
+                </Button>
+              </Box>} />
+            {helpMenuOpen ? <CdrHelpMenu /> : <CdrContent {...activeCdr} />}
           </Box>
         ) : (
-          <Section title="Detected Condensate Decay Reactors">
+          <Section title="Detected Condensate Decay Reactors" buttons={
             <Button
               icon="sync"
               content="Refresh"
               onClick={() => act('refresh')}
-            />
-            <Table>
+            />}>
+            <Flex>
               {Object.values(cdr_data).map((cdr) => {
                 return (
-                  <Table.Row key={cdr.uid}>
-                    <Table.Cell>
-                      {`CDR::${cdr.uid} at ${cdr.area}`}
-                      <Button
-                        icon="arrow-right"
-                        onClick={() =>
-                          act('select_cdr', {
-                            select_cdr: cdr.uid,
-                          })
-                        }
-                      />
-                    </Table.Cell>
-                  </Table.Row>
+                  <Flex.Item key={cdr.uid}>
+                    <Flex>
+                      <Flex.Item fill m={0.5}>
+                      {`${cdr.uid}. ${cdr.area}`}
+                      </Flex.Item>
+                      <Flex.Item>
+                        <ProgressBar
+                          value={((cdr.core_instability - cdr.core_stability) / cdr.core_instability) * 100} />
+                      </Flex.Item>
+                      <Flex.Item fill>
+                        <Button
+                          content={"Details"}
+                          onClick={() =>
+                            act('select_cdr', {
+                              select_cdr: cdr.uid,
+                            })
+                          }
+                        />
+                      </Flex.Item>
+                    </Flex>
+                  </Flex.Item>
                 );
               })}
-            </Table>
+            </Flex>
           </Section>
         )}
       </NtosWindow.Content>
