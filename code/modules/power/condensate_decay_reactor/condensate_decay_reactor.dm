@@ -1,7 +1,3 @@
-//TODO: make failure more interesting
-//TODO: make it produce power directly
-//TODO: make instructions sheet
-
 /obj/machinery/atmospherics/components/unary/cdr
 	name = "Condensate Decay Reactor"
 	desc = "A sphere of ultra-stable metallic gases, which generate magnetic flux by decaying into more stable gases. Use a multitool to deactivate."
@@ -110,15 +106,15 @@
 /obj/machinery/atmospherics/components/unary/cdr/screwdriver_act(mob/living/user, obj/item/tool)
 	if(activated)
 		balloon_alert(user, "deactivate first!")
-		return FALSE
-
+		return ITEM_INTERACT_BLOCKING
 	return default_deconstruction_screwdriver(user, "cdr", "cdr", tool)
 
 /obj/machinery/atmospherics/components/unary/cdr/wrench_act(mob/living/user, obj/item/tool)
 	return default_change_direction_wrench(user, tool)
 
 /obj/machinery/atmospherics/components/unary/cdr/multitool_act(mob/living/user, obj/item/tool)
-	return deactivate(user)
+	deactivate(user)
+	return ITEM_INTERACT_BLOCKING
 
 /obj/machinery/atmospherics/components/unary/cdr/crowbar_act(mob/living/user, obj/item/tool)
 	return crowbar_deconstruction_act(user, tool)
@@ -133,8 +129,8 @@
 			overlay_state = "sphere_1"
 		if(500 to 5000)
 			overlay_state = "sphere_2"
-	. += mutable_appearance(icon, overlay_state, layer = GASFIRE_LAYER)
-	. += emissive_appearance(icon, overlay_state, layer = GASFIRE_LAYER)
+	. += mutable_appearance(icon, overlay_state, layer = ABOVE_GASFIRE_LAYER)
+	. += emissive_appearance(icon, overlay_state, layer = ABOVE_GASFIRE_LAYER)
 
 /obj/machinery/atmospherics/components/unary/cdr/ui_interact(mob/user, datum/tgui/ui)
 	ui = SStgui.try_update_ui(user, src, ui)
@@ -235,7 +231,7 @@
 	for(var/gastype in core_composition.moles)
 		var/datum/condensate_gas/cdr_gas = cdr_gas_factors[gastype]
 		var/gas_moles = core_composition.moles[gastype]
-		if(!cdr_gas.decays_into)
+		if(!cdr_gas?.decays_into)
 			continue
 		if(!gas_moles)
 			continue
@@ -297,11 +293,18 @@
 		COOLDOWN_START(src, alert_cooldown, CDR_ALERT_COOLDOWN + rand(-5, 5))
 
 /obj/machinery/atmospherics/components/unary/cdr/proc/fail()
-	investigate_log("failed. The last person to use it was [last_user]", INVESTIGATE_ENGINES)
-	for(var/turf/nearby_turf in orange(CDR_DET_RADIUS, src))
-		for(var/obj/object in nearby_turf.contents)
-			SSexplosions.high_mov_atom += object
-		SSexplosions.highturf += nearby_turf
+
+	var/mass_mult = get_mass_multiplier()
+	if(mass_mult < 0.5)
+		for(var/turf/nearby_turf in orange(CDR_DET_RADIUS, src))
+			for(var/obj/object in nearby_turf.contents)
+				SSexplosions.high_mov_atom += object
+			SSexplosions.highturf += nearby_turf
+		investigate_log("failed and destroyed the area around it! The last person to use it was [last_user]", INVESTIGATE_ENGINES)
+		qdel(src)
+		return
+	investigate_log("failed and spawned a temporary singularity! The last person to use it was [last_user]", INVESTIGATE_ENGINES)
+	new /obj/anomaly/singularity/stationary/temporary(get_turf(src), mass_mult * 200)
 	qdel(src)
 
 /obj/machinery/atmospherics/components/unary/cdr/proc/process_toroid()
