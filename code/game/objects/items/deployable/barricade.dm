@@ -9,8 +9,9 @@
 	icon = 'icons/obj/objects.dmi'
 	icon_state = "barrier0"
 	w_class = WEIGHT_CLASS_SMALL
+	custom_price = 25
 
-/obj/item/security_barricade/ComponentInitialize()
+/obj/item/security_barricade/Initialize(mapload)
 	. = ..()
 	AddComponent(/datum/component/deployable, /obj/structure/barricade/security, time_to_deploy = 3 SECONDS)
 
@@ -52,7 +53,7 @@
 /obj/structure/barricade/proc/make_debris()
 	return
 
-/obj/structure/barricade/attackby(obj/item/I, mob/living/user, params)
+/obj/structure/barricade/attackby(obj/item/I, mob/living/user, list/modifiers)
 	if(I.tool_behaviour == TOOL_WELDER && !user.combat_mode && bar_material == METAL)
 		if(atom_integrity < max_integrity)
 			if(!I.tool_start_check(user, amount=0))
@@ -139,7 +140,7 @@
 			if(do_after(user, 50, target=src))
 				W.use(5)
 				var/turf/T = get_turf(src)
-				T.PlaceOnTop(/turf/closed/wall/mineral/wood/nonmetal)
+				T.place_on_top(/turf/closed/wall/mineral/wood/nonmetal)
 				transfer_fingerprints_to(T)
 				qdel(src)
 				return
@@ -205,6 +206,7 @@
 	req_access = list(ACCESS_SECURITY)
 	pickup_damaged = FALSE
 	locked_down = TRUE
+	custom_price = 25
 
 
 /datum/armor/barricade_security
@@ -213,7 +215,6 @@
 	laser = 50
 	energy = 50
 	bomb = 10
-	rad = 100
 	fire = 10
 
 /obj/structure/barricade/security/pick_up_barricade()

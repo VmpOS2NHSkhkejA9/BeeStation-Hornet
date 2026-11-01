@@ -69,7 +69,7 @@ GLOBAL_LIST_EMPTY(silo_access_logs)
 	silo_log(M, "deposited", amount, "sheets", item_mats)
 	return TRUE
 
-/obj/machinery/ore_silo/attackby(obj/item/W, mob/user, params)
+/obj/machinery/ore_silo/attackby(obj/item/W, mob/user, list/modifiers)
 	if(default_deconstruction_screwdriver(user, icon_state, icon_state, W))
 		updateUsrDialog()
 		return
@@ -203,13 +203,13 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/ore_silo)
 		logs.Insert(1, entry)
 
 	updateUsrDialog()
-	flick("silo_active", src)
+	z_flick("silo_active", src)
 
 /obj/machinery/ore_silo/examine(mob/user)
 	. = ..()
 	. += span_notice("[src] can be linked to techfabs, circuit printers and protolathes with a multitool.")
 
-/obj/machinery/ore_silo/on_object_saved(var/depth = 0)
+/obj/machinery/ore_silo/on_object_saved(depth = 0)
 	if(depth >= 10)
 		return ""
 	var/dat

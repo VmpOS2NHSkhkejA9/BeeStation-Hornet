@@ -12,6 +12,7 @@
 	open_sound_volume = 25
 	close_sound_volume = 50
 	door_anim_time = 0
+	custom_price = 100
 
 /obj/structure/closet/crate/large/attack_hand(mob/user, list/modifiers)
 	add_fingerprint(user)
@@ -20,7 +21,7 @@
 	else
 		to_chat(user, span_warning("You need a crowbar to pry this open!"))
 
-/obj/structure/closet/crate/large/attackby(obj/item/W, mob/living/user, params)
+/obj/structure/closet/crate/large/attackby(obj/item/W, mob/living/user, list/modifiers)
 	if(W.tool_behaviour == TOOL_CROWBAR)
 		if(manifest)
 			tear_manifest(user)

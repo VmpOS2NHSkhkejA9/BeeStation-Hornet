@@ -3,7 +3,7 @@
 	desc = "A glass case containing an implant."
 	icon = 'icons/obj/syringe.dmi'
 	icon_state = "implantcase-0"
-	item_state = "implantcase"
+	inhand_icon_state = "implantcase"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 	throw_speed = 2
@@ -18,7 +18,7 @@
 	icon_state = "implantcase-[imp ? imp.implant_color : 0]"
 	return ..()
 
-/obj/item/implantcase/attackby(obj/item/used_item, mob/living/user, params)
+/obj/item/implantcase/attackby(obj/item/used_item, mob/living/user, list/modifiers)
 	if(istype(used_item, /obj/item/pen))
 		if(!user.is_literate())
 			to_chat(user, span_notice("You scribble illegibly on the side of [src]!"))

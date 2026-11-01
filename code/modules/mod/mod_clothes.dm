@@ -1,5 +1,5 @@
 /obj/item/clothing/head/mod
-	name = "MOD helmet"
+	name = "\improper MOD helmet"
 	desc = "A helmet for a MODsuit."
 	icon = 'icons/obj/clothing/modsuit/mod_clothing.dmi'
 	icon_state = "standard-helmet"
@@ -9,14 +9,13 @@
 	body_parts_covered = HEAD
 	heat_protection = HEAD
 	cold_protection = HEAD
-	dynamic_hair_suffix = ""
 
 /obj/item/clothing/head/mod/Initialize(mapload)
 	. = ..()
 	ADD_TRAIT(src, TRAIT_NO_SPEED_POTION, INNATE_TRAIT)
 
 /obj/item/clothing/suit/mod
-	name = "MOD chestplate"
+	name = "\improper MOD chestplate"
 	desc = "A chestplate for a MODsuit."
 	icon = 'icons/obj/clothing/modsuit/mod_clothing.dmi'
 	icon_state = "standard-chestplate"
@@ -39,7 +38,7 @@
 	ADD_TRAIT(src, TRAIT_NO_SPEED_POTION, INNATE_TRAIT)
 
 /obj/item/clothing/gloves/mod
-	name = "MOD gauntlets"
+	name = "\improper MOD gauntlets"
 	desc = "A pair of gauntlets for a MODsuit."
 	icon = 'icons/obj/clothing/modsuit/mod_clothing.dmi'
 	icon_state = "standard-gauntlets"
@@ -58,7 +57,7 @@
 	ADD_TRAIT(src, TRAIT_NO_SPEED_POTION, INNATE_TRAIT)
 
 /obj/item/clothing/shoes/mod
-	name = "MOD boots"
+	name = "\improper MOD boots"
 	desc = "A pair of boots for a MODsuit."
 	icon = 'icons/obj/clothing/modsuit/mod_clothing.dmi'
 	icon_state = "standard-boots"

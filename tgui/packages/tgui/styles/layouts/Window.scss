@@ -17,17 +17,11 @@ $title-bar-height: 32px !default;
   right: 0;
   color: base.$color-fg;
   background-color: base.$color-bg;
-  background-image: linear-gradient(to bottom, base.$color-bg-start 0%, base.$color-bg-end 100%);
-}
-
-.Window__titleBar {
-  position: fixed;
-  z-index: 1;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: $title-bar-height;
-  height: base.rem($title-bar-height);
+  background-image: linear-gradient(
+    to bottom,
+    base.$color-bg-start 0%,
+    base.$color-bg-end 100%
+  );
 }
 
 // Everything after the title bar
@@ -65,7 +59,7 @@ $title-bar-height: 32px !default;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: rgba(lighten(base.$color-bg, 30%), 0.25);
+  background-color: rgba(color.adjust(base.$color-bg, $lightness: 30%), 0.25);
   pointer-events: none;
 }
 

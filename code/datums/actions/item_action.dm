@@ -1,7 +1,7 @@
 //Presets for item actions
 /datum/action/item_action
 	name = "Item Action"
-	check_flags = AB_CHECK_HANDS_BLOCKED|AB_CHECK_CONSCIOUS
+	check_flags = AB_CHECK_INCAPACITATED|AB_CHECK_HANDS_BLOCKED|AB_CHECK_CONSCIOUS
 	button_icon_state = null
 	// If you want to override the normal icon being the item
 	// then change this to an icon state
@@ -14,7 +14,7 @@
 
 /datum/action/item_action/apply_icon(atom/movable/screen/movable/action_button/current_button, force)
 	var/obj/item/item_target = master
-	if(button_icon && button_icon_state)
+	if(background_icon && button_icon_state)
 		// If set, use the custom icon that we set instead
 		// of the item appearence
 		..()

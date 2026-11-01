@@ -2,7 +2,7 @@
 
 ///Internal GPS - Extends a GPS you can use.
 /obj/item/mod/module/gps
-	name = "MOD internal GPS module"
+	name = "\improper MOD internal GPS module"
 	desc = "This module uses common Nanotrasen technology to calculate the user's position anywhere in space, \
 		down to the exact coordinates. This information is fed to a central database viewable from the device itself, \
 		though using it to help people is up to you."
@@ -16,14 +16,14 @@
 
 /obj/item/mod/module/gps/Initialize(mapload)
 	. = ..()
-	AddComponent(/datum/component/gps/item, "MOD0", state = GLOB.deep_inventory_state, overlay_state = FALSE)
+	AddComponent(/datum/component/gps/item, "MOD0", state = GLOB.deep_inventory_state, working_overlay = FALSE, emp_overlay = FALSE)
 
 /obj/item/mod/module/gps/on_use()
 	attack_self(mod.wearer)
 
 ///Hydraulic Clamp - Lets you pick up and drop crates.
 /obj/item/mod/module/clamp
-	name = "MOD hydraulic clamp module"
+	name = "\improper MOD hydraulic clamp module"
 	desc = "A series of actuators installed into both arms of the suit, boasting a lifting capacity of almost a ton. \
 		However, this design has been locked by Nanotrasen to be primarily utilized for lifting various crates. \
 		A lot of people would say that loading cargo is a dull job, but you could not disagree more."
@@ -49,7 +49,7 @@
 		return
 	if(!mod.wearer.Adjacent(target))
 		return
-	if(istype(target, /obj/structure/closet/crate) || istype(target, /obj/structure/big_delivery))
+	if(istype(target, /obj/structure/closet/crate) || istype(target, /obj/item/delivery/big))
 		var/atom/movable/picked_crate = target
 		if(!check_crate_pickup(picked_crate))
 			return
@@ -91,6 +91,9 @@
 	if(length(stored_crates) >= max_crates)
 		balloon_alert(mod.wearer, "too many crates!")
 		return FALSE
+	if(istype(target.loc, /obj/structure/crate_shelf))
+		balloon_alert(mod.wearer, "crate is on a shelf!")
+		return FALSE
 	for(var/mob/living/mob in target.GetAllContents())
 		if(mob.mob_size < MOB_SIZE_HUMAN)
 			continue
@@ -99,7 +102,10 @@
 	return TRUE
 
 /obj/item/mod/module/clamp/loader
-	name = "MOD loader hydraulic clamp module"
+	name = "\improper MOD loader hydraulic clamp module"
+	desc = "A series of heavy-duty actuators installed into both arms of the suit, boasting a lifting capacity of more than a ton. \
+		However, this design has been locked by Nanotrasen to be primarily utilized for lifting various crates. \
+		A lot of people would say that loading cargo is a dull job, but you could not disagree more."
 	icon_state = "clamp_loader"
 	complexity = 0
 	removable = FALSE
@@ -112,7 +118,7 @@
 
 ///Drill - Lets you dig through rock and basalt.
 /obj/item/mod/module/drill
-	name = "MOD drill module"
+	name = "\improper MOD drill module"
 	desc = "An integrated drill, typically extending over the user's hand. While useful for drilling through rock, \
 		your drill is surely the one that both pierces and creates the heavens."
 	icon_state = "drill"
@@ -156,7 +162,7 @@
 
 ///Ore Bag - Lets you pick up ores and drop them from the suit.
 /obj/item/mod/module/orebag
-	name = "MOD ore bag module"
+	name = "\improper MOD ore bag module"
 	desc = "An integrated ore storage system installed into the suit, \
 		this utilizes precise electromagnets and storage compartments to automatically collect and deposit ore. \
 		It's recommended by Nakamura Engineering to actually deposit that ore at local refineries."
@@ -186,9 +192,9 @@
 
 /obj/item/mod/module/orebag/proc/move_ore(obj/item/stack/ore)
 	for(var/obj/item/stack/stored_ore as anything in ores)
-		if(!ore.can_merge(stored_ore))
+		if(!stored_ore.can_merge(ore))
 			continue
-		ore.merge(stored_ore)
+		stored_ore.merge(ore)
 		if(QDELETED(ore))
 			return
 		break
@@ -202,7 +208,7 @@
 	drain_power(use_power_cost)
 
 /obj/item/mod/module/hydraulic
-	name = "MOD loader hydraulic arms module"
+	name = "\improper MOD loader hydraulic arms module"
 	desc = "A pair of powerful hydraulic arms installed in a MODsuit."
 	icon_state = "launch_loader"
 	module_type = MODULE_ACTIVE
@@ -223,10 +229,15 @@
 	. = ..()
 	if(!.)
 		return
-	var/atom/game_renderer = mod.wearer.hud_used.plane_masters["[RENDER_PLANE_GAME]"]
-	var/matrix/render_matrix = matrix(game_renderer.transform)
-	render_matrix.Scale(1.25, 1.25)
-	animate(game_renderer, launch_time, flags = SINE_EASING|EASE_IN, transform = render_matrix)
+	// Space and z-mimic go on their own plate
+	var/list/renderers = list(
+		mod.wearer.hud_used.get_plane_master(RENDER_PLANE_GAME),
+		mod.wearer.hud_used.get_plane_master(RENDER_PLANE_BELOW_GAME),
+	)
+	for(var/atom/renderer as anything in renderers)
+		var/matrix/render_matrix = matrix(renderer.transform)
+		render_matrix.Scale(1.25, 1.25)
+		animate(renderer, launch_time, flags = SINE_EASING|EASE_IN, transform = render_matrix)
 	var/current_time = world.time
 	mod.wearer.visible_message(span_warning("[mod.wearer] starts whirring!"), \
 		blind_message = span_hear("You hear a whirring sound."))
@@ -237,11 +248,13 @@
 	var/power = launch_time
 	if(!do_after(mod.wearer, launch_time, target = mod))
 		power = world.time - current_time
-		animate(game_renderer)
+		for(var/atom/renderer as anything in renderers)
+			animate(renderer)
 	drain_power(use_power_cost)
 	new /obj/effect/temp_visual/mook_dust(get_turf(src))
 	playsound(src, 'sound/items/modsuit/loader_launch.ogg', 75, TRUE)
-	game_renderer.transform = game_renderer.transform.Scale(0.8, 0.8)
+	for(var/atom/renderer as anything in renderers)
+		renderer.transform = renderer.transform.Scale(0.8, 0.8)
 	mod.wearer.cut_overlay(lightning)
 	var/angle = get_angle(mod.wearer, target)
 	mod.wearer.transform = mod.wearer.transform.Turn(angle)
@@ -255,7 +268,7 @@
 	user.transform = user.transform.Turn(angle)
 
 /obj/item/mod/module/disposal_connector
-	name = "MOD disposal selector module"
+	name = "\improper MOD disposal selector module"
 	desc = "A module that connects to the disposal pipeline, causing the user to go into their config selected disposal. \
 		Only seems to work when the suit is on."
 	icon_state = "disposal"
@@ -292,7 +305,7 @@
 	disposal_holder.destinationTag = disposal_tag
 
 /obj/item/mod/module/magnet
-	name = "MOD loader hydraulic magnet module"
+	name = "\improper MOD loader hydraulic magnet module"
 	desc = "A powerful hydraulic electromagnet able to launch crates and lockers towards the user, and keep 'em attached."
 	icon_state = "magnet_loader"
 	module_type = MODULE_ACTIVE
@@ -346,7 +359,7 @@
 	UnregisterSignal(locker, COMSIG_ATOM_NO_LONGER_PULLED)
 
 /obj/item/mod/module/ash_accretion
-	name = "MOD ash accretion module"
+	name = "\improper MOD ash accretion module"
 	desc = "A module that collects ash from the terrain, covering the suit in a protective layer, this layer is \
 		lost when moving across standard terrain."
 	icon_state = "ash_accretion"
@@ -398,14 +411,12 @@
 		))
 
 /obj/item/mod/module/ash_accretion/on_part_activation()
-	mod.wearer.weather_immunities += "ash"
-	mod.wearer.weather_immunities += "snow"
+	mod.wearer.add_traits(list(TRAIT_ASHSTORM_IMMUNE, TRAIT_SNOWSTORM_IMMUNE), REF(src))
 	RegisterSignal(mod.wearer, COMSIG_MOVABLE_MOVED, PROC_REF(on_move))
 	RegisterSignal(mod, COMSIG_MOD_UPDATE_SPEED, PROC_REF(on_update_speed))
 
 /obj/item/mod/module/ash_accretion/on_part_deactivation(deleting = FALSE)
-	mod.wearer.weather_immunities -= "ash"
-	mod.wearer.weather_immunities -= "snow"
+	mod.wearer.remove_traits(list(TRAIT_ASHSTORM_IMMUNE, TRAIT_SNOWSTORM_IMMUNE), REF(src))
 	UnregisterSignal(mod.wearer, COMSIG_MOVABLE_MOVED)
 	UnregisterSignal(mod, COMSIG_MOD_UPDATE_SPEED)
 	if(!traveled_tiles)
@@ -457,7 +468,7 @@
 			balloon_alert(mod.wearer, "ran out of ash!")
 
 /obj/item/mod/module/sphere_transform
-	name = "MOD sphere transform module"
+	name = "\improper MOD sphere transform module"
 	desc = "A module able to move the suit's parts around, turning it and the user into a sphere. \
 		The sphere can move quickly, even through lava, and launch mining bombs to decimate terrain."
 	icon_state = "sphere"
@@ -482,13 +493,9 @@
 	mod.wearer.add_filter("mod_ball", 1, alpha_mask_filter(icon = icon('icons/mob/clothing/modsuit/mod_modules.dmi', "ball_mask"), flags = MASK_INVERSE))
 	mod.wearer.add_filter("mod_blur", 2, angular_blur_filter(size = 15))
 	mod.wearer.add_filter("mod_outline", 3, outline_filter(color = "#000000AA"))
-	mod.wearer.base_pixel_y -= 4
-	animate(mod.wearer, animate_time, pixel_y = mod.wearer.base_pixel_y, flags = ANIMATION_PARALLEL)
+	mod.wearer.add_offsets(REF(src), y_add = -4)
 	mod.wearer.SpinAnimation(1.5)
-	mod.wearer.weather_immunities += "lava"
-	ADD_TRAIT(mod.wearer, TRAIT_HANDS_BLOCKED, REF(src))
-	ADD_TRAIT(mod.wearer, TRAIT_FORCED_STANDING, REF(src))
-	ADD_TRAIT(mod.wearer, TRAIT_NOSLIPALL, REF(src))
+	mod.wearer.add_traits(list(TRAIT_LAVA_IMMUNE, TRAIT_HANDS_BLOCKED, TRAIT_FORCED_STANDING, TRAIT_NO_SLIP_ALL), REF(src))
 	mod.wearer.RemoveElement(/datum/element/footstep, FOOTSTEP_MOB_HUMAN, 1, -6)
 	mod.wearer.AddElement(/datum/element/footstep, FOOTSTEP_OBJ_ROBOT, 1, -6, sound_vary = TRUE)
 	mod.wearer.add_movespeed_modifier(/datum/movespeed_modifier/sphere)
@@ -497,13 +504,9 @@
 /obj/item/mod/module/sphere_transform/on_deactivation(display_message = TRUE, deleting = FALSE)
 	if(!deleting)
 		playsound(src, 'sound/items/modsuit/ballin.ogg', 100, TRUE, frequency = -1)
-	mod.wearer.base_pixel_y = 0
-	animate(mod.wearer, animate_time, pixel_y = mod.wearer.base_pixel_y)
+	mod.wearer.remove_offsets(REF(src))
 	addtimer(CALLBACK(mod.wearer, TYPE_PROC_REF(/atom, remove_filter), list("mod_ball", "mod_blur", "mod_outline")), animate_time)
-	mod.wearer.weather_immunities -= "lava"
-	REMOVE_TRAIT(mod.wearer, TRAIT_HANDS_BLOCKED, REF(src))
-	REMOVE_TRAIT(mod.wearer, TRAIT_FORCED_STANDING, REF(src))
-	REMOVE_TRAIT(mod.wearer, TRAIT_NOSLIPALL, REF(src))
+	mod.wearer.remove_traits(list(TRAIT_LAVA_IMMUNE, TRAIT_HANDS_BLOCKED, TRAIT_FORCED_STANDING, TRAIT_NO_SLIP_ALL), REF(src))
 	mod.wearer.remove_movespeed_mod_immunities(REF(src), /datum/movespeed_modifier/damage_slowdown)
 	mod.wearer.RemoveElement(/datum/element/footstep, FOOTSTEP_OBJ_ROBOT, 1, -6, sound_vary = TRUE)
 	mod.wearer.AddElement(/datum/element/footstep, FOOTSTEP_MOB_HUMAN, 1, -6)

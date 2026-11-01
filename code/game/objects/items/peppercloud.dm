@@ -4,7 +4,7 @@
 	desc = "Manufactured by UhangInc, upon activation a pepper-cloud will be deployed slowing down and disorienting anyone who enters it."
 	icon = 'icons/obj/items_and_weapons.dmi'
 	icon_state = "pepperspray"
-	item_state = "pepperspray"
+	inhand_icon_state = "pepperspray"
 	worn_icon_state = "spraybottle"
 	lefthand_file = 'icons/mob/inhands/equipment/security_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/security_righthand.dmi'
@@ -12,7 +12,7 @@
 	list_reagents = list(/datum/reagent/consumable/condensedcapsaicin = 75)
 
 	item_flags = NOBLUDGEON | ISWEAPON
-	reagent_flags = OPENCONTAINER
+	initial_reagent_flags = OPENCONTAINER | NO_SPLASH
 	slot_flags = ITEM_SLOT_BELT
 	throwforce = 0
 	w_class = WEIGHT_CLASS_SMALL
@@ -21,6 +21,7 @@
 
 	var/cooldown_time = 0
 	var/activation_cooldown = 2 SECONDS
+	custom_price = 100
 
 /obj/item/reagent_containers/peppercloud_deployer/empty //for protolathe printing
 	list_reagents = null

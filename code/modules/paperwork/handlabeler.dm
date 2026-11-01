@@ -3,14 +3,14 @@
 	desc = "A combined label printer and applicator in a portable device, designed to be easy to operate and use."
 	icon = 'icons/obj/bureaucracy.dmi'
 	icon_state = "labeler0"
-	item_state = "flight"
+	inhand_icon_state = "flight"
 	w_class = WEIGHT_CLASS_TINY
 	var/label = null
 	var/labels_left = 30
 	var/mode = 0
 
 /obj/item/hand_labeler/suicide_act(mob/living/user)
-	user.visible_message(span_suicide("[user] is pointing [src] at [user.p_them()]self. [user.p_theyre(TRUE)] going to label [user.p_them()]self as a suicide!"))
+	user.visible_message(span_suicide("[user] is pointing [src] at [user.p_them()]self. [user.p_Theyre()] going to label [user.p_them()]self as a suicide!"))
 	labels_left = max(labels_left - 1, 0)
 
 	var/old_real_name = user.real_name
@@ -36,30 +36,32 @@
 
 	return OXYLOSS
 
-/obj/item/hand_labeler/afterattack(atom/A, mob/user,proximity)
-	. = ..()
-	if(!proximity)
-		return
-	if(!mode)	//if it's off, give up.
-		return
+/obj/item/hand_labeler/interact_with_atom(atom/interacting_with, mob/living/user, list/modifiers)
+	if(!mode)
+		return NONE
+	if(!apply_label(interacting_with, user))
+		return ITEM_INTERACT_BLOCKING
+	return ITEM_INTERACT_SUCCESS
 
+/obj/item/hand_labeler/proc/apply_label(atom/interacting_with, mob/living/user)
 	if(!labels_left)
 		to_chat(user, span_warning("No labels left!"))
-		return
-	if(!label || !length(label))
+		return FALSE
+	if(!length(label))
 		to_chat(user, span_warning("No text set!"))
-		return
-	if(length(A.name) + length(label) > 64)
+		return FALSE
+	if(length(interacting_with.name) + length(label) > 64)
 		to_chat(user, span_warning("Label too big!"))
-		return
-	if(ismob(A))
+		return FALSE
+	if(ismob(interacting_with))
 		to_chat(user, span_warning("You can't label creatures!")) // use a collar
-		return
+		return FALSE
 
-	user.visible_message("[user] labels [A] as [label].", \
-						span_notice("You label [A] as [label]."))
-	A.name = "[A.name] ([label])"
+	user.visible_message("[user] labels [interacting_with] as [label].", \
+						span_notice("You label [interacting_with] as [label]."))
+	interacting_with.name = "[interacting_with.name] ([label])"
 	labels_left--
+	return TRUE
 
 
 /obj/item/hand_labeler/attack_self(mob/user)
@@ -83,25 +85,20 @@
 	else
 		to_chat(user, span_notice("You turn off [src]."))
 
-/obj/item/hand_labeler/attackby(obj/item/I, mob/user, params)
+/obj/item/hand_labeler/attackby(obj/item/I, mob/user, list/modifiers)
 	..()
 	if(istype(I, /obj/item/hand_labeler_refill))
 		to_chat(user, span_notice("You insert [I] into [src]."))
 		qdel(I)
 		labels_left = initial(labels_left)	//Yes, it's capped at its initial value
 
-/obj/item/hand_labeler/attackby_storage_insert(datum/component/storage, atom/storage_holder, mob/user)
-	return !mode
-
 /obj/item/hand_labeler/borg
 	name = "cyborg-hand labeler"
 
-/obj/item/hand_labeler/borg/afterattack(atom/A, mob/user, proximity)
-	. = ..(A, user, proximity)
-	if(!iscyborg(user))
+/obj/item/hand_labeler/borg/apply_label(atom/interacting_with, mob/living/silicon/robot/user)
+	. = ..()
+	if(!. || !istype(user))
 		return
-
-	var/mob/living/silicon/robot/borgy = user
 
 	var/starting_labels = initial(labels_left)
 	var/diff = starting_labels - labels_left
@@ -112,15 +109,15 @@
 
 		// If the cyborg manages to use a module without a cell, they get the paper
 		// for free.
-		if(borgy.cell)
-			borgy.cell.use(cost)
+		if(user.cell)
+			user.cell.use(cost)
 
 /obj/item/hand_labeler_refill
 	name = "hand labeler paper roll"
 	icon = 'icons/obj/bureaucracy.dmi'
 	desc = "A roll of paper. Use it on a hand labeler to refill it."
 	icon_state = "labeler_refill"
-	item_state = "electropack"
+	inhand_icon_state = "electropack"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
 	w_class = WEIGHT_CLASS_TINY

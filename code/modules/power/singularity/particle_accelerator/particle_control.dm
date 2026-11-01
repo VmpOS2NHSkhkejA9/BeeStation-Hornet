@@ -10,6 +10,7 @@
 	active_power_usage = 10000
 	dir = NORTH
 	mouse_opacity = MOUSE_OPACITY_OPAQUE
+	custom_price = 500
 
 
 	var/strength_upper_limit = 2
@@ -208,7 +209,7 @@
 	update_state()
 	update_icon()
 
-/obj/machinery/particle_accelerator/control_box/attackby(obj/item/W, mob/user, params)
+/obj/machinery/particle_accelerator/control_box/attackby(obj/item/W, mob/user, list/modifiers)
 	var/did_something = FALSE
 
 	switch(construction_state)

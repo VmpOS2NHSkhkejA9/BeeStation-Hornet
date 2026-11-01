@@ -28,7 +28,7 @@
 	icon = 'icons/obj/storage/box.dmi'
 	w_class = WEIGHT_CLASS_MEDIUM
 	icon_state = "box"
-	item_state = "syringe_kit"
+	inhand_icon_state = "syringe_kit"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 	resistance_flags = FLAMMABLE
@@ -36,6 +36,7 @@
 	var/illustration = "writing"
 	drop_sound = 'sound/items/handling/cardboardbox_drop.ogg'
 	pickup_sound =  'sound/items/handling/cardboardbox_pickup.ogg'
+	trade_flags = TRADE_NOT_SELLABLE | TRADE_DELETE_UNSOLD
 
 /obj/item/storage/box/Initialize(mapload)
 	. = ..()
@@ -76,11 +77,6 @@
 	qdel(src)
 	user.put_in_hands(I)
 
-/obj/item/storage/box/attackby(obj/item/W, mob/user, params)
-	if(istype(W, /obj/item/stack/package_wrap))
-		return 0
-	return ..()
-
 //Locker overloading issue solving boxes
 /obj/item/storage/box/suitbox
 	name = "compression box of invisible outfits"
@@ -116,18 +112,18 @@
 	desc = "Unfortunately not large enough to trap the mime."
 	foldable = null
 	icon_state = "box"
-	item_state = null
+	inhand_icon_state = null
 	alpha = 0
 
 /obj/item/storage/box/mime/attack_hand(mob/user, list/modifiers)
 	..()
-	if(user.mind.miming)
+	if(HAS_MIND_TRAIT(user, TRAIT_MIMING))
 		alpha = 255
 
-/obj/item/storage/box/mime/Moved(oldLoc, dir)
-	if (iscarbon(oldLoc))
+/obj/item/storage/box/mime/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
+	if (iscarbon(old_loc))
 		alpha = 0
-	..()
+	return ..()
 
 //Disk boxes
 
@@ -178,8 +174,8 @@
 		/obj/item/clothing/mask/gas,
 		/obj/item/reagent_containers/hypospray/medipen,
 		/obj/item/tank/internals/emergency_oxygen,
-		/obj/item/tank/internals/plasmaman/belt
-		))
+		/obj/item/tank/internals/plasmaman/belt,
+	))
 	atom_storage.exception_hold = exception_hold
 
 /obj/item/storage/box/survival/PopulateContents()
@@ -224,12 +220,16 @@
 	new /obj/item/radio/off(src)
 
 // Syndie survival box
-/obj/item/storage/box/survival/syndie //why is this its own thing if it's just the engi box with a syndie mask and medipen?
+/obj/item/storage/box/survival/syndie // Has actual changes apart from just a different engineering box
 	name = "extended-capacity survival box"
-	desc = "A box with the bare essentials of ensuring the survival of you and others. This one is labelled to contain an extended-capacity tank."
+	desc = "A box with the bare essentials of ensuring the survival of you and others. This one is labelled to contain an extended-capacity tank and a handy guide on survival"
 	mask_type = /obj/item/clothing/mask/gas/syndicate
 	internal_type = /obj/item/tank/internals/emergency_oxygen/engi
-	medipen_type = null
+	medipen_type =  /obj/item/reagent_containers/hypospray/medipen/atropine
+
+/obj/item/storage/box/survival/syndie/PopulateContents()
+	..()
+	new /obj/item/paper/fluff/operative(src)
 
 // Security survival box
 /obj/item/storage/box/survival/security
@@ -521,22 +521,19 @@
 		new /obj/item/reagent_containers/cup/glass/sillycup( src )
 
 /obj/item/storage/box/donkpockets
-
-/obj/item/storage/box/donkpockets/PopulateContents()
-	for(var/i in 1 to 6)
-		new donktype(src)
-
-/obj/item/storage/box/donkpockets
 	name = "box of donk-pockets"
 	desc = "Instructions: Heat in microwave. Product will stay perpetually warmed with cutting edge Donk Co. technology."
 	icon_state = "donkpocketbox"
-	illustration=null
+	illustration = null
 	var/donktype = /obj/item/food/donkpocket
-	donktype = /obj/item/food/donkpocket
 
 /obj/item/storage/box/donkpockets/Initialize(mapload)
 	. = ..()
 	atom_storage.set_holdable(list(/obj/item/food/donkpocket))
+
+/obj/item/storage/box/donkpockets/PopulateContents()
+	for(var/i in 1 to 6)
+		new donktype(src)
 
 /obj/item/storage/box/donkpockets/donkpocketspicy
 	name = "box of spicy-flavoured donk-pockets"
@@ -629,11 +626,13 @@
 		new /obj/item/modular_computer/tablet/pda(src)
 	new /obj/item/computer_hardware/hard_drive/role/head(src)
 
-	var/newcart = pick(	/obj/item/computer_hardware/hard_drive/role/engineering,
-						/obj/item/computer_hardware/hard_drive/role/security,
-						/obj/item/computer_hardware/hard_drive/role/medical,
-						/obj/item/computer_hardware/hard_drive/role/signal/toxins,
-						/obj/item/computer_hardware/hard_drive/role/cargo_technician)
+	var/newcart = pick(
+		/obj/item/computer_hardware/hard_drive/role/engineering,
+		/obj/item/computer_hardware/hard_drive/role/security,
+		/obj/item/computer_hardware/hard_drive/role/medical,
+		/obj/item/computer_hardware/hard_drive/role/signal/toxins,
+		/obj/item/computer_hardware/hard_drive/role/cargo_technician,
+	)
 	new newcart(src)
 
 /obj/item/storage/box/silver_ids
@@ -707,8 +706,31 @@
 	icon_state = "secbox"
 	illustration = "handcuff"
 
+/obj/item/storage/box/handcuffs/Initialize(mapload)
+	. = ..()
+	atom_storage.max_slots = 7
+	atom_storage.max_total_storage = 14
+	atom_storage.max_specific_storage = WEIGHT_CLASS_SMALL
+
 /obj/item/storage/box/handcuffs/PopulateContents()
 	for(var/i in 1 to 7)
+		new /obj/item/restraints/handcuffs(src)
+
+/obj/item/storage/box/handcuffs/compact
+	name = "compact box of handcuffs"
+	desc = "A compact box full of handcuffs."
+	icon_state = "secbox"
+	illustration = "handcuff"
+	w_class = WEIGHT_CLASS_NORMAL
+
+/obj/item/storage/box/handcuffs/compact/Initialize(mapload)
+	. = ..()
+	atom_storage.max_slots = 4
+	atom_storage.max_total_storage = 8
+	atom_storage.max_specific_storage = WEIGHT_CLASS_SMALL
+
+/obj/item/storage/box/handcuffs/compact/PopulateContents()
+	for(var/i in 1 to 4)
 		new /obj/item/restraints/handcuffs(src)
 
 /obj/item/storage/box/zipties
@@ -717,9 +739,32 @@
 	icon_state = "secbox"
 	illustration = "handcuff"
 
+/obj/item/storage/box/zipties/Initialize(mapload)
+	. = ..()
+	atom_storage.max_slots = 14
+	atom_storage.max_total_storage = 28
+	atom_storage.max_specific_storage = WEIGHT_CLASS_SMALL
+
 /obj/item/storage/box/zipties/PopulateContents()
+	for(var/i in 1 to 14)
+		new /obj/item/restraints/handcuffs/cable/zipties(src)
+
+/obj/item/storage/box/zipties/compact
+	name = "compact box of zipties"
+	desc = "A compact box full of zipties."
+	icon_state = "secbox"
+	illustration = "handcuff"
+	w_class = WEIGHT_CLASS_NORMAL
+
+/obj/item/storage/box/zipties/compact/PopulateContents()
 	for(var/i in 1 to 7)
 		new /obj/item/restraints/handcuffs/cable/zipties(src)
+
+/obj/item/storage/box/zipties/compact/Initialize(mapload)
+	. = ..()
+	atom_storage.max_slots = 7
+	atom_storage.max_total_storage = 14
+	atom_storage.max_specific_storage = WEIGHT_CLASS_SMALL
 
 /obj/item/storage/box/alienhandcuffs
 	name = "box of spare handcuffs"
@@ -759,6 +804,33 @@
 	for(var/i in 1 to 7)
 		new /obj/item/storage/pill_bottle(src)
 
+/obj/item/storage/box/evilmeds
+	name = "box of premium medicine"
+	desc = "Contains a large number of beakers filled with premium medical supplies. Straight from Interdyne Pharmaceutics!"
+	icon_state = "syndiebox"
+	illustration = "beaker"
+
+/obj/item/storage/box/evilmeds/PopulateContents()
+	var/static/list/items_inside = list(
+		/obj/item/reagent_containers/cup/beaker/meta/omnizine = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/sal_acid = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/oxandrolone = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/pen_acid = 1,
+		/obj/item/reagent_containers/cup/beaker/meta/atropine = 1,
+		/obj/item/reagent_containers/cup/beaker/stabilizing_nanites = 1, // They only get 50 of this, it's quite potent
+		/obj/item/reagent_containers/cup/beaker/meta/rezadone = 1,
+	)
+	generate_items_inside(items_inside, src)
+
+/obj/item/storage/box/combathypos
+	name = "box of combat hyposprays"
+	desc = "Contains a small quantity of combat hyposprays, they do seem of a smaller quantity"
+	icon_state = "syndiebox"
+
+/obj/item/storage/box/combathypos/PopulateContents() // You get atleast one for each member, aswell as an extra one
+	for(var/i in 1 to 3)
+		new /obj/item/reagent_containers/hypospray/combat/smaller(src)
+
 /obj/item/storage/box/snappops
 	name = "snap pop box"
 	desc = "Eight wrappers of fun! Ages 8 and up. Not suitable for children."
@@ -779,7 +851,7 @@
 	desc = "A small box of Almost But Not Quite Plasma Premium Matches."
 	icon = 'icons/obj/cigarettes.dmi'
 	icon_state = "matchbox"
-	item_state = "zippo"
+	inhand_icon_state = "zippo"
 	worn_icon_state = "lighter"
 	w_class = WEIGHT_CLASS_TINY
 	slot_flags = ITEM_SLOT_BELT
@@ -790,21 +862,17 @@
 	. = ..()
 	atom_storage.max_slots = 10
 	atom_storage.set_holdable(list(/obj/item/match))
+	AddElement(/datum/element/ignites_matches)
 
 /obj/item/storage/box/matches/PopulateContents()
 	for(var/i in 1 to 10)
 		new /obj/item/match(src)
 
-/obj/item/storage/box/matches/attackby(obj/item/match/W as obj, mob/user as mob, params)
-	if(istype(W, /obj/item/match))
-		W.matchignite()
-		playsound(src.loc, 'sound/items/matchstick_lit.ogg', 100, 1)
-
 /obj/item/storage/box/lights
 	name = "box of replacement bulbs"
 	illustration = "light"
 	desc = "This box is shaped on the inside so that only light tubes and bulbs fit."
-	item_state = "syringe_kit"
+	inhand_icon_state = "syringe_kit"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 	w_class = WEIGHT_CLASS_NORMAL
@@ -889,20 +957,20 @@
 	desc = "A colorful cardboard box for the clown"
 	illustration = "clown"
 
-/obj/item/storage/box/clown/attackby(obj/item/I, mob/user, params)
-	if((istype(I, /obj/item/bodypart/l_arm/robot)) || (istype(I, /obj/item/bodypart/r_arm/robot)))
-		if(contents.len) //prevent accidently deleting contents
-			to_chat(user, span_warning("You need to empty [src] out first!"))
-			return
-		if(!user.temporarilyRemoveItemFromInventory(I))
-			return
-		qdel(I)
-		to_chat(user, span_notice("You add some wheels to the [src]! You've got a honkbot assembly now! Honk!"))
-		var/obj/item/bot_assembly/honkbot/A = new
-		qdel(src)
-		user.put_in_hands(A)
-	else
+/obj/item/storage/box/clown/tool_act(mob/living/user, obj/item/tool, list/modifiers)
+	if(!istype(tool, /obj/item/bodypart/arm/left/robot) && !istype(tool, /obj/item/bodypart/arm/right/robot))
 		return ..()
+	if(contents.len) //prevent accidently deleting contents
+		to_chat(user, span_warning("You need to empty [src] out first!"))
+		return ITEM_INTERACT_BLOCKING
+	if(!user.temporarilyRemoveItemFromInventory(tool))
+		return ITEM_INTERACT_BLOCKING
+	qdel(tool)
+	to_chat(user, span_notice("You add some wheels to the [src]! You've got a honkbot assembly now! Honk!"))
+	var/obj/item/bot_assembly/honkbot/A = new
+	qdel(src)
+	user.put_in_hands(A)
+	return ITEM_INTERACT_SUCCESS
 
 //////
 /obj/item/storage/box/hug/medical/PopulateContents()
@@ -912,7 +980,7 @@
 
 /obj/item/storage/box/rubbershot
 	name = "box of rubber shots"
-	desc = "A box full of rubber shots, designed for riot shotguns."
+	desc = "A standard box full of rubber shots, designed for riot shotguns."
 	icon_state = "rubbershot_box"
 	illustration = null
 
@@ -922,7 +990,7 @@
 
 /obj/item/storage/box/lethalshot
 	name = "box of lethal shotgun shots"
-	desc = "A box full of lethal shots, designed for riot shotguns."
+	desc = "A standard box full of lethal shots, designed for riot shotguns."
 	icon_state = "lethalshot_box"
 	illustration = null
 
@@ -932,7 +1000,7 @@
 
 /obj/item/storage/box/beanbag
 	name = "box of beanbags"
-	desc = "A box full of beanbag shells."
+	desc = "A standard box full of beanbag shells."
 	icon_state = "rubbershot_box"
 	illustration = null
 
@@ -941,8 +1009,8 @@
 		new /obj/item/ammo_casing/shotgun/beanbag(src)
 
 /obj/item/storage/box/breacherslug
-	name = "box of breaching shotgun shells"
-	desc = "A box full of breaching slugs, designed for rapid entry."
+	name = "box of breaching cartridges"
+	desc = "A standard box full of breaching slugs."
 	icon_state = "breachershot_box"
 	illustration = null
 
@@ -951,8 +1019,8 @@
 		new /obj/item/ammo_casing/shotgun/breacher(src)
 
 /obj/item/storage/box/incapacitateshot
-	name = "box of incapacitating shotgun shots"
-	desc = "A box full of incapacitating shots, designed for shotguns."
+	name = "box of incapacitating cartridges"
+	desc = "A standard box full of incapacitating shots, made for a shotgun."
 	icon_state = "incapacitateshot_box"
 	illustration = null
 
@@ -983,7 +1051,7 @@
 		PopulateContents()
 	name = "[name] ([theme_name])"
 	desc = "A box containing supplementary ingredients for the aspiring chef. The box's theme is '[theme_name]'."
-	item_state = "syringe_kit"
+	inhand_icon_state = "syringe_kit"
 
 /obj/item/storage/box/ingredients/PopulateContents()
 	switch(theme_name)
@@ -1124,7 +1192,7 @@
 	new /obj/item/circuitboard/machine/protolathe(src)
 	new /obj/item/circuitboard/machine/destructive_analyzer(src)
 	new /obj/item/circuitboard/machine/circuit_imprinter(src)
-	new /obj/item/circuitboard/computer/rdconsole(src)
+	new /obj/item/circuitboard/computer/rdconsole/unlocked(src)
 
 /obj/item/storage/box/silver_sulf
 	name = "box of silver sulfadiazine patches"
@@ -1133,7 +1201,7 @@
 
 /obj/item/storage/box/silver_sulf/PopulateContents()
 	for(var/i in 1 to 7)
-		new /obj/item/reagent_containers/pill/patch/silver_sulf(src)
+		new /obj/item/reagent_containers/applicator/patch/silver_sulf(src)
 
 /obj/item/storage/box/fountainpens
 	name = "box of fountain pens"
@@ -1201,46 +1269,51 @@
 
 /obj/item/storage/box/material/Initialize(mapload)
 	. = ..()
-	AddComponent(/datum/component/rad_insulation, _amount = RAD_FULL_INSULATION, contamination_proof = TRUE) //please datum mats no more cancer
 	atom_storage.max_specific_storage = 1000
 	atom_storage.max_specific_storage = WEIGHT_CLASS_GIGANTIC
 	atom_storage.max_slots = 1000
 	atom_storage.allow_big_nesting = TRUE
 
 /obj/item/storage/box/material/PopulateContents()
-	var/static/items_inside = list(
-		/obj/item/stack/sheet/iron/fifty=1, \
-		/obj/item/stack/sheet/glass/fifty=1,\
-		/obj/item/stack/sheet/rglass=50,\
-		/obj/item/stack/sheet/mineral/copper/fifty=1,\
-		/obj/item/stack/sheet/plasmaglass=50,\
-		/obj/item/stack/sheet/plasmarglass=50,\
-		/obj/item/stack/sheet/titaniumglass=50,\
-		/obj/item/stack/sheet/plastitaniumglass=50,\
-		/obj/item/stack/sheet/plasteel=50,\
-		/obj/item/stack/sheet/mineral/plastitanium=50,\
-		/obj/item/stack/sheet/mineral/titanium=50,\
-		/obj/item/stack/sheet/mineral/gold=50,\
-		/obj/item/stack/sheet/mineral/silver=50,\
-		/obj/item/stack/sheet/mineral/uranium=50,\
-		/obj/item/stack/sheet/mineral/plasma=50,\
-		/obj/item/stack/sheet/mineral/diamond=50,\
-		/obj/item/stack/ore/bluespace_crystal/refined=50,\
-		/obj/item/stack/sheet/mineral/bananium=50,\
-		/obj/item/stack/sheet/plastic/fifty=1,\
-		/obj/item/stack/sheet/runed_metal/fifty=1,\
-		/obj/item/stack/sheet/brass/fifty=1,\
-		/obj/item/stack/sheet/mineral/abductor=50,\
-		/obj/item/stack/sheet/mineral/adamantine=50,\
-		/obj/item/stack/sheet/wood=50,\
-		/obj/item/stack/sheet/cotton/cloth=50,\
-		/obj/item/stack/sheet/leather=50,\
-		/obj/item/stack/sheet/bone=12,\
-		/obj/item/stack/sheet/cardboard/fifty=1,\
-		/obj/item/stack/sheet/mineral/sandstone=50,\
-		/obj/item/stack/sheet/snow=50
-		)
-	generate_items_inside(items_inside,src)
+	var/static/list/items_inside
+	items_inside ||= list(
+		/obj/item/stack/sheet/iron = 50,
+		/obj/item/stack/sheet/glass = 50,
+		/obj/item/stack/sheet/rglass = 50,
+		/obj/item/stack/sheet/mineral/copper = 50,
+		/obj/item/stack/sheet/plasmaglass = 50,
+		/obj/item/stack/sheet/plasmarglass = 50,
+		/obj/item/stack/sheet/titaniumglass = 50,
+		/obj/item/stack/sheet/plastitaniumglass = 50,
+		/obj/item/stack/sheet/plasteel = 50,
+		/obj/item/stack/sheet/mineral/plastitanium = 50,
+		/obj/item/stack/sheet/mineral/titanium = 50,
+		/obj/item/stack/sheet/mineral/gold = 50,
+		/obj/item/stack/sheet/mineral/silver = 50,
+		/obj/item/stack/sheet/mineral/uranium = 50,
+		/obj/item/stack/sheet/mineral/plasma = 50,
+		/obj/item/stack/sheet/mineral/diamond = 50,
+		/obj/item/stack/ore/bluespace_crystal/refined = 50,
+		/obj/item/stack/sheet/mineral/bananium = 50,
+		/obj/item/stack/sheet/plastic = 50,
+		/obj/item/stack/sheet/runed_metal = 50,
+		/obj/item/stack/sheet/brass = 50,
+		/obj/item/stack/sheet/mineral/abductor = 50,
+		/obj/item/stack/sheet/mineral/adamantine = 50,
+		/obj/item/stack/sheet/wood = 50,
+		/obj/item/stack/sheet/cotton/cloth = 50,
+		/obj/item/stack/sheet/leather = 50,
+		/obj/item/stack/sheet/bone = 12,
+		/obj/item/stack/sheet/cardboard = 50,
+		/obj/item/stack/sheet/mineral/sandstone = 50,
+		/obj/item/stack/sheet/snow = 50,
+	)
+
+	for(var/obj/item/stack/stack_type as anything in items_inside)
+		var/amt = items_inside[stack_type]
+		new stack_type(src, amt, FALSE)
+
+// except iron, glass, copper, plastic, runed metal, brass, and carboard
 
 /obj/item/storage/box/deputy
 	name = "box of deputy armbands"
@@ -1350,8 +1423,7 @@
 
 /obj/item/storage/box/tablet4dummies/PopulateContents()
 	new /obj/item/modular_computer/tablet(src)
-	new /obj/item/computer_hardware/battery(src)
-	new /obj/item/stock_parts/cell/computer/nano(src)
+	new /obj/item/computer_hardware/battery/tiny(src)
 	new /obj/item/computer_hardware/processor_unit/small(src)
 	new /obj/item/computer_hardware/hard_drive/micro(src)
 	new /obj/item/computer_hardware/identifier(src)
@@ -1365,7 +1437,8 @@
 	desc = "Hacking for Dummies kit, made by the HELLRAISER Crack team. Meant to teach you how to stick it to the man! (metaphorically)."
 	icon_state = "syndiebox"
 	illustration = "disk_kit"
-	custom_price = 200
+	custom_price = 200 // this SHOULD be calculated by contents... but... that would ruin export, we need to find something else in the future for vendors
+	trade_flags = TRADE_CONTRABAND | TRADE_NOT_SELLABLE | TRADE_DELETE_UNSOLD
 
 /obj/item/storage/box/hacking4dummies/PopulateContents()
 	new /obj/item/screwdriver(src)
@@ -1411,5 +1484,28 @@
 		/obj/item/slimecross/stabilized/lightpink=1,\
 		/obj/item/slimecross/stabilized/adamantine=1,\
 		/obj/item/slimecross/stabilized/rainbow=1,\
+	)
+
+/obj/item/storage/box/shipping
+	name = "box of shipping supplies"
+	desc = "Contains several scanners and labelers for shipping things. Wrapping Paper not included."
+	illustration = "shipping"
+	custom_price = 150
+
+/obj/item/storage/box/shipping/PopulateContents()
+	var/static/items_inside = list(
+		/obj/item/dest_tagger=1,
+		/obj/item/sales_tagger=1,
+		/obj/item/export_scanner=1,
+		/obj/item/stack/package_wrap/small=2,
+		/obj/item/stack/wrapping_paper/small=1
 		)
 	generate_items_inside(items_inside,src)
+
+/obj/item/storage/box/party_poppers
+	name = "box of party_poppers"
+	desc = "Turn any event into a celebration and ensure the janitor stays busy."
+
+/obj/item/storage/box/party_poppers/PopulateContents()
+	for(var/i in 1 to 5)
+		new /obj/item/reagent_containers/spray/chemsprayer/party(src)

@@ -13,7 +13,7 @@ GLOBAL_LIST_EMPTY_TYPED(integrated_circuits, /obj/item/integrated_circuit)
 	desc = "By inserting components and a cell into this, wiring them up, and putting them into a shell, anyone can pretend to be a programmer."
 	icon = 'icons/obj/module.dmi'
 	icon_state = "integrated_circuit"
-	item_state = "electronic"
+	inhand_icon_state = "electronic"
 	w_class = WEIGHT_CLASS_SMALL
 
 	/// The name that appears on the shell.
@@ -124,7 +124,7 @@ GLOBAL_LIST_EMPTY_TYPED(integrated_circuits, /obj/item/integrated_circuit)
 	SEND_SIGNAL(src, COMSIG_CIRCUIT_SET_LOCKED, new_value)
 	locked = new_value
 
-/obj/item/integrated_circuit/attackby(obj/item/I, mob/living/user, params)
+/obj/item/integrated_circuit/attackby(obj/item/I, mob/living/user, list/modifiers)
 	. = ..()
 	if(istype(I, /obj/item/circuit_component))
 		add_component_manually(I, user)

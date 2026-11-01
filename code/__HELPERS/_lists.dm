@@ -22,47 +22,47 @@
 #define UNTYPED_LIST_REMOVE(list, item) (list -= LIST_VALUE_WRAP_LISTS(item))
 
 ///Initialize the lazylist
-#define LAZYINITLIST(L) if (!L) { L = list(); }
+#define LAZYINITLIST(L) L ||= list()
 ///If the provided list is empty, set it to null
 #define UNSETEMPTY(L) if (L && !length(L)) L = null
 ///If the provided key -> list is empty, remove it from the list
 #define ASSOC_UNSETEMPTY(L, K) if (!length(L[K])) L -= K;
 ///Like LAZYCOPY - copies an input list if the list has entries, If it doesn't the assigned list is nulled
-#define LAZYLISTDUPLICATE(L) (L ? L.Copy() : null )
+#define LAZYLISTDUPLICATE(L) L?.Copy()
 ///copies an input list if the list has entries
-#define LAZYCOPY(L) (L ? L.Copy() : list() )
+#define LAZYCOPY(L) (L?.Copy() || list())
 ///Remove an item from the list, set the list to null if empty
 #define LAZYREMOVE(L, I) if(L) { L -= I; if(!length(L)) { L = null; } }
 ///Add an item to the list, if the list is null it will initialize it
-#define LAZYADD(L, I) if(!L) { L = list(); } L += I;
+#define LAZYADD(L, I) L ||= list(); L += I;
 ///Add an item to the list if not already present, if the list is null it will initialize it
-#define LAZYOR(L, I) if(!L) { L = list(); } L |= I;
+#define LAZYOR(L, I) L ||= list(); L |= I;
 ///Returns the key of the submitted item in the list
-#define LAZYFIND(L, V) L ? L.Find(V) : 0
+#define LAZYFIND(L, V) (L?.Find(V) || 0)
 ///returns L[I] if L exists and I is a valid index of L, runtimes if L is not a list
-#define LAZYACCESS(L, I) (L ? (isnum_safe(I) ? (I > 0 && I <= length(L) ? L[I] : null) : L[I]) : null)
+#define LAZYACCESS(L, I) (L ? (IS_FINITE(I) ? (I > 0 && I <= length(L) ? L[I] : null) : L[I]) : null)
 ///Sets the item K to the value V, if the list is null it will initialize it
-#define LAZYSET(L, K, V) if(!L) { L = list(); } L[K] = V;
+#define LAZYSET(L, K, V) L ||= list(); L[K] = V;
 ///Sets the length of a lazylist
-#define LAZYSETLEN(L, V) if (!L) { L = list(); } L.len = V;
-///Returns the lenght of the list
+#define LAZYSETLEN(L, V) L ||= list(); L.len = V;
+///Returns the length of the list
 #define LAZYLEN(L) length(L) // should only be used for lazy lists. Using this with non-lazy lists is bad
 ///Sets a list to null
 #define LAZYNULL(L) L = null
 ///Adds to the item K the value V, if the list is null it will initialize it
-#define LAZYADDASSOC(L, K, V) if(!L) { L = list(); } L[K] += V;
+#define LAZYADDASSOC(L, K, V) L ||= list(); L[K] += V;
 ///This is used to add onto lazy assoc list when the value you're adding is a /list/. This one has extra safety over lazyaddassoc because the value could be null (and thus cant be used to += objects)
-#define LAZYADDASSOCLIST(L, K, V) if(!L) { L = list(); } L[K] += list(V);
+#define LAZYADDASSOCLIST(L, K, V) L ||= list(); L[K] += list(V);
 ///Removes the value V from the item K, if the item K is empty will remove it from the list, if the list is empty will set the list to null
 #define LAZYREMOVEASSOC(L, K, V) if(L) { if(L[K]) { L[K] -= V; if(!length(L[K])) L -= K; } if(!length(L)) L = null; }
 ///Accesses an associative list, returns null if nothing is found
-#define LAZYACCESSASSOC(L, I, K) L ? L[I] ? L[I][K] ? L[I][K] : null : null : null
+#define LAZYACCESSASSOC(L, I, K) L?[I]?[K]
 ///Qdel every item in the list before setting the list to null
 #define QDEL_LAZYLIST(L) for(var/I in L) qdel(I); L = null;
 
 //These methods don't null the list
 /// Consider LAZYNULL instead
-#define LAZYCLEARLIST(L) if(L) L.Cut()
+#define LAZYCLEARLIST(L) L?.Cut()
 ///Returns the list if it's actually a valid list, otherwise will initialize it
 #define SANITIZE_LIST(L) ( islist(L) ? L : list() )
 #define reverseList(L) reverse_range(L.Copy())
@@ -160,6 +160,7 @@
 	}
 
 #define SORT_FIRST_INDEX(list) (list[1])
+#define SORT_COMPARE_DIRECTLY(thing) (thing)
 #define SORT_VAR_NO_TYPE(varname) var/varname
 /****
 	* Even more custom binary search sorted insert, using defines instead of vars
@@ -196,6 +197,41 @@
 		};\
 	} while(FALSE)
 
+/**
+ * Custom binary search sorted insert utilising comparison procs instead of vars.
+ * INPUT: Object to be inserted
+ * LIST: List to insert object into
+ * TYPECONT: The typepath of the contents of the list
+ * COMPARE: The object to compare against, usualy the same as INPUT
+ * COMPARISON: The plaintext name of a proc on INPUT that takes a single argument to accept a single element from LIST and returns a positive, negative or zero number to perform a comparison.
+ * COMPTYPE: How should the values be compared? Either COMPARE_KEY or COMPARE_VALUE.
+ */
+#define BINARY_INSERT_PROC_COMPARE(INPUT, LIST, TYPECONT, COMPARE, COMPARISON, COMPTYPE) \
+	do {\
+		var/list/__BIN_LIST = LIST;\
+		var/__BIN_CTTL = length(__BIN_LIST);\
+		if(!__BIN_CTTL) {\
+			__BIN_LIST += INPUT;\
+		} else {\
+			var/__BIN_LEFT = 1;\
+			var/__BIN_RIGHT = __BIN_CTTL;\
+			var/__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
+			var ##TYPECONT/__BIN_ITEM;\
+			while(__BIN_LEFT < __BIN_RIGHT) {\
+				__BIN_ITEM = COMPTYPE;\
+				if(__BIN_ITEM.##COMPARISON(COMPARE) <= 0) {\
+					__BIN_LEFT = __BIN_MID + 1;\
+				} else {\
+					__BIN_RIGHT = __BIN_MID;\
+				};\
+				__BIN_MID = (__BIN_LEFT + __BIN_RIGHT) >> 1;\
+			};\
+			__BIN_ITEM = COMPTYPE;\
+			__BIN_MID = __BIN_ITEM.##COMPARISON(COMPARE) > 0 ? __BIN_MID : __BIN_MID + 1;\
+			__BIN_LIST.Insert(__BIN_MID, INPUT);\
+		};\
+	} while(FALSE)
+
 /// Returns a list in plain english as a string
 /proc/english_list(list/input, nothing_text = "nothing", and_text = " and ", comma_text = ", ", final_comma_text = "" )
 	var/total = length(input)
@@ -223,13 +259,25 @@
 	if(LAZYLEN(L))
 		return pick(L)
 
-/// Checks for specific types in a list
-/proc/is_type_in_list(atom/type_to_check, list/list_to_check)
+/**
+ * Checks for specific types in a list.
+ *
+ * If using zebra mode the list should be an assoc list with truthy/falsey values.
+ * The check short circuits so earlier entries in the input list will take priority.
+ * Ergo, subtypes should come before parent types.
+ * Notice that this is the opposite priority of [/proc/typecacheof].
+ *
+ * Arguments:
+ * - [type_to_check][/datum]: An instance to check.
+ * - [list_to_check][/list]: A list of typepaths to check the type_to_check against.
+ * - zebra: Whether to use the value of the matching type in the list instead of just returning true when a match is found.
+ */
+/proc/is_type_in_list(datum/type_to_check, list/list_to_check, zebra = FALSE)
 	if(!LAZYLEN(list_to_check) || !type_to_check)
 		return FALSE
-	for(var/type in list_to_check)
+	for(var/type, zebra_info in list_to_check)
 		if(istype(type_to_check, type))
-			return TRUE
+			return !zebra || zebra_info // Subtypes must come first in zebra lists.
 	return FALSE
 
 /// Checks for specific types in specifically structured (Assoc "type" = TRUE) lists ('typecaches')
@@ -258,33 +306,100 @@
 		if(typecache_include[atom_checked.type] && !typecache_exclude[atom_checked.type])
 			. += atom_checked
 
-/// Like typesof() or subtypesof(), but returns a typecache instead of a list
-/proc/typecacheof(path, ignore_root_path, only_root_path = FALSE)
+/**
+ * Like typesof() or subtypesof(), but returns a typecache instead of a list.
+ *
+ * Arguments:
+ * - path: A typepath or list of typepaths.
+ * - only_root_path: Whether the typecache should be specifically of the passed types.
+ * - ignore_root_path: Whether to ignore the root path when caching subtypes.
+ */
+/proc/typecacheof(path, only_root_path = FALSE, ignore_root_path = FALSE)
+	if(isnull(path))
+		return
+
 	if(ispath(path))
-		var/list/types = list()
+		. = list()
 		if(only_root_path)
-			types = list(path)
-		else
-			types = ignore_root_path ? subtypesof(path) : typesof(path)
-		var/list/L = list()
-		for(var/T in types)
-			L[T] = TRUE
-		return L
-	else if(islist(path))
-		var/list/pathlist = path
-		var/list/L = list()
-		if(ignore_root_path)
-			for(var/P in pathlist)
-				for(var/T in subtypesof(P))
-					L[T] = TRUE
-		else
-			for(var/P in pathlist)
-				if(only_root_path)
-					L[P] = TRUE
-				else
-					for(var/T in typesof(P))
-						L[T] = TRUE
-		return L
+			.[path] = TRUE
+			return
+
+		for(var/subtype in (ignore_root_path ? subtypesof(path) : typesof(path)))
+			.[subtype] = TRUE
+		return
+
+	if(!islist(path))
+		CRASH("Tried to create a typecache of [path] which is neither a typepath nor a list.")
+
+	. = list()
+	var/list/pathlist = path
+	if(only_root_path)
+		for(var/current_path in pathlist)
+			.[current_path] = TRUE
+	else if(ignore_root_path)
+		for(var/current_path in pathlist)
+			for(var/subtype in subtypesof(current_path))
+				.[subtype] = TRUE
+	else
+		for(var/current_path in pathlist)
+			for(var/subpath in typesof(current_path))
+				.[subpath] = TRUE
+
+/**
+ * Like typesof() or subtypesof(), but returns a typecache instead of a list.
+ * This time it also uses the associated values given by the input list for the values of the subtypes.
+ *
+ * Latter values from the input list override earlier values.
+ * Thus subtypes should come _after_ parent types in the input list.
+ * Notice that this is the opposite priority of [/proc/is_type_in_list] and [/proc/is_path_in_list].
+ *
+ * Arguments:
+ * - path: A typepath or list of typepaths with associated values.
+ * - single_value: The assoc value used if only a single path is passed as the first variable.
+ * - only_root_path: Whether the typecache should be specifically of the passed types.
+ * - ignore_root_path: Whether to ignore the root path when caching subtypes.
+ * - clear_nulls: Whether to remove keys with null assoc values from the typecache after generating it.
+ */
+/proc/zebra_typecacheof(path, single_value = TRUE, only_root_path = FALSE, ignore_root_path = FALSE, clear_nulls = FALSE)
+	if(isnull(path))
+		return
+
+	if(ispath(path))
+		if (isnull(single_value))
+			return
+
+		. = list()
+		if(only_root_path)
+			.[path] = single_value
+			return
+
+		for(var/subtype in (ignore_root_path ? subtypesof(path) : typesof(path)))
+			.[subtype] = single_value
+		return
+
+	if(!islist(path))
+		CRASH("Tried to create a typecache of [path] which is neither a typepath nor a list.")
+
+	. = list()
+	var/list/pathlist = path
+	if(only_root_path)
+		for(var/current_path in pathlist)
+			.[current_path] = pathlist[current_path]
+	else if(ignore_root_path)
+		for(var/current_path in pathlist)
+			for(var/subtype in subtypesof(current_path))
+				.[subtype] = pathlist[current_path]
+	else
+		for(var/current_path in pathlist)
+			for(var/subpath in typesof(current_path))
+				.[subpath] = pathlist[current_path]
+
+	if(!clear_nulls)
+		return
+
+	for(var/cached_path in .)
+		if (isnull(.[cached_path]))
+			. -= cached_path
 
 /**
  * Removes any null entries from the list
@@ -353,6 +468,44 @@
 			return item
 
 	return null
+
+
+/**
+ * Like pick_weight, but allowing for nested lists.
+ *
+ * For example, given the following list:
+ * list(A = 1, list(B = 1, C = 1))
+ * A would have a 50% chance of being picked,
+ * and list(B, C) would have a 50% chance of being picked.
+ * If list(B, C) was picked, B and C would then each have a 50% chance of being picked.
+ * So the final probabilities would be 50% for A, 25% for B, and 25% for C.
+ *
+ * Weights should be integers. Entries without weights are assigned weight 1 (so unweighted lists can be used as well)
+ */
+/proc/pick_weight_recursive(list/list_to_pick)
+	var/result = pick_weight(fill_with_ones(list_to_pick))
+	while(islist(result))
+		result = pick_weight(fill_with_ones(result))
+	return result
+
+/**
+ * Given a list, return a copy where values without defined weights are given weight 1.
+ * For example, fill_with_ones(list(A, B=2, C)) = list(A=1, B=2, C=1)
+ * Useful for weighted random choices (loot tables, syllables in languages, etc.)
+ */
+/proc/fill_with_ones(list/list_to_pad)
+	if (!islist(list_to_pad))
+		return list_to_pad
+
+	var/list/final_list = list()
+
+	for (var/key in list_to_pad)
+		if (list_to_pad[key])
+			final_list[key] = list_to_pad[key]
+		else
+			final_list[key] = 1
+
+	return final_list
 
 /// Takes a weighted list (see above) and expands it into raw entries
 /// This eats more memory, but saves time when actually picking from it
@@ -441,7 +594,7 @@
 		return
 	inserted_list = inserted_list.Copy()
 
-	for(var/i = 1, i < inserted_list.len, ++i)
+	for(var/i in 1 to inserted_list.len - 1)
 		inserted_list.Swap(i, rand(i, inserted_list.len))
 
 	return inserted_list
@@ -451,8 +604,10 @@
 	if(!inserted_list)
 		return
 
-	for(var/i = 1, i < inserted_list.len, ++i)
+	for(var/i in 1 to inserted_list.len - 1)
 		inserted_list.Swap(i, rand(i, inserted_list.len))
+
+	return inserted_list
 
 /// Return a list with no duplicate entries
 /proc/unique_list(list/inserted_list)
@@ -465,7 +620,7 @@
 	var/temp = inserted_list.Copy()
 	inserted_list.len = 0
 	for(var/key in temp)
-		if (isnum_safe(key))
+		if (IS_FINITE(key))
 			inserted_list |= key
 		else
 			inserted_list[key] = temp[key]
@@ -487,13 +642,13 @@
 	return sortTim(list_to_sort, order >= 0 ? GLOBAL_PROC_REF(cmp_name_asc) : GLOBAL_PROC_REF(cmp_name_dsc))
 
 //Mergesort: any value in a list, preserves key=value structure
-/proc/sortAssoc(var/list/L)
+/proc/sortAssoc(list/L)
 	if(L.len < 2)
 		return L
 	var/middle = L.len / 2 + 1 // Copy is first,second-1
 	return mergeAssoc(sortAssoc(L.Copy(0,middle)), sortAssoc(L.Copy(middle))) //second parameter null = to end of list
 
-/proc/mergeAssoc(var/list/L, var/list/R)
+/proc/mergeAssoc(list/L, list/R)
 	var/Li=1
 	var/Ri=1
 	var/list/result = new()
@@ -653,7 +808,7 @@
 	. = inserted_list.Copy()
 	for(var/i in 1 to inserted_list.len)
 		var/key = .[i]
-		if(isnum_safe(key))
+		if(IS_FINITE(key))
 			// numbers cannot ever be associative keys
 			continue
 		var/value = .[key]
@@ -672,7 +827,7 @@
 	var/copied_list = inserted_list.Copy()
 	. = copied_list
 	for(var/key_or_value in inserted_list)
-		if(isnum_safe(key_or_value) || !inserted_list[key_or_value])
+		if(IS_FINITE(key_or_value) || !inserted_list[key_or_value])
 			continue
 		var/value = inserted_list[key_or_value]
 		var/new_value = value
@@ -747,12 +902,15 @@
 		UNTYPED_LIST_ADD(keys, key)
 	return keys
 
-/// Checks if a value is contained in an associative list's values
-/proc/assoc_contains_value(list/input, check_for)
+/// Turns an associative list into a flat list of keys, but for sprite accessories, respecting the locked variable
+/proc/assoc_to_keys_features(list/input)
+	var/list/keys = list()
 	for(var/key in input)
-		if(input[key] == check_for)
-			return TRUE
-	return FALSE
+		var/datum/sprite_accessory/value = input[key]
+		if(value?.locked)
+			continue
+		UNTYPED_LIST_ADD(keys, key)
+	return keys
 
 /// Gets the first key that contains the given value in an associative list, otherwise, returns null.
 /proc/assoc_key_for_value(list/input, check_for)

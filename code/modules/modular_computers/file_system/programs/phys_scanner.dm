@@ -9,10 +9,11 @@
 	tgui_id = "NtosPhysScanner"
 	program_icon = "barcode"
 	hardware_requirement = MC_SENSORS
+	power_consumption = 100 WATT
 	/// Information from the last scanned person, to display on the app.
 	var/last_record = ""
 
-/datum/computer_file/program/phys_scanner/tap(atom/tapped_atom, mob/living/user, params)
+/datum/computer_file/program/phys_scanner/tap(atom/tapped_atom, mob/living/user)
 	. = ..()
 
 	if(!iscarbon(tapped_atom))

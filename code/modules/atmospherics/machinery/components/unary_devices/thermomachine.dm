@@ -32,22 +32,35 @@
 	var/base_heating = 140
 	var/base_cooling = 170
 	var/color_index = 1
+	var/wanted_on = FALSE // Does it want/need to be on if power goes out?
 
 
 /datum/armor/unary_thermomachine
 	energy = 100
-	rad = 100
 	fire = 80
 	acid = 30
 
 /obj/machinery/atmospherics/components/unary/thermomachine/Initialize(mapload)
 	. = ..()
+	wanted_on = on
 	RefreshParts()
 	update_appearance()
 
 /obj/machinery/atmospherics/components/unary/thermomachine/add_context_self(datum/screentip_context/context, mob/user)
-	context.add_ctrl_click_action("Turn [on ? "off" : "on"]")
-	context.add_alt_click_action("Cycle temperature")
+	. = ..()
+	if (panel_open)
+		if (anchored)
+			context.add_left_click_tool_action("Close panel", TOOL_SCREWDRIVER)
+			context.add_right_click_tool_action("Unanchor", TOOL_WRENCH)
+		else
+			context.add_right_click_tool_action("Anchor", TOOL_WRENCH)
+		context.add_left_click_tool_action("Rotate", TOOL_WRENCH)
+		context.add_left_click_tool_action("Change pipe color", TOOL_MULTITOOL)
+		context.add_left_click_tool_action("Deconstruct", TOOL_CROWBAR)
+	else
+		context.add_left_click_tool_action("Open panel", TOOL_SCREWDRIVER)
+		context.add_ctrl_click_action("Turn [on ? "off" : "on"]")
+		context.add_alt_click_action("Cycle temperature")
 
 /obj/machinery/atmospherics/components/unary/thermomachine/is_connectable()
 	if(!anchored)
@@ -66,18 +79,19 @@
 		set_anchored(FALSE)
 		panel_open = TRUE
 		icon_state = "thermo-open"
-		balloon_alert(user, "the port is already in use!")
+		balloon_alert(user, "a pipe is hogging the tile!")
 
 /obj/machinery/atmospherics/components/unary/thermomachine/RefreshParts()
+	. = ..()
 	var/calculated_bin_rating
-	for(var/obj/item/stock_parts/matter_bin/bin in component_parts)
-		calculated_bin_rating += bin.rating
+	for(var/datum/stock_part/matter_bin/bin in component_parts)
+		calculated_bin_rating += bin.tier
 	. = ..()
 	heat_capacity = 5000 * ((calculated_bin_rating - 1) ** 2)
 
 	var/calculated_laser_rating = 0
-	for(var/obj/item/stock_parts/micro_laser/laser in component_parts)
-		calculated_laser_rating += laser.rating
+	for(var/datum/stock_part/micro_laser/laser in component_parts)
+		calculated_laser_rating += laser.tier
 	min_temperature = max(T0C - (base_cooling + calculated_laser_rating * 15), TCMB) //73.15K with T1 stock parts
 	max_temperature = T20C + (base_heating * calculated_laser_rating) //573.15K with T1 stock parts
 
@@ -120,11 +134,6 @@
 
 /obj/machinery/atmospherics/components/unary/thermomachine/examine(mob/user)
 	. = ..()
-	. += span_notice("With the panel open:")
-	. += span_notice("-Use a wrench to rotate [src].")
-	. += span_notice("-Use a multitool to change the piping color.")
-	. += span_notice("-<b>AltClick</b> to cycle between temperaure ranges.")
-	. += span_notice("-<b>CtrlClick</b> to toggle on/off.")
 	. += span_notice("The thermostat is set to [target_temperature]K ([(T0C-target_temperature)*-1]C).")
 
 	if(in_range(user, src) || isobserver(user))
@@ -184,8 +193,15 @@
 	// This produces a nice curve that scales decently well for really hot stuff, and is nice to not fusion. It'll do
 	var/power_usage = idle_power_usage + (heat_amount * 0.05) ** (1.05 - (5e7 * 0.16 / max(heat_amount, 5e7)))
 
-	use_power = power_usage
+	update_mode_power_usage(ACTIVE_POWER_USE, power_usage)
 	update_parents()
+
+/obj/machinery/atmospherics/components/unary/thermomachine/power_change()
+	if(!powered())
+		on = FALSE
+	else
+		on = wanted_on
+	return ..()
 
 /obj/machinery/atmospherics/components/unary/thermomachine/screwdriver_act(mob/living/user, obj/item/tool)
 	if(on)
@@ -200,6 +216,20 @@
 
 /obj/machinery/atmospherics/components/unary/thermomachine/wrench_act(mob/living/user, obj/item/tool)
 	return default_change_direction_wrench(user, tool)
+
+/obj/machinery/atmospherics/components/unary/thermomachine/wrench_act_secondary(mob/living/user, obj/item/tool)
+	. = TRUE
+	if (!panel_open)
+		balloon_alert(user, "panel closed!")
+		return
+	if (!anchored && check_pipe_on_turf())
+		balloon_alert(user, "a pipe is hogging the tile!")
+		return
+
+	if (default_unfasten_wrench(user, tool) != SUCCESSFUL_UNFASTEN)
+		return
+
+	change_nodes_connection(!anchored)
 
 /obj/machinery/atmospherics/components/unary/thermomachine/crowbar_act(mob/living/user, obj/item/tool)
 	return crowbar_deconstruction_act(user, tool)
@@ -261,7 +291,8 @@
 
 	switch(action)
 		if("power")
-			on = !on
+			wanted_on = !wanted_on
+			on = wanted_on && powered()
 			update_use_power(on ? ACTIVE_POWER_USE : IDLE_POWER_USE)
 			investigate_log("was turned [on ? "on" : "off"] by [key_name(usr)]", INVESTIGATE_ATMOS)
 			. = TRUE
@@ -284,17 +315,19 @@
 	update_appearance()
 
 /obj/machinery/atmospherics/components/unary/thermomachine/CtrlClick(mob/user)
-	if(!can_interact(user))
-		return FALSE
 	if(!anchored)
-		return TRUE
+		return ..()
 	if(panel_open)
 		balloon_alert(user, "close panel!")
 		return TRUE
+	if(!can_interact(user))
+		return FALSE
 	if(!is_operational)
 		return TRUE
 
-	on = !on
+
+	wanted_on = !wanted_on
+	on = wanted_on && powered()
 	balloon_alert(user, "turned [on ? "on" : "off"]")
 	investigate_log("was turned [on ? "on" : "off"] by [key_name(user)]", INVESTIGATE_ATMOS)
 	update_appearance()

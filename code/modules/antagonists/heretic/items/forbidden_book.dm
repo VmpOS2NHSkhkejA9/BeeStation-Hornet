@@ -3,7 +3,7 @@
 	name = "Codex Cicatrix"
 	desc = "This book describes the secrets of the veil between worlds."
 	icon = 'icons/obj/heretic.dmi'
-	item_state = "book"
+	inhand_icon_state = "book"
 	icon_state = "book"
 	worn_icon_state = "book"
 	w_class = WEIGHT_CLASS_SMALL
@@ -29,7 +29,7 @@
 
 	open_animation()
 
-/obj/item/codex_cicatrix/afterattack(atom/target, mob/user, proximity_flag, click_parameters)
+/obj/item/codex_cicatrix/afterattack(atom/target, mob/user, proximity_flag, list/modifiers)
 	. = ..()
 	if(!proximity_flag)
 		return
@@ -46,8 +46,8 @@
  * Plays a little animation that shows the book opening and closing.
  */
 /obj/item/codex_cicatrix/proc/open_animation()
-	icon_state = "[item_state]_open"
-	flick("[item_state]_opening", src)
+	icon_state = "[inhand_icon_state]_open"
+	z_flick("[inhand_icon_state]_opening", src)
 
 	addtimer(CALLBACK(src, PROC_REF(close_animation)), 5 SECONDS)
 
@@ -55,5 +55,5 @@
  * Plays a closing animation and resets the icon state.
  */
 /obj/item/codex_cicatrix/proc/close_animation()
-	icon_state = item_state
-	flick("[item_state]_closing", src)
+	icon_state = inhand_icon_state
+	z_flick("[inhand_icon_state]_closing", src)

@@ -14,7 +14,7 @@ Woods Sheets
 	desc = "One can only guess that this is a bunch of wood."
 	singular_name = "wood plank"
 	icon_state = "sheet-wood"
-	item_state = "sheet-wood"
+	inhand_icon_state = "sheet-wood"
 	icon = 'icons/obj/stacks/organic.dmi'
 	mats_per_unit = list(/datum/material/wood=MINERAL_MATERIAL_AMOUNT)
 	sheettype = "wood"
@@ -32,8 +32,8 @@ Woods Sheets
 /obj/item/stack/sheet/wood/get_recipes()
 	return GLOB.wood_recipes
 
-/obj/item/stack/sheet/wood/attackby(obj/item/item, mob/user, params)
-	if(!item.is_sharp())
+/obj/item/stack/sheet/wood/attackby(obj/item/item, mob/user, list/modifiers)
+	if(!item.get_sharpness())
 		return ..()
 	user.visible_message(
 		span_notice("[user] begins whittling [src] into a pointy object."),
@@ -65,7 +65,7 @@ Woods Sheets
 	desc = "Finely cut bamboo sticks."
 	singular_name = "cut bamboo"
 	icon_state = "sheet-bamboo"
-	item_state = "sheet-bamboo"
+	inhand_icon_state = "sheet-bamboo"
 	icon = 'icons/obj/stacks/organic.dmi'
 	force = 10
 	throwforce = 10
@@ -97,7 +97,7 @@ Woods Sheets
 	desc = "A thin wooden frame with paper attached."
 	singular_name = "paper frame"
 	icon_state = "sheet-paper"
-	item_state = "sheet-paper"
+	inhand_icon_state = "sheet-paper"
 	icon = 'icons/obj/stacks/organic.dmi'
 	merge_type = /obj/item/stack/sheet/paperframes
 	resistance_flags = FLAMMABLE

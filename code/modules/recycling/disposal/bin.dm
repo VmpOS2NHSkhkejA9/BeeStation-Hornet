@@ -10,9 +10,6 @@
 	resistance_flags = FIRE_PROOF
 	interaction_flags_machine = INTERACT_MACHINE_OPEN | INTERACT_MACHINE_WIRES_IF_OPEN | INTERACT_MACHINE_ALLOW_SILICON | INTERACT_MACHINE_OPEN_SILICON
 	obj_flags = CAN_BE_HIT | USES_TGUI
-	rad_flags = RAD_PROTECT_CONTENTS | RAD_NO_CONTAMINATE
-
-
 
 	var/datum/gas_mixture/air_contents	// internal reservoir
 	var/full_pressure = FALSE
@@ -34,7 +31,6 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 	bullet = 10
 	laser = 10
 	energy = 100
-	rad = 100
 	fire = 90
 	acid = 30
 
@@ -48,9 +44,8 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 	trunk_check()
 
 	air_contents = new /datum/gas_mixture()
-	//gas.volume = 1.05 * CELLSTANDARD
 	update_appearance()
-
+	ADD_TRAIT(src, TRAIT_COMBAT_MODE_SKIP_INTERACTION, INNATE_TRAIT)
 	return INITIALIZE_HINT_LATELOAD //we need turfs to have air
 
 /obj/machinery/disposal/proc/trunk_check()
@@ -68,6 +63,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 	eject()
 	if(trunk)
 		trunk.linked = null
+		trunk = null
 	return ..()
 
 /obj/machinery/disposal/return_air()
@@ -75,7 +71,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 		return loc?.return_air()
 	return air_contents
 
-/obj/machinery/disposal/singularity_pull(S, current_size)
+/obj/machinery/disposal/singularity_pull(obj/anomaly/singularity/singularity, current_size)
 	..()
 	if(current_size >= STAGE_FIVE)
 		deconstruct()
@@ -89,7 +85,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 	air_contents.merge(removed)
 	trunk_check()
 
-/obj/machinery/disposal/attackby(obj/item/I, mob/living/user, params)
+/obj/machinery/disposal/attackby(obj/item/I, mob/living/user, list/modifiers)
 	add_fingerprint(user)
 	if(!pressure_charging && !full_pressure && !flush)
 		if(I.tool_behaviour == TOOL_SCREWDRIVER)
@@ -122,11 +118,14 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 
 //mouse drop another mob or self
 /obj/machinery/disposal/MouseDrop_T(mob/living/target, mob/living/user)
+	if(..())
+		return
 	if(istype(target))
 		stuff_mob_in(target, user)
 
 /obj/machinery/disposal/proc/stuff_mob_in(mob/living/target, mob/living/user)
-	if(!iscarbon(user) && !user.ventcrawler) //only carbon and ventcrawlers can climb into disposal by themselves.
+	var/ventcrawler = HAS_TRAIT(user, TRAIT_VENTCRAWLER_ALWAYS) || HAS_TRAIT(user, TRAIT_VENTCRAWLER_NUDE)
+	if(!iscarbon(user) && !ventcrawler) //only carbon and ventcrawlers can climb into disposal by themselves.
 		if (iscyborg(user))
 			var/mob/living/silicon/robot/borg = user
 			if (!borg.model || !borg.model.canDispose)
@@ -210,12 +209,12 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 	flush = FALSE
 
 /obj/machinery/disposal/proc/newHolderDestination(obj/structure/disposalholder/H)
-	for(var/obj/item/small_delivery/O in src)
+	for(var/obj/item/delivery/O in src)
 		H.tomail = TRUE
 		return
 
 /obj/machinery/disposal/proc/flushAnimation()
-	flick("[icon_state]-flush", src)
+	z_flick("[icon_state]-flush", src)
 
 // called when holder is expelled from a disposal
 /obj/machinery/disposal/proc/expel(obj/structure/disposalholder/H)
@@ -266,7 +265,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/machinery/disposal)
 	icon_state = "disposal"
 
 // attack by item places it in to disposal
-/obj/machinery/disposal/bin/attackby(obj/item/I, mob/user, params)
+/obj/machinery/disposal/bin/attackby(obj/item/I, mob/user, list/modifiers)
 	if(istype(I, /obj/item/storage/bag/trash))	//Not doing component overrides because this is a specific type.
 		var/obj/item/storage/bag/trash/bag = I
 		to_chat(user, span_warning("You empty the bag."))

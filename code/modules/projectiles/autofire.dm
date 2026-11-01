@@ -98,7 +98,7 @@ Everything else should be handled for you. Good luck soldier.
 			G.attack(autofire_target, L)
 			next_process = world.time + CLICK_CD_MELEE
 			return
-	G.afterattack(autofire_target,L)
+	G.pull_trigger(autofire_target,L)
 
 /datum/component/full_auto/ClearFromParent()
 	. = ..()
@@ -110,7 +110,7 @@ Everything else should be handled for you. Good luck soldier.
 
 /obj/item/gun/onMouseDown(object, location, params)
 	. = ..()
-	var/modifiers = params2list(params)
+	var/list/modifiers = params2list(params)
 	if(LAZYACCESS(modifiers, MIDDLE_CLICK) || LAZYACCESS(modifiers, SHIFT_CLICK) || LAZYACCESS(modifiers, CTRL_CLICK) || LAZYACCESS(modifiers, ALT_CLICK)) // Only shoot if we're not trying to do something else
 		return FALSE
 	if(burst_size <= 1) //Don't let them autofire with bursts. That would just be awful.

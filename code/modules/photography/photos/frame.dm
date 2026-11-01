@@ -95,7 +95,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/sign/picture_frame)
 
 //Manual loading, DO NOT USE FOR HARDCODED/MAPPED IN ALBUMS. This is for if an album needs to be loaded mid-round from an ID.
 /obj/structure/sign/picture_frame/proc/persistence_load()
-	var/list/data = SSpersistence.GetPhotoFrames()
+	var/list/data = SSpersistence.get_photo_frames()
 	if(data[persistence_id])
 		load_from_id(data[persistence_id])
 
@@ -116,7 +116,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/sign/picture_frame)
 	else
 		return ..()
 
-/obj/structure/sign/picture_frame/attackby(obj/item/I, mob/user, params)
+/obj/structure/sign/picture_frame/attackby(obj/item/I, mob/user, list/modifiers)
 	if(can_decon && (I.tool_behaviour == TOOL_SCREWDRIVER || I.tool_behaviour == TOOL_WRENCH))
 		to_chat(user, span_notice("You start unsecuring [name]..."))
 		if(I.use_tool(src, user, 30, volume=50))

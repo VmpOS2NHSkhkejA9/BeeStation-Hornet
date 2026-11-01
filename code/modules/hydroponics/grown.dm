@@ -7,11 +7,13 @@ CREATION_TEST_IGNORE_SELF(/obj/item/food/grown)
 
 // Base type. Subtypes are found in /grown dir. Lavaland-based subtypes can be found in mining/ash_flora.dm
 /obj/item/food/grown
+	abstract_type = /obj/item/food/grown
 	icon = 'icons/obj/hydroponics/harvest.dmi'
 	icon_state = "berrypile"
 	worn_icon = 'icons/mob/clothing/head/hydroponics.dmi'
 	name = "fresh produce" //fix naming bug
 	max_volume = 100
+	max_demand = 150
 	w_class = WEIGHT_CLASS_SMALL
 	resistance_flags = FLAMMABLE
 	/// type path, gets converted to item on New(). It's safe to assume it's always a seed item.
@@ -110,7 +112,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/food/grown)
 			if(T.examine_line)
 				. += T.examine_line
 
-/obj/item/food/grown/attackby(obj/item/O, mob/user, params)
+/obj/item/food/grown/attackby(obj/item/O, mob/user, list/modifiers)
 	..()
 	if (istype(O, /obj/item/plant_analyzer))
 		var/msg = "[span_info("This is \a [span_name(name)]")].\n"

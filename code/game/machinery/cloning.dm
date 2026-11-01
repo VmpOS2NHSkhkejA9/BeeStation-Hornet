@@ -41,7 +41,6 @@
 	var/flesh_number = 0
 	var/datum/bank_account/current_insurance
 	fair_market_price = 5 // He nodded, because he knew I was right. Then he swiped his credit card to pay me for arresting him.
-	dept_req_for_free = ACCOUNT_MED_BITFLAG
 	var/experimental_pod = FALSE //experimental cloner will have true. TRUE allows you to clone a weird brain after scanning it.
 
 /obj/machinery/clonepod/Initialize(mapload)
@@ -67,11 +66,12 @@
 	QDEL_NULL(radio)
 	QDEL_NULL(countdown)
 	if(connected)
-		connected.DetachCloner(src)
+		connected.detach_clonepod(src)
 	QDEL_LIST(unattached_flesh)
 	. = ..()
 
 /obj/machinery/clonepod/RefreshParts()
+	. = ..()
 	speed_coeff = 0
 	efficiency = 0
 	reagents.maximum_volume = 0
@@ -79,11 +79,11 @@
 	for(var/obj/item/reagent_containers/cup/G in component_parts)
 		reagents.maximum_volume += G.volume
 		G.reagents.trans_to(src, G.reagents.total_volume)
-	for(var/obj/item/stock_parts/scanning_module/S in component_parts)
-		efficiency += S.rating
+	for(var/datum/stock_part/scanning_module/S in component_parts)
+		efficiency += S.tier
 		fleshamnt = 1/max(efficiency-1, 1)
-	for(var/obj/item/stock_parts/manipulator/P in component_parts)
-		speed_coeff += P.rating
+	for(var/datum/stock_part/manipulator/manipulator in component_parts)
+		speed_coeff += manipulator.tier
 	heal_level = (efficiency * 15) + 10
 	if(heal_level < MINIMUM_HEAL_LEVEL)
 		heal_level = MINIMUM_HEAL_LEVEL
@@ -137,6 +137,11 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 	icon_state = "datadisk[rand(0,6)]"
 	add_overlay("datadisk_gene")
 
+/obj/item/disk/data/Destroy(force)
+	. = ..()
+	if(data)
+		QDEL_NULL(data)
+
 /obj/item/disk/data/attack_self(mob/user)
 	read_only = !read_only
 	to_chat(user, span_notice("You flip the write-protect tab to [read_only ? "protected" : "unprotected"]."))
@@ -152,7 +157,7 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 
 /obj/item/disk/data/debug/Initialize(mapload)
 	. = ..()
-	for(var/datum/mutation/HM as() in GLOB.all_mutations)
+	for(var/datum/mutation/HM as anything in GLOB.all_mutations)
 		mutations += new HM
 
 //Clonepod
@@ -167,13 +172,10 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 			. += "Current clone cycle is [round(get_completion())]% complete."
 
 /obj/machinery/clonepod/return_air()
-	// We want to simulate the clone not being in contact with
-	// the atmosphere, so we'll put them in a constant pressure
-	// nitrogen. They don't need to breathe while cloning anyway.
-	var/static/datum/gas_mixture/immutable/planetary/cloner/GM //global so that there's only one instance made for all cloning pods
-	if(!GM)
-		GM = new
-	return GM
+	var/datum/gas_mixture/nitrogen_atmosphere = new
+	nitrogen_atmosphere.set_gas(/datum/gas/nitrogen, 104)
+	nitrogen_atmosphere.temperature = T20C
+	return nitrogen_atmosphere
 
 /obj/machinery/clonepod/proc/get_completion()
 	. = FALSE
@@ -182,7 +184,7 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 		. = (100 * ((mob_occupant.health + 100) / (heal_level + 100)))
 
 //Start growing a human clone in the pod!
-/obj/machinery/clonepod/proc/growclone(clonename, ui, mutation_index, given_mind, last_death, datum/species/mrace, list/features, factions, datum/bank_account/insurance, list/traumas, body_only, experimental)
+/obj/machinery/clonepod/proc/growclone(CLONING_STRICT_ARGS(clonename, unique_identity, unique_enzymes, mutation_index, given_mind, last_death, datum/species/mrace, list/features, factions, datum/bank_account/insurance, list/traumas, body_only, experimental, gender, age, datum/blood_type/blood_type))
 	var/result = CLONING_SUCCESS
 	if(!reagents.has_reagent(/datum/reagent/medicine/synthflesh, fleshamnt))
 		connected_message("Cannot start cloning: Not enough synthflesh.")
@@ -214,21 +216,23 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 				return ERROR_SOUL_DEPARTED
 			if(G.suiciding) // The ghost came from a body that is suiciding.
 				return ERROR_SUICIDED_BODY
-		if(clonemind.damnation_type) //Can't clone the damned.
-			INVOKE_ASYNC(src, PROC_REF(horrifyingsound))
-			mess = TRUE
-			icon_state = "pod_g"
-			update_icon()
-			return ERROR_SOUL_DAMNED
-		if(clonemind.no_cloning_at_all) // nope.
-			return ERROR_UNCLONABLE
 		current_insurance = insurance
 	attempting = TRUE //One at a time!!
 	countdown.start()
 
 	var/mob/living/carbon/human/H = new /mob/living/carbon/human(src)
 
-	H.hardset_dna(ui, mutation_index, H.real_name, null, mrace, features)
+	if(!clonename)	//to prevent null names
+		clonename = "clone ([rand(1,999)])"
+	H.real_name = clonename
+	if(gender in list(MALE, FEMALE, PLURAL, NEUTER))
+		H.gender = gender
+	if(age)
+		H.age = age
+
+	H.hardset_dna(unique_identity, mutation_index, clonename, blood_type, mrace, features)
+	if(unique_enzymes)
+		H.dna.unique_enzymes = unique_enzymes
 
 	if(!HAS_TRAIT(H, TRAIT_RADIMMUNE))//dont apply mutations if the species is Mutation proof.
 		if(efficiency > 2)
@@ -241,12 +245,8 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 			if(ismob(M))
 				H = M
 
-	H.silent = 20 //Prevents an extreme edge case where clones could speak if they said something at exactly the right moment.
+	H.adjust_silence(40 SECONDS) //Prevents an extreme edge case where clones could speak if they said something at exactly the right moment.
 	occupant = H
-
-	if(!clonename)	//to prevent null names
-		clonename = "clone ([rand(1,999)])"
-	H.real_name = clonename
 
 	icon_state = "pod_1"
 	//Get the clone body ready
@@ -293,14 +293,15 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 
 /obj/machinery/clonepod/proc/offer_to_ghost(mob/living/carbon/H)
 	set waitfor = FALSE
-	var/mob/dead/observer/candidate = SSpolling.poll_ghosts_for_target(
+	var/datum/poll_config/config = new(
 		check_jobban = ROLE_EXPERIMENTAL_CLONE,
 		poll_time = 30 SECONDS,
-		checked_target = H,
-		jump_target = H,
+		jump_target = src,
 		role_name_text = "[H.real_name]'s experimental clone?",
-		alert_pic = H,
+		alert_pic = src,
+		amount_to_pick = 1,
 	)
+	var/mob/dead/observer/candidate = SSpolling.poll_ghosts_for_target(config, H)
 	if(candidate)
 		H.key = candidate.key
 
@@ -347,7 +348,7 @@ SCREENTIP_ATTACK_HAND(/obj/machinery/clonepod, "Examine")
 						fair_market_price = round(fair_market_price/length(dept_list))
 						for(var/datum/bank_account/department/D in dept_list)
 							D.adjust_money(fair_market_price)
-		if(mob_occupant && (mob_occupant.stat == DEAD) || (mob_occupant.suiciding) || mob_occupant.ishellbound())  //Autoeject corpses and suiciding dudes.
+		if(mob_occupant && mob_occupant.stat == DEAD || mob_occupant.suiciding)  //Autoeject corpses and suiciding dudes.
 			connected_message("Clone Rejected: Deceased.")
 			if(internal_radio)
 				SPEAK("The cloning of [mob_occupant.real_name] has been \
@@ -419,8 +420,8 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/clonepod)
 		to_chat(user, "<font color = #666633>-% Successfully linked [buffer] with [src] %-</font color>")
 		var/obj/machinery/computer/cloning/comp = buffer
 		if(connected)
-			connected.DetachCloner(src)
-		comp.AttachCloner(src)
+			connected.detach_clonepod(src)
+		comp.attach_clonepod(src)
 	else if (TRY_STORE_IN_BUFFER(buffer_parent, src))
 		to_chat(user, "<font color = #666633>-% Successfully stored [REF(src)] [name] in buffer %-</font color>")
 	else
@@ -428,7 +429,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/clonepod)
 	return COMPONENT_BUFFER_RECEIVED
 
 //Let's unlock this early I guess.  Might be too early, needs tweaking.
-/obj/machinery/clonepod/attackby(obj/item/W, mob/user, params)
+/obj/machinery/clonepod/attackby(obj/item/W, mob/user, list/modifiers)
 	if(!(occupant || mess))
 		if(default_deconstruction_screwdriver(user, "[icon_state]_maintenance", "[initial(icon_state)]",W))
 			return

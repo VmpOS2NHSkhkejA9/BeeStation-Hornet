@@ -4,7 +4,6 @@
 	icon_state = "blank_blob"
 	desc = "A huge, pulsating yellow mass."
 	max_integrity = BLOB_CORE_MAX_HP
-	max_hit_damage = BLOB_CORE_MAX_HP / 10
 	armor_type = /datum/armor/blob_core
 	explosion_block = 6
 	point_return = -1
@@ -15,7 +14,6 @@
 	claim_range	= BLOB_CORE_CLAIM_RANGE
 	pulse_range = BLOB_CORE_PULSE_RANGE
 	expand_range = BLOB_CORE_EXPAND_RANGE
-	max_spores = BLOB_CORE_MAX_SPORES
 	ignore_syncmesh_share = TRUE
 
 CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob/special/core)
@@ -27,13 +25,14 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob/special/core)
 /obj/structure/blob/special/core/Initialize(mapload, client/new_overmind = null, placed = 0)
 	GLOB.blob_cores += src
 	START_PROCESSING(SSobj, src)
-	AddElement(/datum/element/point_of_interest)
+	SSpoints_of_interest.make_point_of_interest(src)
 	update_icon() //so it atleast appears
 	if(!placed && !overmind)
 		return INITIALIZE_HINT_QDEL
 	if(overmind)
 		overmind.blobstrain.on_gain()
 		update_icon()
+	AddComponent(/datum/component/stationloving, FALSE, TRUE)
 	. = ..()
 
 /obj/structure/blob/special/core/scannerreport()
@@ -76,12 +75,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/blob/special/core)
 		overmind.update_health_hud()
 	pulse_area(overmind, claim_range, pulse_range, expand_range)
 	reinforce_area(delta_time)
-	produce_spores()
 	..()
-
-/obj/structure/blob/special/core/ComponentInitialize()
-	. = ..()
-	AddComponent(/datum/component/stationloving, FALSE, TRUE)
 
 /obj/structure/blob/special/core/onTransitZ(old_z, new_z)
 	if(overmind && is_station_level(new_z))

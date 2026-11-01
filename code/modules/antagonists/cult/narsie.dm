@@ -39,7 +39,7 @@ GLOBAL_DATUM(narsie, /obj/eldritch/narsie)
 	GLOB.narsie = src
 	var/list/all_cults = list()
 
-	for(var/datum/antagonist/cult/cultist in GLOB.antagonists)
+	for(var/datum/antagonist/cult/cultist in GLOB.active_antagonists)
 		if(!cultist.owner)
 			continue
 		all_cults |= cultist.cult_team
@@ -50,9 +50,9 @@ GLOBAL_DATUM(narsie, /obj/eldritch/narsie)
 		var/datum/objective/eldergod/summon_objective = locate() in cult_team.objectives
 		if(summon_objective)
 			summon_objective.summoned = TRUE
-	for(var/datum/antagonist/cult/cultist in GLOB.antagonists)
-		if(isliving(cultist.owner.current))
-			var/mob/living/L = cultist.owner.current
+	for(var/datum/mind/cult_mind in get_antag_minds(/datum/antagonist/cult))
+		if(isliving(cult_mind.current))
+			var/mob/living/L = cult_mind.current
 			L.narsie_act()
 	for(var/mob/living/carbon/player in GLOB.player_list)
 		if(player.stat != DEAD && is_station_level(player.loc?.z) && !IS_CULTIST(player))
@@ -68,7 +68,13 @@ GLOBAL_DATUM(narsie, /obj/eldritch/narsie)
 	var/area/area = get_area(src)
 	if(area)
 		var/mutable_appearance/alert_overlay = mutable_appearance('icons/effects/cult_effects.dmi', "ghostalertsie")
-		notify_ghosts("Nar'Sie has risen in [area]. Reach out to the Geometer to be given a new shell for your soul.", source = src, alert_overlay = alert_overlay, action = NOTIFY_ATTACK)
+		notify_ghosts(
+			"Nar'Sie has risen in [area]. Reach out to the Geometer to be given a new shell for your soul.",
+			source = src,
+			header = "Nar'Sie has risen!",
+			click_interact = TRUE,
+			alert_overlay = alert_overlay,
+		)
 	narsie_spawn_animation()
 
 /obj/eldritch/narsie/Destroy()
@@ -77,7 +83,7 @@ GLOBAL_DATUM(narsie, /obj/eldritch/narsie)
 
 	var/list/all_cults = list()
 
-	for(var/datum/antagonist/cult/cultist in GLOB.antagonists)
+	for(var/datum/antagonist/cult/cultist in GLOB.active_antagonists)
 		if (!cultist.owner)
 			continue
 		all_cults |= cultist.cult_team
@@ -195,7 +201,7 @@ GLOBAL_DATUM(narsie, /obj/eldritch/narsie)
 
 /obj/eldritch/narsie/proc/narsie_spawn_animation()
 	setDir(SOUTH)
-	flick("narsie_spawn_anim", src)
+	z_flick("narsie_spawn_anim", src)
 	addtimer(CALLBACK(src, PROC_REF(narsie_spawn_animation_end)), 3.5 SECONDS)
 
 /obj/eldritch/narsie/proc/narsie_spawn_animation_end()
@@ -221,9 +227,9 @@ GLOBAL_DATUM(narsie, /obj/eldritch/narsie)
 	return clashing
 
 /proc/ending_helper()
-	SSticker.force_ending = 1
+	SSticker.force_ending = FORCE_END_ROUND
 
-/proc/cult_ending_helper(var/no_explosion = 0)
+/proc/cult_ending_helper(no_explosion = 0)
 	if(no_explosion)
 		Cinematic(CINEMATIC_CULT,world,CALLBACK(GLOBAL_PROC,GLOBAL_PROC_REF(ending_helper)))
 	else

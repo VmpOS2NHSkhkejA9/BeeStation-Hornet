@@ -3,6 +3,7 @@
 	name = "energy gun"
 	desc = "A basic energy-based gun."
 	icon = 'icons/obj/guns/energy.dmi'
+	custom_price = 100 // Adding this here because only SOME guns were covered by export datums
 
 	///What type of power cell this uses
 	var/obj/item/stock_parts/cell/cell
@@ -41,11 +42,13 @@
 
 /obj/item/gun/energy/emp_act(severity)
 	. = ..()
-	if(!(. & EMP_PROTECT_CONTENTS))
-		obj_flags |= OBJ_EMPED
-		update_appearance()
-		addtimer(CALLBACK(src, PROC_REF(emp_reset)), rand(1, 200 / severity))
-		playsound(src, 'sound/machines/capacitor_discharge.ogg', 60, TRUE)
+	if(. & EMP_PROTECT_CONTENTS)
+		return
+
+	obj_flags |= OBJ_EMPED
+	update_appearance()
+	addtimer(CALLBACK(src, PROC_REF(emp_reset)), rand(1, 200 / severity))
+	playsound(src, 'sound/machines/capacitor_discharge.ogg', 60, TRUE)
 
 /obj/item/gun/energy/proc/emp_reset()
 	obj_flags &= ~OBJ_EMPED
@@ -56,6 +59,13 @@
 
 /obj/item/gun/energy/get_cell()
 	return cell
+
+/obj/item/gun/energy/examine(mob/user)
+	. = ..()
+	if(cell)
+		var/obj/item/ammo_casing/energy/shot = ammo_type[select]	//Finds cost of selected shot
+		if(shot && shot.e_cost)
+			. += "Shots to battery depletion: <b><span class='cfc_orange'>[floor(cell.charge / shot.e_cost)]</span></b>"
 
 /obj/item/gun/energy/add_weapon_description()
 	AddElement(/datum/element/weapon_description, attached_proc = PROC_REF(add_notes_energy))
@@ -109,14 +119,14 @@
 
 /obj/item/gun/energy/fire_sounds()
 	var/obj/item/ammo_casing/energy/shot = ammo_type[select]
-	var/batt_percent = FLOOR(clamp(cell.charge / cell.maxcharge, 0, 1) * 100, 1)
+	var/batt_percent = floor(clamp(cell.charge / cell.maxcharge, 0, 1) * 100)
 	var/shot_cost_percent = 0
 	var/max_shots = 0
 	var/shots_left = 0
 	var/frequency_to_use = 0
 
 	if(shot.e_cost > 0)
-		shot_cost_percent = FLOOR(clamp(shot.e_cost / cell.maxcharge, 0.01, 1) * 100, 1)
+		shot_cost_percent = floor(clamp(shot.e_cost / cell.maxcharge, 0.01, 1) * 100)
 		max_shots = shot_cost_percent ? round(100/shot_cost_percent) : 0 //Division by 0 protection
 		shots_left = shot_cost_percent  ? round(batt_percent/shot_cost_percent) : 0 //Division by 0 protection
 		frequency_to_use = sin((90/max_shots) * shots_left)
@@ -147,6 +157,13 @@
 	if (cell)
 		QDEL_NULL(cell)
 	STOP_PROCESSING(SSobj, src)
+
+	// Intentional cast.
+	// Sometimes ammo_type has paths, sometimes it has atoms.
+	for (var/atom/item in ammo_type)
+		qdel(item)
+	ammo_type = null
+
 	return ..()
 
 /obj/item/gun/energy/handle_atom_del(atom/A)
@@ -177,9 +194,9 @@
 			else
 				return //Not equipped, not stashed in a cyborg model, it shouldn't even exist then.
 
-			if(!R.cell.use(100)) //if the cyborg is not charged enough, or doesn't have a cell, don't recharge
+			if(!R.cell.use(1000 WATT)) //if the cyborg is not charged enough, or doesn't have a cell, don't recharge
 				return
-		cell.give(100)
+		cell.give(1000 WATT)
 		if(!chambered) //if empty chamber we try to charge a new shot
 			recharge_newshot()
 		update_appearance()
@@ -233,7 +250,7 @@
 	update_appearance()
 
 /obj/item/gun/energy/update_icon_state()
-	var/skip_inhand = initial(item_state) //only build if we aren't using a preset inhand icon
+	var/skip_inhand = initial(inhand_icon_state) //only build if we aren't using a preset inhand icon
 	var/skip_worn_icon = initial(worn_icon_state) //only build if we aren't using a preset worn icon
 
 	if(skip_inhand && skip_worn_icon) //if we don't have either, don't do the math.
@@ -252,7 +269,7 @@
 
 	temp_icon_to_use += "[ratio]"
 	if(!skip_inhand)
-		item_state = temp_icon_to_use
+		inhand_icon_state = temp_icon_to_use
 	if(!skip_worn_icon)
 		worn_icon_state = temp_icon_to_use
 	return ..()
@@ -298,7 +315,7 @@
 
 ///Used by update_icon_state() and update_overlays()
 /obj/item/gun/energy/proc/get_charge_ratio()
-	return can_shoot() ? CEILING(clamp(cell.charge / cell.maxcharge, 0, 1) * charge_sections, 1) : 0
+	return can_shoot() ? ceil(clamp(cell.charge / cell.maxcharge, 0, 1) * charge_sections) : 0
 	// Sets the ratio to 0 if the gun doesn't have enough charge to fire, or if its power cell is removed.
 
 /obj/item/gun/energy/suicide_act(mob/living/user)

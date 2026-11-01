@@ -3,7 +3,7 @@
 	desc = "This can be used to check medical records."
 	icon_screen = "medcomp"
 	icon_keyboard = "med_key"
-	req_one_access = list(ACCESS_MEDICAL, ACCESS_FORENSICS_LOCKERS)
+	req_one_access = list(ACCESS_BRIGPHYS, ACCESS_MEDICAL, ACCESS_FORENSICS_LOCKERS)
 	circuit = /obj/item/circuitboard/computer/records/medical
 	light_color = LIGHT_COLOR_BLUE
 
@@ -51,7 +51,6 @@
 	data["max_age"] = AGE_MAX
 	data["physical_statuses"] = PHYSICAL_STATUSES()
 	data["mental_statuses"] = MENTAL_STATUSES()
-	data["character_preview_view"] = character_preview_view.assigned_map
 	return data
 
 /obj/machinery/computer/records/medical/ui_act(action, list/params, datum/tgui/ui)
@@ -59,7 +58,7 @@
 	if(.)
 		return
 
-	if (!authenticated)
+	if (!authenticated || issilicon(usr)) // Silicons are forbidden from editing records.
 		return FALSE
 
 	var/datum/record/crew/target_record
@@ -95,7 +94,7 @@
 			return TRUE
 		if ("gender")
 			return TRUE
-		if ("dna")
+		if ("dna_string")
 			return TRUE
 		if ("blood_type")
 			return TRUE

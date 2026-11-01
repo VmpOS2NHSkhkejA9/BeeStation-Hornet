@@ -1,5 +1,6 @@
 
 /obj/structure/statue
+	abstract_type = /obj/structure/statue
 	name = "statue"
 	desc = "Placeholder. Yell at Qwerty if you SOMEHOW see this."
 	icon = 'icons/obj/statue.dmi'
@@ -22,9 +23,9 @@
 	. = ..()
 	AddElement(art_type, impressiveness)
 	//AddElement(/datum/element/beauty, impressiveness * 75)
-	AddComponent(/datum/component/simple_rotation)
+	AddElement(/datum/element/simple_rotation)
 
-/obj/structure/statue/attackby(obj/item/W, mob/living/user, params)
+/obj/structure/statue/attackby(obj/item/W, mob/living/user, list/modifiers)
 	add_fingerprint(user)
 	if(!(flags_1 & NODECONSTRUCT_1))
 		if(default_unfasten_wrench(user, W))
@@ -41,9 +42,6 @@
 				deconstruct(TRUE)
 			return
 	return ..()
-
-/obj/structure/statue/AltClick(mob/user)
-	return ..() // This hotkey is BLACKLISTED since it's used by /datum/component/simple_rotation
 
 /obj/structure/statue/deconstruct(disassembled = TRUE)
 	if(!(flags_1 & NODECONSTRUCT_1))
@@ -62,9 +60,9 @@
 	max_integrity = 300
 	light_range = 2
 	material_drop_type = /obj/item/stack/sheet/mineral/uranium
-	var/last_event = 0
-	var/active = null
 	impressiveness = 25 // radiation makes an impression
+
+	COOLDOWN_DECLARE(radiate_cooldown)
 
 /obj/structure/statue/uranium/nuke
 	name = "statue of a nuclear fission explosive"
@@ -76,31 +74,34 @@
 	desc = "This statue has a sickening green colour."
 	icon_state = "eng"
 
-/obj/structure/statue/uranium/attackby(obj/item/W, mob/user, params)
+/obj/structure/statue/uranium/attackby(obj/item/attacking_item, mob/user, list/modifiers)
 	radiate()
 	return ..()
 
 /obj/structure/statue/uranium/Bumped(atom/movable/AM)
 	radiate()
-	..()
+	return ..()
 
 /obj/structure/statue/uranium/attack_hand(mob/user, list/modifiers)
 	radiate()
-	. = ..()
+	return ..()
 
 /obj/structure/statue/uranium/attack_paw(mob/user)
 	radiate()
-	. = ..()
+	return ..()
 
 /obj/structure/statue/uranium/proc/radiate()
-	if(!active)
-		if(world.time > last_event+15)
-			active = 1
-			radiation_pulse(src, 30)
-			last_event = world.time
-			active = null
-			return
-	return
+	if(!COOLDOWN_FINISHED(src, radiate_cooldown))
+		return
+
+	COOLDOWN_START(src, radiate_cooldown, 1.5 SECONDS)
+	radiation_pulse(
+		src,
+		max_range = 2,
+		threshold = RAD_LIGHT_INSULATION,
+		intensity = URANIUM_IRRADIATION_INTENSITY,
+		minimum_exposure_time = URANIUM_RADIATION_MINIMUM_EXPOSURE_TIME,
+	)
 
 ////////////////////////////plasma///////////////////////////////////////////////////////////////////////
 
@@ -114,7 +115,7 @@
 	name = "statue of a scientist"
 	icon_state = "sci"
 
-/obj/structure/statue/plasma/ComponentInitialize()
+/obj/structure/statue/plasma/Initialize(mapload)
 	. = ..()
 	AddElement(/datum/element/atmos_sensitive)
 
@@ -130,8 +131,8 @@
 		plasma_ignition(6, Proj?.firer)
 	. = ..()
 
-/obj/structure/statue/plasma/attackby(obj/item/W, mob/user, params)
-	if(W.is_hot() > 300)//If the temperature of the object is over 300, then ignite
+/obj/structure/statue/plasma/attackby(obj/item/W, mob/user, list/modifiers)
+	if(W.get_temperature() > 300)//If the temperature of the object is over 300, then ignite
 		plasma_ignition(6, user)
 	else
 		return ..()
@@ -229,7 +230,7 @@
 	honk()
 	..()
 
-/obj/structure/statue/bananium/attackby(obj/item/W, mob/user, params)
+/obj/structure/statue/bananium/attackby(obj/item/W, mob/user, list/modifiers)
 	honk()
 	return ..()
 

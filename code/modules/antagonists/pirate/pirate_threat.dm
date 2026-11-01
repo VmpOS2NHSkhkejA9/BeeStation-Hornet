@@ -49,15 +49,22 @@ GLOBAL_VAR_INIT(pirates_spawned, FALSE)
 	if(!skip_answer_check && threat?.answered == PIRATE_RESPONSE_PAY)
 		return
 
-	var/list/candidates = SSpolling.poll_ghost_candidates(
+	var/datum/poll_config/config = new(
 		check_jobban = ROLE_SPACE_PIRATE,
 		poll_time = 15 SECONDS,
 		role_name_text = "pirate crew",
 		alert_pic = /obj/item/stack/sheet/mineral/gold,
 	)
+	var/list/candidates = SSpolling.poll_ghost_candidates(config)
 	shuffle_inplace(candidates)
 
-	var/datum/map_template/shuttle/pirate/default/ship = new
+	var/datum/map_template/shuttle/pirate/ship
+	var/total_players = GLOB.clients.len
+	if(total_players < 12)
+		ship = new /datum/map_template/shuttle/pirate/bratica()
+	else
+		ship = new /datum/map_template/shuttle/pirate/default()
+
 	var/x = rand(TRANSITIONEDGE,world.maxx - TRANSITIONEDGE - ship.width)
 	var/y = rand(TRANSITIONEDGE,world.maxy - TRANSITIONEDGE - ship.height)
 	var/z = SSmapping.empty_space.z_value
@@ -77,9 +84,17 @@ GLOBAL_VAR_INIT(pirates_spawned, FALSE)
 				var/mob/M = candidates[1]
 				spawner.create(M.ckey)
 				candidates -= M
-				notify_ghosts("The pirate ship has an object of interest: [M]!", source=M, action=NOTIFY_ORBIT, header="Something's Interesting!")
+				notify_ghosts(
+					"The pirate ship has an object of interest: [M]!",
+					source=M,
+					header="Something's Interesting!"
+				)
 			else
-				notify_ghosts("The pirate ship has an object of interest: [spawner]!", source=spawner, action=NOTIFY_ORBIT, header="Something's Interesting!")
+				notify_ghosts(
+					"The pirate ship has an object of interest: [spawner]!",
+					source=spawner,
+					header="Something's Interesting!"
+				)
 
 //Shuttle equipment
 
@@ -133,11 +148,12 @@ GLOBAL_VAR_INIT(pirates_spawned, FALSE)
 
 //interrupt_research
 /obj/machinery/shuttle_scrambler/proc/interrupt_research()
-	for(var/obj/machinery/rnd/server/S in GLOB.machines)
-		if(S.machine_stat & (NOPOWER|BROKEN))
+	var/datum/techweb/science_web = locate(/datum/techweb/science) in SSresearch.techwebs
+	for(var/obj/machinery/rnd/server/research_server as anything in science_web.techweb_servers)
+		if(research_server.machine_stat & (NOPOWER|BROKEN|EMPED))
 			continue
-		S.emp_act(1)
-		new /obj/effect/temp_visual/emp(get_turf(S))
+		research_server.emp_act(EMP_LIGHT)
+		new /obj/effect/temp_visual/emp(get_turf(research_server))
 
 /obj/machinery/shuttle_scrambler/proc/dump_loot(mob/user)
 	if(credits_stored)	// Prevents spamming empty holochips
@@ -205,10 +221,8 @@ GLOBAL_VAR_INIT(pirates_spawned, FALSE)
 		say("Located: [AM.name] at [get_area_name(AM)]")
 
 /obj/machinery/loot_locator/proc/find_random_loot()
-	if(!GLOB.exports_list.len)
-		setupExports()
 	var/list/possible_loot = list()
-	for(var/datum/export/pirate/E in GLOB.exports_list)
+	for(var/datum/export/E in GLOB.exports_list)
 		possible_loot += E
 	var/datum/export/pirate/P
 	var/atom/movable/AM
@@ -265,7 +279,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 /obj/machinery/computer/piratepad_control/LateInitialize()
 	. = ..()
 	if(cargo_hold_id)
-		for(var/obj/machinery/piratepad/P in GLOB.machines)
+		for(var/obj/machinery/piratepad/P as anything in SSmachines.get_machines_by_type_and_subtypes(/obj/machinery/piratepad))
 			if(P.cargo_hold_id == cargo_hold_id)
 				set_pad(P)
 				return
@@ -290,6 +304,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 	return GLOB.default_state
 
 /obj/machinery/computer/piratepad_control/ui_interact(mob/user, datum/tgui/ui)
+	. = ..()
 	ui = SStgui.try_update_ui(user, src, ui)
 	if(!ui)
 		ui = new(user, src, "CargoHoldTerminal")
@@ -330,7 +345,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 	for(var/atom/movable/AM in get_turf(pad))
 		if(AM == pad)
 			continue
-		export_item_and_contents(AM, EXPORT_PIRATE | EXPORT_CARGO | EXPORT_CONTRABAND | EXPORT_EMAG, apply_elastic = FALSE, dry_run = TRUE, external_report = ex)
+		export_item_and_contents(AM, EXPORT_CARGO | EXPORT_CONTRABAND, dry_run = TRUE, external_report = ex)
 
 	for(var/datum/export/E in ex.total_amount)
 		status_report += E.total_printout(ex,notes = FALSE)
@@ -349,7 +364,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 	for(var/atom/movable/AM in get_turf(pad))
 		if(AM == pad)
 			continue
-		export_item_and_contents(AM, EXPORT_PIRATE | EXPORT_CARGO | EXPORT_CONTRABAND | EXPORT_EMAG, apply_elastic = FALSE, delete_unsold = FALSE, external_report = ex)
+		export_item_and_contents(AM, EXPORT_CARGO | EXPORT_CONTRABAND, delete_unsold = FALSE, external_report = ex)
 
 	status_report = "Sold: "
 	var/value = 0
@@ -365,8 +380,8 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 	if(!total_report)
 		total_report = ex
 	else
-		total_report.exported_atoms += ex.exported_atoms
 		for(var/datum/export/E in ex.total_amount)
+			total_report.exported_atoms[E] = ex.exported_atoms
 			total_report.total_amount[E] += ex.total_amount[E]
 			total_report.total_value[E] += ex.total_value[E]
 
@@ -376,7 +391,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 		status_report += "Nothing"
 
 	pad.visible_message(span_notice("[pad] activates!"))
-	flick(pad.sending_state,pad)
+	z_flick(pad.sending_state,pad)
 	pad.icon_state = pad.idle_state
 	sending = FALSE
 	ui_update()
@@ -398,10 +413,13 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 	pad.icon_state = pad.idle_state
 	deltimer(sending_timer)
 
-/datum/export/pirate
-	export_category = EXPORT_PIRATE
+// Export pirate category is irrelevant
+// export/pirate applies to living things (which don't fit the cargo shuttle) and money, which I don't see a reason not to
 
-//Attempts to find the thing on station
+/// This only serves to be a parent type to all pirate exports for purposes of find_loot
+/datum/export/pirate
+	abstract_type = /datum/export/pirate
+
 /datum/export/pirate/proc/find_loot()
 	return
 
@@ -420,15 +438,14 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 
 /datum/export/pirate/ransom/get_cost(atom/movable/AM)
 	var/mob/living/carbon/human/H = AM
-	if(H.stat != CONSCIOUS || !H.mind || !H.mind.assigned_role) //mint condition only
+	if(H.stat != CONSCIOUS || !H.mind) //mint condition only
 		return 0
 	else if(FACTION_PIRATE in H.faction) //can't ransom your fellow pirates to CentCom!
 		return 0
+	else if(H.mind.assigned_role.departments_bitflags & DEPARTMENT_BITFLAG_COMMAND)
+		return 3000
 	else
-		if(H.mind.assigned_role in SSdepartment.get_jobs_by_dept_id(DEPT_NAME_COMMAND))
-			return 3000
-		else
-			return 1000
+		return 1000
 
 /datum/export/pirate/parrot
 	cost = 2000
@@ -446,7 +463,7 @@ DEFINE_BUFFER_HANDLER(/obj/machinery/computer/piratepad_control)
 	unit_name = "bills"
 	export_types = list(/obj/item/stack/spacecash)
 
-/datum/export/pirate/cash/get_amount(obj/O)
+/datum/export/pirate/get_amount(obj/O)
 	var/obj/item/stack/spacecash/C = O
 	return ..() * C.amount * C.value
 

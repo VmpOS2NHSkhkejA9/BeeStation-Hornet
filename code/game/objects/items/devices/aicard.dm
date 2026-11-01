@@ -3,7 +3,7 @@
 	desc = "A storage device for AIs. Patent pending."
 	icon = 'icons/obj/aicards.dmi'
 	icon_state = "aicard" // aicard-full
-	item_state = "electronic"
+	inhand_icon_state = "electronic"
 	worn_icon_state = "electronic"
 	lefthand_file = 'icons/mob/inhands/misc/devices_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/misc/devices_righthand.dmi'
@@ -28,7 +28,7 @@
 	user.visible_message(span_suicide("[user] is trying to upload [user.p_them()]self into [src]! That's not going to work out well!"))
 	return BRUTELOSS
 
-/obj/item/aicard/pre_attack(atom/target, mob/living/user, params)
+/obj/item/aicard/pre_attack(atom/target, mob/living/user, list/modifiers)
 	if(AI) //AI is on the card, implies user wants to upload it.
 		var/our_ai = AI
 		target.transfer_ai(AI_TRANS_FROM_CARD, user, AI, src)

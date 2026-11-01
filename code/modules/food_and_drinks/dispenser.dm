@@ -3,7 +3,7 @@
 	name = "gumball dispenser"
 	desc = "A whimsical device with a glass globe on top, which can be operated to dispense various candies."
 	icon = 'icons/obj/food/containers.dmi'
-	item_state = "deliverypackage"
+	inhand_icon_state = "deliverypackage"
 	lefthand_file = 'icons/mob/inhands/items_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/items_righthand.dmi'
 	icon_state = "dispenser"
@@ -29,22 +29,8 @@
 /obj/item/candydispenser/Initialize(mapload)
 	. = ..()
 	interaction_flags_item &= ~INTERACT_ITEM_ATTACK_HAND_PICKUP
+	AddElement(/datum/element/drag_pickup)
 	update_icon()
-
-/obj/item/candydispenser/MouseDrop(atom/over_object)
-	. = ..()
-	var/mob/living/M = usr
-	if(!istype(M) || M.incapacitated() || !Adjacent(M))
-		return
-
-	if(over_object == M)
-		M.put_in_hands(src)
-
-	else if(istype(over_object, /atom/movable/screen/inventory/hand))
-		var/atom/movable/screen/inventory/hand/H = over_object
-		M.putItemFromInventoryInHandIfPossible(src, H.held_index)
-
-	add_fingerprint(M)
 
 /obj/item/candydispenser/attack_paw(mob/user)
 	return attack_hand(user)
@@ -128,7 +114,7 @@
 	. = ..()
 	dispense(danger = TRUE)
 
-/obj/item/candydispenser/attack_atom(atom/attacked_atom, mob/living/user, params)
+/obj/item/candydispenser/attack_atom(atom/attacked_atom, mob/living/user, list/modifiers)
 	. = ..()
 	dispense(danger = TRUE)
 

@@ -2,7 +2,7 @@
 
 ///Magnetic Harness - Automatically puts guns in your suit storage when you drop them.
 /obj/item/mod/module/magnetic_harness
-	name = "MOD magnetic harness module"
+	name = "\improper MOD magnetic harness module"
 	desc = "Based off old TerraGov harness kits, this magnetic harness automatically attaches dropped guns back to the wearer."
 	icon_state = "mag_harness"
 	complexity = 2
@@ -19,7 +19,13 @@
 /obj/item/mod/module/magnetic_harness/Initialize(mapload)
 	. = ..()
 	if(!guns_typecache)
-		guns_typecache = typecacheof(list(/obj/item/gun/ballistic, /obj/item/gun/energy, /obj/item/gun/grenadelauncher, /obj/item/gun/chem, /obj/item/gun/syringe))
+		guns_typecache = typecacheof(list(
+			/obj/item/gun/ballistic,
+			/obj/item/gun/energy,
+			/obj/item/gun/grenadelauncher,
+			/obj/item/gun/chem,
+			/obj/item/gun/syringe,
+		))
 
 /obj/item/mod/module/magnetic_harness/on_install()
 	var/obj/item/clothing/suit = mod.get_part_from_slot(ITEM_SLOT_OCLOTHING)
@@ -62,7 +68,7 @@
 
 ///Pepper Shoulders - When hit, reacts with a spray of pepper spray around the user.
 /obj/item/mod/module/pepper_shoulders
-	name = "MOD pepper shoulders module"
+	name = "\improper MOD pepper shoulders module"
 	desc = "A module that attaches two pepper sprayers on shoulders of a MODsuit, reacting to touch with a spray around the user."
 	icon_state = "pepper_shoulder"
 	module_type = MODULE_USABLE
@@ -101,7 +107,7 @@
 
 ///Holster - Instantly holsters any not huge gun.
 /obj/item/mod/module/holster
-	name = "MOD holster module"
+	name = "\improper MOD holster module"
 	desc = "Based off typical storage compartments, this system allows the suit to holster a \
 		standard firearm across its surface and allow for extremely quick retrieval. \
 		While some users prefer the chest, others the forearm for quick deployment, \
@@ -150,7 +156,7 @@
 
 ///Megaphone - Lets you speak loud.
 /obj/item/mod/module/megaphone
-	name = "MOD megaphone module"
+	name = "\improper MOD megaphone module"
 	desc = "A microchip megaphone linked to a MODsuit, for very important purposes, like: loudness."
 	icon_state = "megaphone"
 	module_type = MODULE_TOGGLE
@@ -177,7 +183,7 @@
 /*
 ///Criminal Capture - Lets you put people in transport bags.
 /obj/item/mod/module/criminalcapture
-	name = "MOD criminal capture module"
+	name = "\improper MOD criminal capture module"
 	desc = "The private security that had orders to take in people dead were quite \
 		happy with their space-proofed suit, but for those who wanted to bring back \
 		whomever their targets were still breathing needed a way to \"share\" the \
@@ -250,7 +256,7 @@
 
 ///Mirage grenade dispenser - Dispenses grenades that copy the user's appearance.
 /obj/item/mod/module/dispenser/mirage
-	name = "MOD mirage grenade dispenser module"
+	name = "\improper MOD mirage grenade dispenser module"
 	desc = "This module can create mirage grenades at the user's liking. These grenades create holographic copies of the user."
 	icon_state = "mirage_grenade"
 	cooldown_time = 20 SECONDS
@@ -265,7 +271,7 @@
 	name = "mirage grenade"
 	desc = "A special device that, when activated, produces a holographic copy of the user."
 	icon_state = "mirage"
-	item_state = "flashbang"
+	inhand_icon_state = "flashbang"
 	det_time = 3 SECONDS
 	/// Mob that threw the grenade.
 	var/mob/living/thrower
@@ -284,8 +290,8 @@
 
 ///Projectile Dampener - Weakens projectiles in range.
 /obj/item/mod/module/projectile_dampener
-	name = "MOD projectile dampener module"
-	desc = "Using technology from peaceborgs, this module weakens all projectiles in nearby range."
+	name = "\improper MOD projectile dampener module"
+	desc = "Using technology from peacekeeper cyborgs, this module weakens all projectiles in nearby range."
 	icon_state = "projectile_dampener"
 	module_type = MODULE_TOGGLE
 	complexity = 3
@@ -336,7 +342,7 @@
 
 ///Active Sonar - Displays a hud circle on the turf of any living creatures in the given radius
 /obj/item/mod/module/active_sonar
-	name = "MOD active sonar"
+	name = "\improper MOD active sonar"
 	desc = "Ancient tech from the 20th century, this module uses sonic waves to detect living creatures within the user's radius. \
 		Its basic function slowly scans around the user for any bio-signatures, however it can be overclocked to scan everywhere at once.\
 		Its loud ping is much harder to hide in an indoor station than in the outdoor operations it was designed for."
@@ -394,7 +400,7 @@
 	var/oldgroup = keyed_creatures[creature]
 	var/newgroup = round(get_angle(mod.wearer, creature) / (360 / radar_slices)) + 1
 	if(oldgroup)
-		if(creature.stat == DEAD || get_dist(get_turf(mod.wearer), get_turf(creature)) > world.view)
+		if(creature.stat == DEAD || get_dist(get_turf(mod.wearer), get_turf(creature)) > 7)
 			sorted_creatures[oldgroup] -= creature
 			keyed_creatures -= creature
 			UnregisterSignal(creature, COMSIG_MOVABLE_MOVED)
@@ -440,3 +446,48 @@
 	to_chat(mod.wearer, span_notice("You slam your fist into the ground, sending out a sonic wave that detects [detect_living_creatures()] living beings nearby!"))
 	for(var/mob/living/creature as anything in keyed_creatures)
 		new /obj/effect/temp_visual/sonar_ping(mod.wearer.loc, mod.wearer, creature)
+/obj/item/mod/module/reinforced_plating
+	name = "\improper MOD reinforced plating module"
+	desc = "Additional armor plating integrated into the suit. Increases protection at the cost of mobility."
+	icon_state = "armor_plating"
+	module_type = MODULE_PASSIVE
+	complexity = 3
+	required_slots = list(ITEM_SLOT_BACK)
+	incompatible_modules = list(/obj/item/mod/module/reinforced_plating, /obj/item/mod/module/mod_switch)
+	var/datum/armor/armor_mod = /datum/armor/mod_reinforced_plating
+	var/slowdown_per_part = 0.1
+
+/datum/armor/mod_reinforced_plating
+	melee = 20
+	bullet = 20
+	laser = 20
+	energy = 20
+	bomb = 20
+
+/obj/item/mod/module/reinforced_plating/on_install()
+	. = ..()
+	RegisterSignal(mod, COMSIG_MOD_UPDATE_SPEED, PROC_REF(on_update_speed))
+
+/obj/item/mod/module/reinforced_plating/on_uninstall(deleting = FALSE)
+	UnregisterSignal(mod, COMSIG_MOD_UPDATE_SPEED)
+	return ..()
+
+/obj/item/mod/module/reinforced_plating/proc/on_update_speed(datum/source, list/module_slowdowns, prevent_slowdown)
+	SIGNAL_HANDLER
+	if(prevent_slowdown)
+		return
+	var/sealed_count = 0
+	for(var/datum/mod_part/part_datum as anything in mod.get_part_datums(all = TRUE))
+		if(part_datum.sealed)
+			sealed_count++
+	module_slowdowns += slowdown_per_part * sealed_count
+
+/obj/item/mod/module/reinforced_plating/on_equip()
+	. = ..()
+	for(var/obj/item/part as anything in mod.get_parts(all = TRUE))
+		part.set_armor(part.get_armor().add_other_armor(armor_mod))
+
+/obj/item/mod/module/reinforced_plating/on_unequip()
+	. = ..()
+	for(var/obj/item/part as anything in mod.get_parts(all = TRUE))
+		part.set_armor(part.get_armor().subtract_other_armor(armor_mod))

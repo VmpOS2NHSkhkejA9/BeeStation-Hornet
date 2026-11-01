@@ -11,11 +11,11 @@
 	var/datum/changeling_profile/chosen_prof = changeling.select_dna()
 	if(!chosen_prof)
 		return
-	if(!user || user.notransform)
+	if(!user || HAS_TRAIT(user, TRAIT_NO_TRANSFORM))
 		return 0
 	to_chat(user, span_notice("We transform our appearance."))
 	..()
-	changeling.purchased_powers -= src
+	changeling.purchased_powers -= src.type
 	Remove(user)
 
 	var/datum/dna/chosen_dna = chosen_prof.dna

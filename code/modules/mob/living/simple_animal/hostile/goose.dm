@@ -6,7 +6,7 @@
 	icon_state = "goose" // sprites by cogwerks from goonstation, used with permission
 	icon_living = "goose"
 	icon_dead = "goose_dead"
-	mob_biotypes = list(MOB_ORGANIC, MOB_BEAST)
+	mob_biotypes = MOB_ORGANIC | MOB_BEAST
 	speak_chance = 0
 	turns_per_move = 5
 	butcher_results = list(/obj/item/food/meat/slab = 2)
@@ -25,6 +25,7 @@
 	attack_verb_continuous = "pecks"
 	attack_verb_simple = "peck"
 	attack_sound = "goose"
+	attack_vis_effect = ATTACK_EFFECT_BITE
 	speak_emote = list("honks")
 	faction = list(FACTION_NEUTRAL)
 	attack_same = TRUE
@@ -127,7 +128,7 @@
 	playsound(currentTurf, 'sound/effects/splat.ogg', 50, 1)
 
 /mob/living/simple_animal/hostile/retaliate/goose/vomit/proc/vomit_prestart(duration)
-	flick("vomit_start",src)
+	z_flick("vomit_start",src)
 	addtimer(CALLBACK(src, PROC_REF(vomit_start), duration), 13) //13 is the length of the vomit_start animation in gooseloose.dmi
 
 /mob/living/simple_animal/hostile/retaliate/goose/vomit/proc/vomit_start(duration)
@@ -145,7 +146,7 @@
 	vomit_end()
 
 /mob/living/simple_animal/hostile/retaliate/goose/vomit/proc/vomit_end()
-	flick("vomit_end",src)
+	z_flick("vomit_end",src)
 	vomiting = FALSE
 	icon_state = initial(icon_state)
 
@@ -182,7 +183,7 @@
 	name = "Vomit"
 	check_flags = AB_CHECK_CONSCIOUS
 	button_icon_state = "vomit"
-	icon_icon = 'icons/mob/animal.dmi'
+	button_icon = 'icons/mob/animal.dmi'
 	cooldown_time = 250
 
 /datum/action/vomit/is_available()

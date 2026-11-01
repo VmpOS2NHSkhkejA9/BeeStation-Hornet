@@ -2,7 +2,7 @@
 	name = "breaching charges"
 	desc = "Used by exploration crews to breach and demolish unknown places. Requires a nearby detonator to be triggered."
 	icon_state = "plastic-explosive0"
-	item_state = "plastic-explosive"
+	inhand_icon_state = "plastic-explosive"
 	lefthand_file = 'icons/mob/inhands/weapons/bombs_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/weapons/bombs_righthand.dmi'
 	item_flags = NOBLUDGEON
@@ -17,7 +17,7 @@
 
 /obj/item/grenade/exploration/Initialize(mapload)
 	. = ..()
-	plastic_overlay = mutable_appearance(icon, "[item_state]2", HIGH_OBJ_LAYER)
+	plastic_overlay = mutable_appearance(icon, "[inhand_icon_state]2", HIGH_OBJ_LAYER)
 
 /obj/item/grenade/exploration/Destroy()
 	for(var/obj/item/exploration_detonator/detonator in attached_detonators)
@@ -25,7 +25,10 @@
 	attached_detonators = null
 	. = ..()
 
-/obj/item/grenade/exploration/attackby(obj/item/W, mob/user, params)
+/obj/item/grenade/exploration/attack_self(mob/user)
+	return
+
+/obj/item/grenade/exploration/attackby(obj/item/W, mob/user, list/modifiers)
 	if(istype(W, /obj/item/exploration_detonator))
 		var/obj/item/exploration_detonator/detonator = W
 		detonator.linked_explosives |= src
@@ -56,7 +59,12 @@
 		message_admins("[ADMIN_LOOKUPFLW(user)] planted [name] on [target.name] at [ADMIN_VERBOSEJMP(target)]")
 		log_game("[key_name(user)] planted [name] on [target.name] at [AREACOORD(user)]")
 
-		notify_ghosts("[user] has planted \a [src] on [target]!", source = target, action = NOTIFY_ORBIT, flashwindow = FALSE, header = "Explosive Planted")
+		notify_ghosts(
+			"[user] has planted \a [src] on [target]!",
+			source = target,
+			header = "Explosive Planted",
+			notify_flags = NOTIFY_CATEGORY_NOFLASH,
+		)
 
 		moveToNullspace()	//Yep
 
@@ -87,8 +95,8 @@
 		location = get_turf(src)
 	if(location)
 		explosion(location, devastation_range, heavy_range, light_exp_range)
-	if(ismob(target))
-		var/mob/M = target
+	if(isliving(target))
+		var/mob/living/M = target
 		M.gib()
 	qdel(src)
 

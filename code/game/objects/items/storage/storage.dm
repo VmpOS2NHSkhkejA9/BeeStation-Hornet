@@ -1,4 +1,5 @@
 /obj/item/storage
+	abstract_type = /obj/item/storage
 	name = "storage"
 	icon = 'icons/obj/storage/storage.dmi'
 	w_class = WEIGHT_CLASS_NORMAL
@@ -14,7 +15,8 @@
 /obj/item/storage/Initialize(mapload)
 	. = ..()
 
-	create_storage(storage_type = storage_type)
+	if(!istype(atom_storage))
+		create_storage(storage_type = storage_type)
 
 	if(empty)
 		return
@@ -56,7 +58,7 @@
 /obj/item/storage/proc/emptyStorage()
 	atom_storage.remove_all()
 
-/obj/item/storage/on_object_saved(var/depth = 0)
+/obj/item/storage/on_object_saved(depth = 0)
 	if(depth >= 10)
 		return ""
 	var/dat = ""
@@ -108,3 +110,17 @@
 /// Don't do anything stupid, please
 /obj/item/storage/proc/get_types_to_preload()
 	return
+
+/// Removes an item or puts it in mouth from the contents, if any
+/obj/item/storage/proc/quick_remove_item(obj/item/grabbies, mob/user, equip_to_mouth =  FALSE)
+	var/obj/item/finger = locate(grabbies) in contents
+	if(!finger)
+		return
+	if(!equip_to_mouth)
+		if(atom_storage.remove_single(user, finger, drop_location()))
+			user.put_in_hands(finger)
+		return
+	if(user.equip_to_slot_if_possible(finger, ITEM_SLOT_MASK, qdel_on_fail = FALSE, disable_warning = TRUE))
+		finger.forceMove(user)
+		return
+	balloon_alert(user, "mouth is covered!")

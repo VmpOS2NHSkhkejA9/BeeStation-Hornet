@@ -32,6 +32,7 @@ field_generator power level display
 	density = TRUE
 	use_power = NO_POWER_USE
 	max_integrity = 500
+	custom_price = 550
 	//100% immune to lasers and energy projectiles since it absorbs their energy.
 	armor_type = /datum/armor/field_generator
 	var/power_level = 0
@@ -42,7 +43,7 @@ field_generator power level display
 	var/list/obj/machinery/field/containment/fields
 	var/list/obj/machinery/field/generator/connected_gens
 	var/clean_up = 0
-	COOLDOWN_STATIC_DECLARE(loose_message_cooldown)
+	STATIC_COOLDOWN_DECLARE(loose_message_cooldown)
 
 
 /datum/armor/field_generator
@@ -58,9 +59,6 @@ field_generator power level display
 	fields = list()
 	connected_gens = list()
 	RegisterSignal(src, COMSIG_ATOM_SINGULARITY_TRY_MOVE, PROC_REF(block_singularity_if_active))
-
-/obj/machinery/field/generator/ComponentInitialize()
-	. = ..()
 	AddElement(/datum/element/empprotection, EMP_PROTECT_SELF | EMP_PROTECT_WIRES)
 
 /obj/machinery/field/generator/update_icon()
@@ -352,7 +350,13 @@ field_generator power level display
 		if(a)
 			message_admins("A [a.name] exists and a containment field has failed at [ADMIN_VERBOSEJMP(T)].")
 			investigate_log("has <font color='red'>failed</font> whilst a [a.name] exists at [AREACOORD(T)].", INVESTIGATE_ENGINES)
-			notify_ghosts("IT'S LOOSE", source = src, action = NOTIFY_ORBIT, flashwindow = FALSE, ghost_sound = 'sound/machines/warning-buzzer.ogg', header = "IT'S LOOSE", notify_volume = 75)
+			notify_ghosts(
+				"IT'S LOOSE",
+				source = src,
+				header = "IT'S LOOSE",
+				ghost_sound = 'sound/machines/warning-buzzer.ogg',
+				notify_volume = 75
+			)
 
 /obj/machinery/field/generator/proc/block_singularity_if_active()
 	SIGNAL_HANDLER

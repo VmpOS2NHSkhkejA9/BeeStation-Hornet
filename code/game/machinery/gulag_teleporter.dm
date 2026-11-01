@@ -13,8 +13,7 @@ The console is located at computer/gulag_teleporter.dm
 	icon_state = "implantchair"
 	state_open = FALSE
 	density = TRUE
-	idle_power_usage = 200
-	active_power_usage = 5000
+	active_power_usage = BASE_MACHINE_ACTIVE_CONSUMPTION * 5
 	circuit = /obj/item/circuitboard/machine/gulag_teleporter
 	var/locked = FALSE
 	var/message_cooldown
@@ -22,6 +21,7 @@ The console is located at computer/gulag_teleporter.dm
 	var/jumpsuit_type = /obj/item/clothing/under/rank/prisoner
 	var/shoes_type = /obj/item/clothing/shoes/sneakers/orange
 	var/obj/machinery/gulag_item_reclaimer/linked_reclaimer
+	/// makes more sense to give prisoners older models of masks
 	var/static/list/telegulag_required_items = typecacheof(list(
 		/obj/item/implant,
 		/obj/item/clothing/suit/space/eva/plasmaman,
@@ -29,7 +29,8 @@ The console is located at computer/gulag_teleporter.dm
 		/obj/item/clothing/head/helmet/space/plasmaman,
 		/obj/item/tank/internals,
 		/obj/item/clothing/mask/breath,
-		/obj/item/clothing/mask/gas/old))	//makes more sense to give prisoners older models of masks
+		/obj/item/clothing/mask/gas/old,
+	))
 
 /obj/machinery/gulag_teleporter/Initialize(mapload)
 	. = ..()
@@ -157,15 +158,18 @@ The console is located at computer/gulag_teleporter.dm
 	if(id)
 		prisoner.equip_to_appropriate_slot(id)
 	if(R)
-		R.wanted_status = WANTED_PRISONER
+		R.set_wanted_status(src, WANTED_PRISONER)
+
+	use_power(active_power_usage)
 
 /obj/item/circuitboard/machine/gulag_teleporter
 	name = "labor camp teleporter (Machine Board)"
 	build_path = /obj/machinery/gulag_teleporter
 	req_components = list(
-							/obj/item/stack/ore/bluespace_crystal = 2,
-							/obj/item/stock_parts/scanning_module,
-							/obj/item/stock_parts/manipulator)
+		/obj/item/stack/ore/bluespace_crystal = 2,
+		/datum/stock_part/scanning_module = 1,
+		/datum/stock_part/manipulator = 1,
+	)
 	def_components = list(/obj/item/stack/ore/bluespace_crystal = /obj/item/stack/ore/bluespace_crystal/artificial)
 
 /*  beacon that receives the teleported prisoner */

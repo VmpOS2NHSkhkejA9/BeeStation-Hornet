@@ -7,8 +7,6 @@
 	max_integrity = 100
 	armor_type = /datum/armor/structure_sign
 	var/buildable_sign = 1 //unwrenchable and modifiable
-	rad_flags = RAD_PROTECT_CONTENTS | RAD_NO_CONTAMINATE
-
 
 /datum/armor/structure_sign
 	melee = 50
@@ -30,7 +28,7 @@
 		if(BURN)
 			playsound(loc, 'sound/items/welder.ogg', 80, 1)
 
-/obj/structure/sign/attackby(obj/item/I, mob/user, params)
+/obj/structure/sign/attackby(obj/item/I, mob/user, list/modifiers)
 	if(I.tool_behaviour == TOOL_WRENCH && buildable_sign)
 		user.visible_message(span_notice("[user] starts removing [src]..."), \
 							span_notice("You start unfastening [src]."))
@@ -53,11 +51,11 @@
 			if("Blank")
 				sign_type = /obj/structure/sign/basic
 			if("Secure Area")
-				sign_type = /obj/structure/sign/warning/securearea
+				sign_type = /obj/structure/sign/warning/secure_area
 			if("Biohazard")
 				sign_type = /obj/structure/sign/warning/biohazard
 			if("High Voltage")
-				sign_type = /obj/structure/sign/warning/electricshock
+				sign_type = /obj/structure/sign/warning/electric_shock
 			if("Radiation")
 				sign_type = /obj/structure/sign/warning/radiation
 			if("Hard Vacuum Ahead")
@@ -67,7 +65,7 @@
 			if("Danger: Fire")
 				sign_type = /obj/structure/sign/warning/fire
 			if("No Smoking")
-				sign_type = /obj/structure/sign/warning/nosmoking/circle
+				sign_type = /obj/structure/sign/warning/no_smoking/circle
 			if("Medbay")
 				sign_type = /obj/structure/sign/departments/medbay/alt
 			if("Science")

@@ -2,7 +2,7 @@
 	name = "plastic explosive"
 	desc = "Used to put holes in specific areas without too much extra hole."
 	icon_state = "plastic-explosive0"
-	item_state = "plastic-explosive"
+	inhand_icon_state = "plastic-explosive"
 	lefthand_file = 'icons/mob/inhands/weapons/bombs_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/weapons/bombs_righthand.dmi'
 	item_flags = NOBLUDGEON
@@ -23,14 +23,11 @@
 
 /obj/item/grenade/plastic/Initialize(mapload)
 	. = ..()
-	plastic_overlay = mutable_appearance(icon, "[item_state]2", HIGH_OBJ_LAYER)
+	plastic_overlay = mutable_appearance(icon, "[inhand_icon_state]2", HIGH_OBJ_LAYER)
 	var/static/list/loc_connections = list(
 		COMSIG_ATOM_ENTERED = PROC_REF(on_entered),
 	)
 	AddElement(/datum/element/connect_loc, loc_connections)
-
-/obj/item/grenade/plastic/ComponentInitialize()
-	. = ..()
 	AddElement(/datum/element/empprotection, EMP_PROTECT_WIRES)
 
 /obj/item/grenade/plastic/Destroy()
@@ -39,7 +36,7 @@
 	target = null
 	..()
 
-/obj/item/grenade/plastic/attackby(obj/item/I, mob/user, params)
+/obj/item/grenade/plastic/attackby(obj/item/I, mob/user, list/modifiers)
 	if(!nadeassembly && istype(I, /obj/item/assembly_holder))
 		var/obj/item/assembly_holder/A = I
 		if(!user.transferItemToLoc(I, src))
@@ -81,8 +78,8 @@
 			explosion(get_step(T, aim_dir), boom_sizes[1], boom_sizes[2], boom_sizes[3])
 		else
 			explosion(location, boom_sizes[1], boom_sizes[2], boom_sizes[3])
-	if(ismob(target))
-		var/mob/M = target
+	if(isliving(target))
+		var/mob/living/M = target
 		M.gib()
 	qdel(src)
 
@@ -110,47 +107,56 @@
 		det_time = newtime
 		to_chat(user, "Timer set for [det_time] seconds.")
 
-/obj/item/grenade/plastic/afterattack(atom/movable/AM, mob/user, flag)
+/obj/item/grenade/plastic/afterattack(atom/movable/bomb_target, mob/user, flag)
 	. = ..()
-	aim_dir = get_dir(user,AM)
+	aim_dir = get_dir(user, bomb_target)
 	if(!flag || !user.is_holding(src))
 		return
-	if(ismob(AM) && !can_attach_mob)
+	if(ismob(bomb_target) && !can_attach_mob)
 		return
 
-	if(ismob(AM))
-		to_chat(AM, span_userdanger("[user.name] is trying to plant [name] on you!"))
+	if(ismob(bomb_target))
+		to_chat(bomb_target, span_userdanger("[user.name] is trying to plant [name] on you!"))
 
 	to_chat(user, span_notice("You start planting [src]. The timer is set to [det_time]..."))
 
-	if(do_after(user, 30, target = AM))
-		if(!user.temporarilyRemoveItemFromInventory(src))
-			return
-		target = AM
+	if(!do_after(user, 3 SECONDS, target = bomb_target))
+		return
+	if(!user.temporarilyRemoveItemFromInventory(src))
+		return
+	target = bomb_target
 
-		message_admins("[ADMIN_LOOKUPFLW(user)] planted [name] on [target.name] at [ADMIN_VERBOSEJMP(target)] with [det_time] second fuse")
-		log_game("[key_name(user)] planted [name] on [target.name] at [AREACOORD(user)] with a [det_time] second fuse")
+	message_admins("[ADMIN_LOOKUPFLW(user)] planted [name] on [target.name] at [ADMIN_VERBOSEJMP(target)] with [det_time] second fuse")
+	log_game("[key_name(user)] planted [name] on [target.name] at [AREACOORD(user)] with a [det_time] second fuse")
+	var/icon/target_icon = icon(bomb_target.icon, bomb_target.icon_state)
+	target_icon.Blend(icon(icon, icon_state), ICON_OVERLAY)
+	var/mutable_appearance/bomb_target_image = mutable_appearance(target_icon)
+	notify_ghosts(
+		"[user] has planted \a [src] on [target] with a [det_time] second fuse!",
+		source = bomb_target,
+		header = "Explosive Planted",
+		alert_overlay = bomb_target_image,
+		notify_flags = NOTIFY_CATEGORY_NOFLASH,
+	)
 
-		notify_ghosts("[user] has planted \a [src] on [target] with a [det_time] second fuse!", source = AM, action = (isturf(target) ? NOTIFY_JUMP : NOTIFY_ORBIT), flashwindow = FALSE, header = "Explosive Planted")
+	moveToNullspace() //Yep
 
-		moveToNullspace()	//Yep
+	if(istype(bomb_target)) //your crappy throwing star can't fly so good with a giant brick of c4 on it.
+		var/obj/item/I = bomb_target
+		I.throw_speed = max(1, (I.throw_speed - 3))
+		I.throw_range = max(1, (I.throw_range - 3))
+		if(I.embedding)
+			I.embedding["embed_chance"] = 0
+			I.updateEmbedding()
+	else if(istype(bomb_target, /mob/living))
+		plastic_overlay.layer = FLOAT_LAYER
 
-		if(istype(AM, /obj/item)) //your crappy throwing star can't fly so good with a giant brick of c4 on it.
-			var/obj/item/I = AM
-			I.throw_speed = max(1, (I.throw_speed - 3))
-			I.throw_range = max(1, (I.throw_range - 3))
-			if(I.embedding)
-				I.embedding["embed_chance"] = 0
-				I.updateEmbedding()
-		else if(istype(AM, /mob/living))
-			plastic_overlay.layer = FLOAT_LAYER
-
-		target.add_overlay(plastic_overlay)
-		if(!nadeassembly)
-			to_chat(user, span_notice("You plant the bomb. Timer counting down from [det_time]."))
-			addtimer(CALLBACK(src, PROC_REF(prime)), det_time*10)
-		else
-			qdel(src)	//How?
+	target.add_overlay(plastic_overlay)
+	if(!nadeassembly)
+		to_chat(user, span_notice("You plant the bomb. Timer counting down from [det_time]."))
+		addtimer(CALLBACK(src, PROC_REF(prime)), det_time*10)
+	else
+		qdel(src)	//How?
 
 /obj/item/grenade/plastic/proc/shout_syndicate_crap(mob/M)
 	if(!M)
@@ -179,9 +185,9 @@
 
 /obj/item/grenade/plastic/update_icon()
 	if(nadeassembly)
-		icon_state = "[item_state]1"
+		icon_state = "[inhand_icon_state]1"
 	else
-		icon_state = "[item_state]0"
+		icon_state = "[inhand_icon_state]0"
 
 //////////////////////////
 ///// The Explosives /////
@@ -192,6 +198,7 @@
 	desc = "Used to put holes in specific areas without too much extra hole. A saboteur's favorite."
 	gender = PLURAL
 	var/open_panel = 0
+	// Wire panel removed for BeeStation compatibility - C4 can still be planted on airlocks and used normally
 	can_attach_mob = TRUE
 
 /obj/item/grenade/plastic/c4/Initialize(mapload)
@@ -214,7 +221,7 @@
 	prime()
 	user.gib(1, 1)
 
-/obj/item/grenade/plastic/c4/attackby(obj/item/I, mob/user, params)
+/obj/item/grenade/plastic/c4/attackby(obj/item/I, mob/user, list/modifiers)
 	if(I.tool_behaviour == TOOL_SCREWDRIVER)
 		open_panel = !open_panel
 		to_chat(user, span_notice("You [open_panel ? "open" : "close"] the wire panel."))
@@ -256,7 +263,7 @@
 	name = "X4"
 	desc = "A shaped high-explosive breaching charge. Designed to ensure user safety and wall nonsafety."
 	icon_state = "plasticx40"
-	item_state = "plasticx4"
+	inhand_icon_state = "plasticx4"
 	gender = PLURAL
 	directional = TRUE
 	boom_sizes = list(0, 2, 5)

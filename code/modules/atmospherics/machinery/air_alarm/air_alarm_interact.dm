@@ -101,7 +101,7 @@
 	if((buildstage == AIR_ALARM_BUILD_COMPLETE))
 		new /obj/item/stack/cable_coil(loc, 3)
 
-/obj/machinery/airalarm/attackby(obj/item/W, mob/user, params)
+/obj/machinery/airalarm/attackby(obj/item/W, mob/user, list/modifiers)
 	switch(buildstage)
 		if(AIR_ALARM_BUILD_COMPLETE)
 			if(W.GetID())// trying to unlock the interface with an ID card
@@ -128,7 +128,7 @@
 						shorted = FALSE
 						danger_level = AIR_ALARM_ALERT_NONE
 						buildstage = AIR_ALARM_BUILD_COMPLETE
-						select_mode(user, /datum/air_alarm_mode/filtering)
+						select_mode(user, /datum/air_alarm_mode/filtering/automatic)
 						update_icon()
 				return
 		if(AIR_ALARM_BUILD_NO_CIRCUIT)

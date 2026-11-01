@@ -6,7 +6,6 @@
 	icon_state = "outlet"
 	density = TRUE
 	anchored = TRUE
-	rad_flags = RAD_PROTECT_CONTENTS | RAD_NO_CONTAMINATE
 	var/active = FALSE
 	var/turf/target	// this will be where the output objects are 'thrown' to.
 	var/obj/structure/disposalpipe/trunk/trunk // the attached pipe trunk
@@ -37,7 +36,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/structure/disposaloutlet)
 // called when the holder exits the outlet
 /obj/structure/disposaloutlet/proc/expel(obj/structure/disposalholder/H)
 	H.active = FALSE
-	flick("outlet-open", src)
+	z_flick("outlet-open", src)
 	if((start_eject + 30) < world.time)
 		start_eject = world.time
 		playsound(src, 'sound/machines/warning-buzzer.ogg', 50, 0, 0)

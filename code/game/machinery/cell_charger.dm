@@ -3,18 +3,24 @@
 	desc = "It charges power cells."
 	icon = 'icons/obj/power.dmi'
 	icon_state = "ccharger"
-	use_power = IDLE_POWER_USE
-	idle_power_usage = 5
-	active_power_usage = 60
 	power_channel = AREA_USAGE_EQUIP
 	circuit = /obj/item/circuitboard/machine/cell_charger
+	// Standby overhead only. The charge transfer is a per-tick spend, see process().
+	idle_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.05
+	active_power_usage = BASE_MACHINE_IDLE_CONSUMPTION * 0.05
 	pass_flags = PASSTABLE
 	var/obj/item/charging = null
 	var/chargelevel = -1
-	var/charge_rate = 250
+	var/recharge_coeff = 1
 	var/static/list/allowed_items = list(
 		/obj/item/stock_parts/cell,
-		/obj/item/modular_computer/tablet)
+		/obj/item/modular_computer
+	)
+
+/obj/machinery/cell_charger/RefreshParts()
+	. = ..()
+	for(var/datum/stock_part/capacitor/capacitor in component_parts)
+		recharge_coeff = capacitor.tier
 
 /obj/machinery/cell_charger/update_overlays()
 	. = ..()
@@ -28,7 +34,7 @@
 			var/newlevel = 	round(cell_charging.percent() * 4 / 100)
 			chargelevel = newlevel
 			. += mutable_appearance(init_icon, "ccharger-o[newlevel]")
-	if(istype(charging, /obj/item/modular_computer/tablet))	//The overlay is for PDA but lets do this for tablets also
+	if(istype(charging, /obj/item/modular_computer))	//The overlay is for PDA but lets do this for other computers also
 		. += mutable_appearance(init_icon, "pda")
 
 /obj/machinery/cell_charger/examine(mob/user)
@@ -38,9 +44,10 @@
 		var/obj/item/stock_parts/cell/cell_charging = charging.get_cell()
 		. += "Current charge: [round(cell_charging.percent(), 1)]%."
 	if(in_range(user, src) || isobserver(user))
-		. += span_notice("The status display reads: Charging power: <b>[charge_rate]W</b>.")
+		. += span_notice("The status display reads:")
+		. += span_notice("- Current recharge coefficient: <b>[recharge_coeff]</b>.")
 
-/obj/machinery/cell_charger/attackby(obj/item/W, mob/user, params)
+/obj/machinery/cell_charger/attackby(obj/item/W, mob/user, list/modifiers)
 	if(W.get_cell() && is_allowed(W) && !panel_open)
 		if(machine_stat & BROKEN)
 			to_chat(user, span_warning("[src] is broken!"))
@@ -129,24 +136,25 @@
 	if(charging)
 		charging.emp_act(severity)
 
-/obj/machinery/cell_charger/RefreshParts()
-	charge_rate = 250
-	for(var/obj/item/stock_parts/capacitor/C in component_parts)
-		charge_rate *= C.rating
-
 /obj/machinery/cell_charger/process(delta_time)
 	if(!charging || !anchored || (machine_stat & (BROKEN|NOPOWER)))
 		return
 
-	var/obj/item/stock_parts/cell/cell_charging = charging.get_cell()
-	if(cell_charging.percent() >= 100)
+	var/obj/item/stock_parts/cell/cell = charging.get_cell()
+
+	if(!cell)
+		update_use_power(IDLE_POWER_USE)
 		return
-	var/main_draw = use_power_from_net(charge_rate * delta_time, take_any = TRUE) //Pulls directly from the Powernet to dump into the cell or holder
-	if(!main_draw)
+	if(cell.percent() >= 100)
+		update_use_power(IDLE_POWER_USE)
 		return
-	cell_charging.give(main_draw)
-	use_power(charge_rate / 100) //use a small bit for the charger itself, but power usage scales up with the part tier
-	//this is 2558, unfortunately, lead batteries are still a thing, sorry!
+
+	var/power_needed = cell.chargerate * recharge_coeff
+
+	// The grid pays the gross figure
+	use_power(power_needed / POWER_TRANSFER_LOSS)
+	update_use_power(ACTIVE_POWER_USE)
+	cell.give(power_needed)
 
 	update_appearance()
 

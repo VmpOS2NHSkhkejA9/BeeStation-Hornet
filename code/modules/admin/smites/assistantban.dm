@@ -14,7 +14,7 @@
 		return
 	var/mob/living/simple_animal/hostile/banassistant/H = new(spawn_turf)
 	H.smitetarget = target
-	H.status_flags = GODMODE
+	ADD_TRAIT(H, TRAIT_GODMODE, ROUNDSTART_TRAIT)
 	RegisterSignal(target, COMSIG_LIVING_DEATH, PROC_REF(on_target_death))
 	assassin = H
 
@@ -55,7 +55,7 @@
 	icon_living = "banassist"
 	icon_dead = "banassist"
 	icon_gib = "banassist"
-	mob_biotypes = list(MOB_ORGANIC, MOB_HUMANOID)
+	mob_biotypes = MOB_ORGANIC | MOB_HUMANOID
 	speak_chance = 0
 	turns_per_move = 1
 	speed = 0
@@ -73,7 +73,7 @@
 	attack_sound = 'sound/weapons/smash.ogg'
 	combat_mode = TRUE
 	loot = null
-	atmos_requirements = list("min_oxy" = 0, "max_oxy" = 0, "min_tox" = 0, "max_tox" = 0, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
+	atmos_requirements = list("min_oxy" = 0, "max_oxy" = 0, "min_plas" = 0, "max_tox" = 0, "min_co2" = 0, "max_co2" = 0, "min_n2" = 0, "max_n2" = 0)
 	unsuitable_atmos_damage = 0
 	minbodytemp = 0
 	status_flags = CANPUSH
@@ -81,7 +81,6 @@
 	dodging = TRUE
 	rapid_melee = 2
 	hardattacks = TRUE
-	spacewalk = TRUE
 	footstep_type = FOOTSTEP_MOB_SHOE
 	vision_range = 1
 	aggro_vision_range = 10
@@ -91,6 +90,9 @@
 	speak_chance = 25
 	taunt_chance = 55
 
+/mob/living/simple_animal/hostile/banassistant/Initialize(mapload)
+	. = ..()
+	ADD_TRAIT(src, TRAIT_SPACEWALK, INNATE_TRAIT)
 
 /mob/living/simple_animal/hostile/banassistant/ListTargets()
 	if(smitetarget && !QDELETED(smitetarget))
@@ -109,7 +111,7 @@
 		return FALSE
 	if(see_invisible < the_target.invisibility)
 		return FALSE
-	if(ismob(the_target) && (the_target.status_flags & GODMODE))
+	if(ismob(the_target) && HAS_TRAIT(the_target, TRAIT_GODMODE))
 		return FALSE
 	return TRUE
 

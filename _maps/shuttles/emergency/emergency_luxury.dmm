@@ -46,9 +46,7 @@
 /turf/open/floor/mineral/gold,
 /area/shuttle/escape/luxury)
 "al" = (
-/obj/structure/mirror{
-	pixel_y = 32
-	},
+/obj/structure/mirror/directional/north,
 /turf/open/floor/mineral/gold,
 /area/shuttle/escape/luxury)
 "ap" = (
@@ -71,9 +69,7 @@
 /obj/structure/shuttle/engine/heater{
 	dir = 8
 	},
-/obj/structure/window/reinforced{
-	dir = 4
-	},
+/obj/structure/window/reinforced/spawner/directional/east,
 /turf/open/floor/plating/airless,
 /area/shuttle/escape/luxury)
 "at" = (

@@ -8,14 +8,17 @@
 	name = "artistic toolbox"
 	desc = "A toolbox painted bright green. Looking at it makes you feel uneasy."
 	icon_state = "his_grace"
-	item_state = "artistic_toolbox"
+	inhand_icon_state = "artistic_toolbox"
 	lefthand_file = 'icons/mob/inhands/equipment/toolbox_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/toolbox_righthand.dmi'
 	icon = 'icons/obj/items_and_weapons.dmi'
 	w_class = WEIGHT_CLASS_GIGANTIC
 	item_flags = ISWEAPON
 	force = 12
-	block_upgrade_walk = TRUE
+
+	canblock = TRUE
+	block_flags = BLOCKING_ACTIVE
+
 	attack_verb_continuous = list("robusts")
 	attack_verb_simple = list("robust")
 	hitsound = 'sound/weapons/smash.ogg'
@@ -32,7 +35,7 @@
 /obj/item/his_grace/Initialize(mapload)
 	. = ..()
 	START_PROCESSING(SSprocessing, src)
-	AddElement(/datum/element/point_of_interest)
+	SSpoints_of_interest.make_point_of_interest(src)
 	RegisterSignal(src, COMSIG_MOVABLE_POST_THROW, PROC_REF(move_gracefully))
 
 /obj/item/his_grace/Destroy()
@@ -83,7 +86,7 @@
 		drowse()
 		return
 	if(bloodthirst < HIS_GRACE_CONSUME_OWNER && !ascended)
-		adjust_bloodthirst((1 + FLOOR(LAZYLEN(contents) * 0.5, 1)) * delta_time) //Maybe adjust this?
+		adjust_bloodthirst((1 + floor(LAZYLEN(contents) * 0.5)) * delta_time) //Maybe adjust this?
 	else
 		adjust_bloodthirst(1 * delta_time) //don't cool off rapidly once we're at the point where His Grace consumes all.
 	var/mob/living/master = get_atom_on_turf(src, /mob/living)
@@ -135,6 +138,11 @@
 	gender = MALE
 	adjust_bloodthirst(1)
 	force_bonus = HIS_GRACE_FORCE_BONUS * LAZYLEN(contents)
+	notify_ghosts(
+		"[user] has awoken His Grace!",
+		source = src,
+		header = "All Hail His Grace!",
+	)
 	playsound(user, 'sound/effects/pope_entry.ogg', 100)
 	icon_state = "his_grace_awakened"
 	move_gracefully()
@@ -252,7 +260,7 @@
 	force_bonus += ascend_bonus
 	desc = "A legendary toolbox and a distant artifact from The Age of Three Powers. On its three latches engraved are the words \"The Sun\", \"The Moon\", and \"The Stars\". The entire toolbox has the words \"The World\" engraved into its sides."
 	icon_state = "his_grace_ascended"
-	item_state = "toolbox_gold"
+	inhand_icon_state = "toolbox_gold"
 	ascended = TRUE
 	playsound(src, 'sound/effects/his_grace_ascend.ogg', 100)
 	if(istype(master))

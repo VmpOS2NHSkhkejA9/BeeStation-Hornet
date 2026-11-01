@@ -25,7 +25,6 @@
 	laser = 70
 	energy = 100
 	bomb = 10
-	rad = 100
 
 /obj/structure/railing/corner //aesthetic corner sharp edges hurt oof ouch
 	icon_state = "railing_corner"
@@ -45,9 +44,9 @@
 		)
 		AddElement(/datum/element/connect_loc, loc_connections)
 
-	AddComponent(/datum/component/simple_rotation, ROTATION_NEEDS_ROOM|(diagonals_possible ? ROTATION_DIAGONAL : null))
+	AddElement(/datum/element/simple_rotation, ROTATION_NEEDS_ROOM|(diagonals_possible ? ROTATION_DIAGONAL : null))
 
-/obj/structure/railing/attackby(obj/item/I, mob/living/user, params)
+/obj/structure/railing/attackby(obj/item/I, mob/living/user, list/modifiers)
 	..()
 	add_fingerprint(user)
 
@@ -63,9 +62,6 @@
 		else
 			to_chat(user, span_warning("[src] is already in good condition!"))
 		return
-
-/obj/structure/railing/AltClick(mob/user)
-	return ..() // This hotkey is BLACKLISTED since it's used by /datum/component/simple_rotation
 
 /obj/structure/railing/wirecutter_act(mob/living/user, obj/item/I)
 	. = ..()

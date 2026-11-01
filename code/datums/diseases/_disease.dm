@@ -30,10 +30,11 @@
 	var/bypasses_immunity = FALSE //Does it skip species virus immunity check? Some things may diseases and not viruses
 	var/spreading_modifier = 1
 	var/danger = DISEASE_NONTHREAT
-	var/list/required_organs = list()
+	/// If the disease requires an organ for the effects to function, robotic organs are immune to disease unless inorganic biology symptom is present
+	var/required_organ
 	var/needs_all_cures = TRUE
 	var/list/strain_data = list() //dna_spread special bullshit
-	var/list/infectable_biotypes = list(MOB_ORGANIC) //if the disease can spread on organics, synthetics, or undead
+	var/infectable_biotypes = MOB_ORGANIC //if the disease can spread on organics, synthetics, or undead
 	var/process_dead = FALSE //if this ticks while the host is dead
 	var/spread_dead = FALSE
 	var/copy_type = null //if this is null, copies will use the type of the instance being copied
@@ -46,12 +47,12 @@
 	SSdisease.active_diseases.Remove(src)
 
 //add this disease if the host does not already have too many
-/datum/disease/proc/try_infect(var/mob/living/infectee, make_copy = TRUE)
+/datum/disease/proc/try_infect(mob/living/infectee, make_copy = TRUE)
 	infect(infectee, make_copy)
 	return TRUE
 
 //add the disease with no checks
-/datum/disease/proc/infect(var/mob/living/infectee, make_copy = TRUE)
+/datum/disease/proc/infect(mob/living/infectee, make_copy = TRUE)
 	var/datum/disease/D = make_copy ? Copy() : src
 	infectee.diseases += D
 	D.affected_mob = infectee
@@ -72,6 +73,10 @@
 	var/mob/living/L = affected_mob
 	if(IS_IN_STASIS(L))
 		return
+
+	if(required_organ)
+		if(!has_required_infectious_organ(affected_mob, required_organ))
+			return FALSE
 
 	if(has_cure())
 		if(DT_PROB(cure_chance, delta_time))
@@ -168,10 +173,10 @@
 		"cures",
 		"infectivity",
 		"cure_chance",
+		"required_organ",
 		"bypasses_immunity",
 		"spreading_modifier",
 		"danger",
-		"required_organs",
 		"needs_all_cures",
 		"strain_data",
 		"infectable_biotypes",
@@ -223,3 +228,18 @@
 
 /datum/disease/proc/speechModification(message)
 	return message
+
+/// Checks if the mob has the required organ and it's not robotic or affected by inorganic biology
+/datum/disease/proc/has_required_infectious_organ(mob/living/carbon/target, required_organ_slot)
+	if(!iscarbon(target))
+		return FALSE
+
+	var/obj/item/organ/target_organ = target.get_organ_slot(required_organ_slot)
+	if(!istype(target_organ))
+		return FALSE
+
+	// robotic organs are immune to disease unless 'inorganic biology' symptom is present
+	if(IS_ROBOTIC_ORGAN(target_organ) && !(infectable_biotypes & MOB_ROBOTIC))
+		return FALSE
+
+	return TRUE

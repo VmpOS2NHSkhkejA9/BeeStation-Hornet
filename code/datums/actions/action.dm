@@ -4,6 +4,7 @@
  * A simple base for an modular behavior attached to atom or datum.
  */
 /datum/action
+	abstract_type = /datum/action
 	/// The name of the action
 	var/name = "Generic Action"
 	/// The description of what the action does
@@ -11,7 +12,7 @@
 	/// The datum the action is attached to. If the master datum is deleted, the action is as well.
 	/// Set in New() via the proc link_to().
 	/// DO NOT ASSIGN TO THIS VARIABLE, ASSIGN IT ON /NEW()
-	VAR_PRIVATE/datum/master
+	VAR_FINAL/datum/master
 	/// Where any buttons we create should be by default. Accepts screen_loc and location defines
 	var/default_button_position = SCRN_OBJ_IN_LIST
 	/// This is who currently owns the action, and most often, this is who is using the action if it is triggered
@@ -32,21 +33,32 @@
 	/// If toggleable, deactivate will be called when the action button is pressed after
 	/// being activated.
 	var/toggleable = FALSE
+	/// full key we are bound to
+	var/full_key
+	/// Toggles whether this action is usable or not
+	var/action_disabled = FALSE
+
 	// =====================================
 	// Action Appearance
 	// =====================================
+	/// Do we come with a button?
+	var/has_button = TRUE
 	/// The style the button's tooltips appear to be
 	var/buttontooltipstyle = ""
 	/// Whether the button becomes transparent when it can't be used or just reddened
 	var/transparent_when_unavailable = TRUE
-	/// This is the file for the BACKGROUND icon of the button
-	var/button_icon = 'icons/hud/actions/backgrounds.dmi'
-	/// This is the icon state state for the BACKGROUND icon of the button
+
+	/// This is the file for the BACKGROUND underlay icon of the button
+	var/background_icon = 'icons/hud/actions/backgrounds.dmi'
+	/// This is the icon state state for the BACKGROUND underlay icon of the button
+	/// (If set to ACTION_BUTTON_DEFAULT_BACKGROUND, uses the hud's default background)
 	var/background_icon_state = ACTION_BUTTON_DEFAULT_BACKGROUND
+
 	/// This is the file for the icon that appears OVER the button background
-	var/icon_icon = 'icons/hud/actions.dmi'
+	var/button_icon = 'icons/hud/actions.dmi'
 	/// This is the icon state for the icon that appears OVER the button background
 	var/button_icon_state = "default"
+
 	///List of all mobs that are viewing our action button -> A unique movable for them to view.
 	var/list/viewers = list()
 	/// What icon to replace our mouse cursor with when active. Optional, Requires requires_target
@@ -70,7 +82,7 @@
 	/// If the ability is currently active or not
 	VAR_PRIVATE/active = FALSE
 	/// If we require a target and are a toggleable button, we track a reference to the
-	/// object that we are targetting.
+	/// object that we are targeting.
 	VAR_PRIVATE/datum/selected_target = null
 	/// Overlay currently applied to this action
 	VAR_PRIVATE/mutable_appearance/timer_overlay
@@ -129,6 +141,7 @@
 	SEND_SIGNAL(src, COMSIG_ACTION_GRANTED, owner)
 	//SEND_SIGNAL(owner, COMSIG_MOB_GRANTED_ACTION, src)
 	RegisterSignal(owner, COMSIG_QDELETING, PROC_REF(clear_ref), override = TRUE)
+	RegisterSignal(owner, COMSIG_MOB_KEYDOWN, PROC_REF(keydown), override = TRUE)
 
 	// Register some signals based on our check_flags
 	// so that our button icon updates when relevant
@@ -168,6 +181,7 @@
 	SEND_SIGNAL(src, COMSIG_ACTION_REMOVED, owner)
 	//SEND_SIGNAL(owner, COMSIG_MOB_REMOVED_ACTION, src)
 	UnregisterSignal(owner, COMSIG_QDELETING)
+	UnregisterSignal(owner, COMSIG_MOB_KEYDOWN)
 
 	// Clean up our check_flag signals
 	UnregisterSignal(owner, list(
@@ -309,6 +323,8 @@
 /datum/action/proc/is_available(feedback = FALSE)
 	if(!owner)
 		return FALSE
+	if(action_disabled)
+		return FALSE
 	if (next_use_time && world.time < next_use_time)
 		return FALSE
 	if((check_flags & AB_CHECK_HANDS_BLOCKED) && HAS_TRAIT(owner, TRAIT_HANDS_BLOCKED))
@@ -324,14 +340,18 @@
 			owner.balloon_alert(owner, "incapacitated!")
 		return FALSE
 	if((check_flags & AB_CHECK_LYING) && isliving(owner))
-		var/mob/living/action_user = owner
-		if(action_user.body_position == LYING_DOWN)
+		var/mob/living/action_owner = owner
+		if(action_owner.body_position == LYING_DOWN)
 			if (feedback)
 				owner.balloon_alert(owner, "must stand up!")
 			return FALSE
 	if((check_flags & AB_CHECK_CONSCIOUS) && owner.stat != CONSCIOUS)
 		if (feedback)
 			owner.balloon_alert(owner, "unconscious!")
+		return FALSE
+	if((check_flags & AB_CHECK_PHASED) && HAS_TRAIT(owner, TRAIT_MAGICALLY_PHASED))
+		if (feedback)
+			owner.balloon_alert(owner, "incorporeal!")
 		return FALSE
 	if ((check_flags & AB_CHECK_DEAD) && owner.stat == DEAD)
 		if (feedback)
@@ -340,8 +360,7 @@
 	return TRUE
 
 /datum/action/proc/update_buttons(status_only, force)
-	for(var/datum/hud/hud in viewers)
-		var/atom/movable/screen/movable/button = viewers[hud]
+	for(var/datum/hud/hud, button in viewers)
 		update_button(button, status_only, force)
 
 /datum/action/proc/update_button(atom/movable/screen/movable/action_button/button, status_only = FALSE, force = FALSE)
@@ -357,8 +376,8 @@
 			if(button.icon_state != settings["bg_state"])
 				button.icon_state = settings["bg_state"]
 		else
-			if(button.icon != button_icon)
-				button.icon = button_icon
+			if(button.icon != background_icon)
+				button.icon = background_icon
 			if(button.icon_state != background_icon_state)
 				button.icon_state = background_icon_state
 
@@ -371,6 +390,7 @@
 		QDEL_NULL(timer_overlay)
 
 	var/available = is_available()
+	button.update_keybind_maptext(full_key)
 	if(available)
 		button.color = rgb(255,255,255,255)
 	else
@@ -379,9 +399,9 @@
 
 /// Applies our button icon over top the background icon of the action
 /datum/action/proc/apply_icon(atom/movable/screen/movable/action_button/current_button, force = FALSE)
-	if(icon_icon && button_icon_state && ((current_button.button_icon_state != button_icon_state) || force))
+	if(button_icon && button_icon_state && ((current_button.button_icon_state != button_icon_state) || force))
 		current_button.cut_overlays(TRUE)
-		current_button.add_overlay(mutable_appearance(icon_icon, button_icon_state))
+		current_button.add_overlay(mutable_appearance(button_icon, button_icon_state))
 		current_button.button_icon_state = button_icon_state
 
 /datum/action/proc/update_cooldown_icon(atom/movable/screen/movable/action_button/button, force = FALSE)
@@ -395,7 +415,7 @@
 		timer_overlay.maptext_height = 64
 		timer_overlay.maptext_x = -8
 		timer_overlay.maptext_y = -6
-	var/new_maptext = "<center><span class='maptext' style='font-weight: bold;color: #eeeeee;'>[FLOOR((next_use_time - world.time)/10, 1)]</span></center>"
+	var/new_maptext = "<center><span class='maptext' style='font-weight: bold;color: #eeeeee;'>[floor((next_use_time - world.time)/10)]</span></center>"
 	if (new_maptext != timer_overlay.maptext || force)
 		button.cut_overlay(timer_overlay)
 		timer_overlay.maptext = new_maptext
@@ -413,6 +433,9 @@
 
 /// Adds our action button to the screen of the passed viewer.
 /datum/action/proc/show_to(mob/viewer)
+	if (!has_button)
+		return
+
 	var/datum/hud/our_hud = viewer.hud_used
 	if(!our_hud || viewers[our_hud]) // There's no point in this if you have no hud in the first place
 		return
@@ -544,6 +567,16 @@
 /datum/action/proc/is_active()
 	return active
 
+/datum/action/proc/begin_creating_bind(atom/movable/screen/movable/action_button/current_button, mob/user)
+	if(!current_button || user != owner)
+		return
+	if(!isnull(full_key))
+		full_key = null
+		update_button(current_button)
+		return
+	full_key = tgui_input_keycombo(user, "Please bind a key for this action.")
+	update_button(current_button)
+
 //Exists to keep master private
 /datum/action/proc/get_master()
 	SHOULD_BE_PURE(TRUE)
@@ -552,3 +585,14 @@
 //Exists to keep next_use_time private
 /datum/action/proc/reset_next_use_time()
 	next_use_time = initial(next_use_time)
+
+/datum/action/proc/keydown(mob/source, key, client/client, full_key)
+	SIGNAL_HANDLER
+	if(isnull(full_key) || full_key != src.full_key)
+		return
+	if(istype(source))
+		if(source.next_click > world.time)
+			return
+		else
+			source.next_click = world.time + CLICK_CD_HYPER_RAPID
+	INVOKE_ASYNC(src, PROC_REF(trigger))

@@ -1,6 +1,6 @@
 /obj/item/ammo_casing/energy/wormhole
 	projectile_type = /obj/projectile/beam/wormhole
-	e_cost = 0
+	e_cost = 0 WATT
 	harmful = FALSE
 	fire_sound = 'sound/weapons/pulse3.ogg'
 	select_name = "blue"
@@ -17,7 +17,7 @@ CREATION_TEST_IGNORE_SUBTYPES(/obj/item/ammo_casing/energy/wormhole)
 	. = ..()
 	gun = WEAKREF(wh)
 
-/obj/item/ammo_casing/energy/wormhole/throw_proj()
+/obj/item/ammo_casing/energy/wormhole/throw_proj(atom/target, turf/targloc, mob/living/user, list/modifiers, spread)
 	. = ..()
 	if(istype(BB, /obj/projectile/beam/wormhole))
 		var/obj/projectile/beam/wormhole/WH = BB

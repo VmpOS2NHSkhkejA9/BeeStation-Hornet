@@ -7,7 +7,7 @@
 	desc = "A device that delivers powerful shocks to detachable paddles that resuscitate incapacitated patients."
 	icon = 'icons/obj/defib.dmi'
 	icon_state = "defibunit"
-	item_state = "defibunit"
+	inhand_icon_state = "defibunit"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 	slot_flags = ITEM_SLOT_BACK
@@ -40,6 +40,7 @@
 	paddles = make_paddles()
 	update_power()
 	RegisterSignal(paddles, COMSIG_DEFIBRILLATOR_SUCCESS, PROC_REF(on_defib_success))
+	AddElement(/datum/element/drag_pickup)
 
 /obj/item/defibrillator/loaded/Initialize(mapload) //starts with hicap
 	. = ..()
@@ -77,7 +78,7 @@
 	if(powered)
 		. += "[initial(icon_state)]-powered"
 		var/ratio = cell.charge / cell.maxcharge
-		ratio = CEILING(ratio*4, 1) * 25
+		ratio = ceil(ratio*4) * 25
 		. += "[initial(icon_state)]-charge[ratio]"
 	if(!cell)
 		. += "[initial(icon_state)]-nocell"
@@ -111,15 +112,7 @@
 		ui_action_click() //checks for this are handled in defibrillator.mount.dm
 	return ..()
 
-/obj/item/defibrillator/MouseDrop(obj/over_object)
-	. = ..()
-	if(ismob(loc))
-		var/mob/M = loc
-		if(!M.incapacitated() && istype(over_object, /atom/movable/screen/inventory/hand))
-			var/atom/movable/screen/inventory/hand/H = over_object
-			M.putItemFromInventoryInHandIfPossible(src, H.held_index)
-
-/obj/item/defibrillator/attackby(obj/item/W, mob/user, params)
+/obj/item/defibrillator/attackby(obj/item/W, mob/user, list/modifiers)
 	if(W == paddles)
 		toggle_paddles()
 	else if(istype(W, /obj/item/stock_parts/cell))
@@ -259,7 +252,7 @@
 	name = "compact defibrillator"
 	desc = "A belt-equipped defibrillator that can be rapidly deployed."
 	icon_state = "defibcompact"
-	item_state = "defibcompact"
+	inhand_icon_state = "defibcompact"
 	worn_icon_state = "defibcompact"
 	w_class = WEIGHT_CLASS_LARGE
 	slot_flags = ITEM_SLOT_BELT
@@ -288,7 +281,7 @@
 	cell = new /obj/item/stock_parts/cell/infinite(src)
 	update_power()
 
-/obj/item/defibrillator/compact/combat/loaded/attackby(obj/item/W, mob/user, params)
+/obj/item/defibrillator/compact/combat/loaded/attackby(obj/item/W, mob/user, list/modifiers)
 	if(W == paddles)
 		toggle_paddles()
 		return
@@ -305,7 +298,7 @@
 	desc = "A pair of plastic-gripped paddles with flat metal surfaces that are used to deliver powerful electric shocks."
 	icon = 'icons/obj/defib.dmi'
 	icon_state = "defibpaddles0"
-	item_state = "defibpaddles0"
+	inhand_icon_state = "defibpaddles0"
 	lefthand_file = 'icons/mob/inhands/equipment/medical_lefthand.dmi'
 	righthand_file = 'icons/mob/inhands/equipment/medical_righthand.dmi'
 
@@ -323,16 +316,11 @@
 	var/recharge_time = 6 SECONDS // Only applies to defibs that do not require a defibrilator. See: do_success
 	var/combat = FALSE //If it penetrates armor and gives additional functionality
 	var/grab_ghost = TRUE
-	var/tlimit = DEFIB_TIME_LIMIT * 10
+	var/tlimit = DEFIB_TIME_LIMIT
 
 	var/mob/listeningTo
 
 	base_icon_state = "defibpaddles"
-
-/obj/item/shockpaddles/ComponentInitialize()
-	. = ..()
-	AddElement(/datum/element/update_icon_updates_onmob)
-	AddComponent(/datum/component/two_handed, force_unwielded=8, force_wielded=12)
 
 /obj/item/shockpaddles/Destroy()
 	defib = null
@@ -349,7 +337,7 @@
 	listeningTo = user
 	check_range()
 
-/obj/item/shockpaddles/Moved()
+/obj/item/shockpaddles/Moved(atom/old_loc, movement_dir, forced, list/old_locs, momentum_change = TRUE)
 	. = ..()
 	if(!istype(loc, /mob/living))
 		check_range()
@@ -387,19 +375,27 @@
 
 /obj/item/shockpaddles/Initialize(mapload)
 	. = ..()
-	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, GENERIC_ITEM_TRAIT) //stops shockpaddles from being inserted in BoH
-	if(!req_defib)
-		return //If it doesn't need a defib, just say it exists
-	if (!loc || !istype(loc, /obj/item/defibrillator)) //To avoid weird issues from admin spawns
-		return INITIALIZE_HINT_QDEL
-	defib = loc
-	busy = FALSE
-	update_appearance()
+	ADD_TRAIT(src, TRAIT_NO_STORAGE_INSERT, INNATE_TRAIT) //stops shockpaddles from being inserted in BoH
+
+	// Defib-specific initialization
+	if(req_defib)
+		// Check if we are inside a defibrillator; if not, delete the object.
+		if (!loc || !istype(loc, /obj/item/defibrillator))
+			return INITIALIZE_HINT_QDEL
+
+		// If valid, set up the reference and appearance.
+		defib = loc
+		busy = FALSE
+		update_appearance()
+
+	// Common initialization
+	AddElement(/datum/element/update_icon_updates_onmob)
+	AddComponent(/datum/component/two_handed, force_unwielded=8, force_wielded=12)
 
 /obj/item/shockpaddles/update_icon_state()
 	var/wielded = ISWIELDED(src)
 	icon_state = "[base_icon_state][wielded]"
-	item_state = icon_state
+	inhand_icon_state = icon_state
 	if(cooldown)
 		icon_state = "[base_icon_state][wielded]_cooldown"
 	return ..()
@@ -446,7 +442,7 @@
 	listeningTo = null
 	defib.update_power()
 
-/obj/item/shockpaddles/attack(mob/M, mob/living/user, params)
+/obj/item/shockpaddles/attack(mob/M, mob/living/user, list/modifiers)
 	if(busy)
 		return
 	if(req_defib && !defib.powered)
@@ -466,7 +462,6 @@
 			to_chat(user, span_warning("[src] are recharging!"))
 		return
 
-	var/list/modifiers = params2list(params)
 	if(LAZYACCESS(modifiers, RIGHT_CLICK))
 		do_disarm(M, user)
 		return
@@ -514,7 +509,7 @@
 
 /obj/item/shockpaddles/proc/can_defib(mob/living/carbon/H)
 	var/obj/item/organ/heart = H.get_organ_by_type(/obj/item/organ/heart)
-	if(H.suiciding || H.ishellbound() || HAS_TRAIT(H, TRAIT_HUSK))
+	if(H.suiciding || HAS_TRAIT(H, TRAIT_HUSK))
 		return
 	if((world.time - H.timeofdeath) > tlimit)
 		return
@@ -546,7 +541,7 @@
 			span_userdanger("[user] has touched [M] with [src]!"))
 	M.adjustStaminaLoss(80)
 	M.Knockdown(75)
-	M.Jitter(50)
+	M.set_jitter_if_lower(100 SECONDS)
 	M.apply_status_effect(/datum/status_effect/convulsing)
 	playsound(src,  'sound/machines/defib_zap.ogg', 50, TRUE, -1)
 	if(HAS_TRAIT(M,MOB_ORGANIC))
@@ -592,7 +587,7 @@
 			H.apply_damage(50, BURN, BODY_ZONE_CHEST)
 			log_combat(user, H, "overloaded the heart of", defib)
 			H.Paralyze(100)
-			H.Jitter(100)
+			H.set_jitter_if_lower(200 SECONDS)
 			do_success()
 			return
 	do_cancel()
@@ -627,8 +622,6 @@
 
 				if (H.suiciding)
 					failed = span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: Resuscitation failed - Recovery of patient impossible. Further attempts futile.")
-				else if (H.ishellbound())
-					failed = span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: Resuscitation failed - Patient's soul appears to be on another plane of existence.  Further attempts futile.")
 				else if (tplus > tlimit)
 					failed = span_warning("[req_defib ? "[defib]" : "[src]"] buzzes: Resuscitation failed - Body has decayed for too long. Further attempts futile.")
 				else if (!heart)
@@ -660,7 +653,7 @@
 						var/overall_damage = total_brute + total_burn + H.getToxLoss() + H.getOxyLoss()
 						var/mobhealth = H.health
 						H.adjustOxyLoss((mobhealth - HALFWAYCRITDEATH) * (H.getOxyLoss() / overall_damage), 0)
-						H.adjustToxLoss((mobhealth - HALFWAYCRITDEATH) * (H.getToxLoss() / overall_damage), 0)
+						H.adjustToxLoss((mobhealth - HALFWAYCRITDEATH) * (H.getToxLoss() / overall_damage), 0, TRUE) // force tox heal for toxin lovers too
 						H.adjustFireLoss((mobhealth - HALFWAYCRITDEATH) * (total_burn / overall_damage), 0)
 						H.adjustBruteLoss((mobhealth - HALFWAYCRITDEATH) * (total_brute / overall_damage), 0)
 					H.updatehealth() // Previous "adjust" procs don't update health, so we do it manually.
@@ -669,7 +662,7 @@
 					H.set_heartattack(FALSE)
 					H.revive()
 					H.emote("gasp")
-					H.Jitter(100)
+					H.set_jitter_if_lower(200 SECONDS)
 					SEND_SIGNAL(H, COMSIG_LIVING_MINOR_SHOCK)
 					log_combat(user, H, "revived", defib)
 				do_success()
@@ -697,7 +690,7 @@
 	name = "cyborg defibrillator paddles"
 	icon = 'icons/obj/defib.dmi'
 	icon_state = "defibpaddles0"
-	item_state = "defibpaddles0"
+	inhand_icon_state = "defibpaddles0"
 	req_defib = FALSE
 
 /obj/item/shockpaddles/cyborg/attack(mob/M, mob/user)
@@ -718,7 +711,7 @@
 	combat = TRUE
 	icon = 'icons/obj/defib.dmi'
 	icon_state = "defibpaddles0"
-	item_state = "defibpaddles0"
+	inhand_icon_state = "defibpaddles0"
 
 /obj/item/shockpaddles/syndicate/cyborg
 	req_defib = FALSE

@@ -59,6 +59,10 @@ validPrefixes = [
     "config",
     "admin",
     "server",
+    "sound",
+    "image",
+    "map",
+    "qol",
 ]
 
 
